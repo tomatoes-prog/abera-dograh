@@ -16,8 +16,9 @@ def run(*args):
 
 for tool in ("gcc", "g++", "make", "git", "npm", "yarn", "uv"):
     assert shutil.which(tool) is None, f"Build tool leaked into runtime: {tool}"
-for module in ("cv2", "av", "onnxruntime", "numba", "soundfile", "api.app"):
+for module in ("av", "aiortc", "pipecat.transports.smallwebrtc.transport", "onnxruntime", "numba", "soundfile", "api.app"):
     importlib.import_module(module)
+assert importlib.util.find_spec("cv2") is None, "Video dependency leaked into voice-only runtime"
 for binary in ("ffmpeg", "ffprobe", "node"):
     assert b"not found" not in run("ldd", shutil.which(binary))
 

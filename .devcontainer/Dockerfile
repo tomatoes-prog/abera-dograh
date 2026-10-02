@@ -40,16 +40,12 @@ RUN --mount=type=bind,source=api/requirements.txt,target=/tmp/req.txt \
     uv pip install -r /tmp/req.txt -r /tmp/req.dev.txt
 
 # Layer 2: pipecat deps. Cache invalidates when pipecat source changes.
-# After installing pipecat, swap opencv-python (pulled by pipecat[webrtc]) for
-# opencv-python-headless (mirrored from api/Dockerfile). The non-headless build
-# links against X11/Qt (libxcb*); without those shared libs in the image,
-# `import cv2` fails at runtime.
+# Voice-only WebRTC: aiortc is installed explicitly in requirements.txt.
+# Avoid the upstream webrtc extra, which also installs OpenCV for video.
 RUN --mount=type=bind,source=pipecat,target=/tmp/pipecat,rw \
     --mount=type=cache,target=/root/.cache/uv \
-    uv pip install '/tmp/pipecat[cartesia,deepgram,openai,elevenlabs,groq,google,azure,sarvam,soundfile,silero,webrtc,speechmatics,openrouter,camb,mcp,inworld,smallest]' \
- && uv pip install --group /tmp/pipecat/pyproject.toml:dev \
- && uv pip uninstall opencv-python \
- && uv pip install opencv-python-headless
+    uv pip install '/tmp/pipecat[cartesia,deepgram,openai,elevenlabs,groq,google,azure,sarvam,soundfile,silero,speechmatics,openrouter,camb,mcp,inworld,smallest]' \
+ && uv pip install --group /tmp/pipecat/pyproject.toml:dev
 
 
 # =============================================================================

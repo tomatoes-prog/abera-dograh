@@ -6,7 +6,7 @@ la memoria y la capacidad de llamadas requieren mediciones independientes.
 
 | Imagen | Referencia | Optimizada | Reducción aproximada |
 | --- | ---: | ---: | ---: |
-| API | 1.598 MB | 1.161 MB | 27 % |
+| API | 1.598 MB | 992 MB | 38 % |
 | UI | 327 MB | 262 MB | 20 % |
 | Administración de Dograh | 1.688 MB | 632 MB | 63 % |
 | Redis 7 | 113 MB | 39 MB | 65 % |
@@ -43,23 +43,46 @@ e instalar dependencias. Sus herramientas no se copian a las imágenes productiv
 Nginx ya usa Alpine; coturn, cloudflared y el init de Bash usan imágenes externas.
 No se reconstruyeron estos componentes ni se cambiaron sus implementaciones.
 
-## Por qué la API sigue ocupando aproximadamente 1,16 GB
+## Recorte de video y tamaño restante de la API
 
-El entorno Python ocupa unos 874 MiB. Los mayores componentes medidos son:
+La imagen anterior pesaba 1.160.535.702 bytes. Al retirar OpenCV pasa a
+992.190.533 bytes: 168.345.169 bytes menos (14,5 % adicional). La etiqueta
+local es `abera/dograh-api:voice-only`; los contenedores existentes siguen
+usando sus imágenes anteriores.
+
+Se instala `aiortc==1.15.0` explícitamente en los requisitos de Dograh y se
+omite el extra `webrtc` de Pipecat, porque ese extra instala OpenCV para video.
+El submódulo conserva su pin y su código. API, devcontainer y scripts de setup
+usan esta selección de dependencias. En entornos Python existentes hay que
+recrear el entorno para retirar paquetes heredados; cambiar los requisitos
+por sí solo no desinstala el OpenCV instalado previamente.
+
+El transporte deshabilita entrada y salida de video. La señalización rechaza
+cualquier sección SDP `m=video`, incluida su adición al renegociar, antes de
+reservar recursos de una llamada nueva. Voz y canal de datos siguen habilitados.
+No se modifican las referencias a imágenes ni la lectura de documentación.
+
+PyAV se conserva: `AudioFrame`, `AudioResampler` y los códecs de aiortc lo usan
+para la voz del navegador. Su distribución también contiene componentes de
+video. Retirar esos binarios requiere mantener una distribución propia de
+PyAV/FFmpeg y comprobar el contrato de aiortc; no se borran bibliotecas
+arbitrariamente. FFmpeg CLI ya era solo audio.
+
+Componentes grandes que permanecen (medición previa; tamaños aproximados):
 
 | Componente | MiB aproximados | Uso |
 | --- | ---: | --- |
 | LLVM/llvmlite | 171 | Dependencia de Numba para cálculos numéricos del audio |
-| OpenCV y bibliotecas | 162 | Conversión de vídeo de WebRTC; candidato para un perfil solo audio |
+| OpenCV y bibliotecas | 0 | Retirado; antes ocupaba unos 162 MiB |
 | PyAV y bibliotecas | 101 | Tramas, códecs y transporte multimedia de WebRTC |
 | ONNX Runtime | 49 | Detección local de voz y turnos |
 | NumPy y bibliotecas | 48 | Procesamiento de muestras de audio |
 | Node, fuera del entorno Python | 103 | Validación de workflows TypeScript |
 
 El código de la aplicación ocupa una fracción de estos tamaños. La API mantiene
-compatibilidad con los proveedores y transportes del original. Separar vídeo
-y el validador de workflows permitiría otro perfil menor, pero requiere cambios
-funcionales y pruebas específicas. Cambiar Python a Alpine no elimina estos
+compatibilidad con los proveedores de voz y los transportes telefónicos/WebRTC.
+Separar el validador de workflows permitiría otro perfil menor y requiere pruebas
+funcionales específicas. Cambiar Python a Alpine no elimina estos
 paquetes: Alpine usa musl y las extensiones nativas deben ser compatibles.
 Fuentes: [imagen oficial Python](https://hub.docker.com/_/python) y
 [etiquetas manylinux/musllinux](https://packaging.python.org/en/latest/specifications/platform-compatibility-tags/).
@@ -70,14 +93,32 @@ Inicializar el submódulo antes de construir. Los dos builds usan la raíz del r
 
 ```sh
 git submodule update --init --recursive
-docker build --target runner -f api/Dockerfile -t abera/dograh-api:hardening .
+docker build --target runner -f api/Dockerfile -t abera/dograh-api:voice-only .
 docker build -f ui/Dockerfile -t abera/dograh-ui:hardening .
-docker build --target test -f api/Dockerfile -t abera/dograh-api:test-hardening .
+docker build --target test -f api/Dockerfile -t abera/dograh-api:test-voice-only .
 ```
 
 El Dockerfile administrativo está en Automations, bajo
 `products/abera-dograh/admin-image`; construir usando ese directorio como contexto.
 En AWS promover imágenes por digest, después de ejecutar las pruebas.
+
+### Verificación específica de voz sin OpenCV
+
+- 62 pruebas aprobadas: video rechazado, renegociación, oferta de llamadas
+  terminadas, concurrencia, errores de tareas e ICE.
+- `scripts/verify_webrtc_audio.py`: dos pares locales con el transporte Pipecat;
+  audio audible sintético en ambos sentidos y mensajes por el canal de datos.
+  Sin secciones de video ni OpenCV, dentro de una red Docker sin salida externa.
+- `scripts/verify_api_runtime.py`: importación de API y transportes, códecs,
+  conversión de audio y ausencia de herramientas de compilación aprobadas.
+- No se hicieron llamadas a OpenAI ni se utilizaron claves de proveedores.
+- La comprobación de dependencias muestra la advertencia existente de
+  `tuner-pipecat-sdk`: el source build de Pipecat declara `0.0.0.dev0` al excluir
+  metadatos Git, aunque su código está fijado al commit revisado. Esta advertencia
+  no corresponde a una dependencia de video eliminada.
+
+Estos resultados verifican el recorte funcional. No son una medición de RAM
+ni una nueva garantía de llamadas simultáneas.
 
 ## S3 y migración de datos anteriores
 

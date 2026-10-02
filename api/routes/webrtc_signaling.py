@@ -549,6 +549,9 @@ class SignalingManager:
             )
             return
 
+        if await self._reject_video_offer(ws, sdp):
+            return
+
         # Set run context for logging and tracing. org_id must be set before
         # pc.initialize() so that aiortc's internal tasks inherit it.
         set_current_run_id(workflow_run_id)
@@ -799,6 +802,24 @@ class SignalingManager:
         else:
             logger.debug(f"End of ICE candidates for pc_id: {pc_id}")
 
+    @staticmethod
+    async def _reject_video_offer(ws: WebSocket, sdp: str) -> bool:
+        """Reject video before negotiating media or reserving paid call resources."""
+        if isinstance(sdp, str) and any(
+            line.startswith("m=video ") for line in sdp.splitlines()
+        ):
+            await ws.send_json(
+                {
+                    "type": "error",
+                    "payload": {
+                        "error_type": "video_not_supported",
+                        "message": "Esta plataforma admite llamadas de voz; el video no está habilitado.",
+                    },
+                }
+            )
+            return True
+        return False
+
     async def _handle_renegotiation(
         self, ws: WebSocket, payload: dict, connection_key: str
     ):
@@ -817,6 +838,9 @@ class SignalingManager:
             await ws.send_json(
                 {"type": "error", "payload": {"message": "Peer connection not found"}}
             )
+            return
+
+        if await self._reject_video_offer(ws, sdp):
             return
 
         pc = self._peer_connections[pc_id]
