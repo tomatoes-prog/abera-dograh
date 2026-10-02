@@ -8,7 +8,7 @@
 #   - No bundled `nginx` service. Traefik is the ingress; we attach
 #     routing intent via labels instead of shipping our own proxy.
 #   - No `cloudflared` tunnel. The app is reachable at a real domain.
-#   - Web tier (ui/api/minio) publishes NO host ports — Traefik reaches
+#   - Web tier (ui/api) publishes NO host ports — Traefik reaches
 #     them over its own Docker network. coturn is the ONLY service that
 #     binds host ports, because WebRTC media is UDP and CANNOT traverse
 #     an HTTP reverse proxy.
@@ -50,7 +50,7 @@ services:
       - app-network
 
   redis:
-    image: redis:7
+    image: redis:7-alpine
     restart: unless-stopped
     command: >
       --requirepass ${REDIS_PASSWORD:-redissecret}
@@ -65,49 +65,6 @@ services:
     networks:
       - app-network
 
-  minio:
-    image: quay.io/minio/minio
-    container_name: minio
-    restart: unless-stopped
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: "${MINIO_ROOT_USER:-minioadmin}"
-      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD:-minioadmin}"
-      MINIO_API_CORS_ALLOW_ORIGIN: "*"
-    # No host ports. Browsers fetch audio via Traefik at
-    # https://${PUBLIC_HOST}/voice-audio/... (objects are public-read,
-    # unsigned URLs — no presign/host-signature to break). For console
-    # admin, port-forward 9001 over SSH instead of publishing it.
-    volumes:
-      - minio-data:/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=${TRAEFIK_NETWORK:-traefik-proxy}"
-      # Audio file downloads. Highest priority so it wins over the UI catch-all.
-      - "traefik.http.routers.dograh-audio.rule=Host(`${PUBLIC_HOST}`) && PathPrefix(`/voice-audio`)"
-      - "traefik.http.routers.dograh-audio.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
-      - "traefik.http.routers.dograh-audio.tls=true"
-      - "traefik.http.routers.dograh-audio.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}"
-      - "traefik.http.routers.dograh-audio.priority=20"
-      - "traefik.http.services.dograh-audio.loadbalancer.server.port=9000"
-    networks:
-      - app-network
-      - traefik
-
-  # TURN/STUN relay for WebRTC NAT traversal. This is the voice media path —
-  # it is UDP and is NOT, and cannot be, proxied by Traefik. These host ports
-  # MUST be published and opened in the VPS firewall, and TURN_HOST must be the
-  # VPS public IP (or a domain resolving to it). Without this, calls connect
-  # (signaling succeeds over Traefik) but carry NO audio.
-  #
-  # Configured entirely from CLI flags (`-n` disables config-file lookup), so
-  # the stack ships no host-side config and needs no init/renderer container —
-  # it is a single self-contained file, which is what a catalog import requires.
   coturn:
     image: coturn/coturn:4.8.0
     container_name: coturn
@@ -151,17 +108,12 @@ services:
       DATABASE_URL: "postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/postgres"
       REDIS_URL: "redis://:${REDIS_PASSWORD:-redissecret}@redis:6379"
 
-      ENABLE_AWS_S3: "false"
-      MINIO_ENDPOINT: "minio:9000"
-      # Full public URL browsers use to fetch audio. Traefik routes
-      # /voice-audio/ to minio:9000. This replaces the nginx sub_filter hack.
-      MINIO_PUBLIC_ENDPOINT: "https://${PUBLIC_HOST}"
-      # Must match the MinIO root creds above (same env vars).
-      MINIO_ACCESS_KEY: "${MINIO_ROOT_USER:-minioadmin}"
-      MINIO_SECRET_KEY: "${MINIO_ROOT_PASSWORD:-minioadmin}"
-      MINIO_BUCKET: "voice-audio"
-      MINIO_SECURE: "false"
-
+      ENABLE_AWS_S3: "true"
+      S3_BUCKET: "${S3_BUCKET:?Set a private S3 bucket}"
+      S3_REGION: "${S3_REGION:-us-east-2}"
+      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID:-}"
+      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY:-}"
+      AWS_SESSION_TOKEN: "${AWS_SESSION_TOKEN:-}"
       # IMPORTANT: pinned to 1. The image launches FASTAPI_WORKERS as
       # independent uvicorn processes on consecutive ports (8000, 8001, ...)
       # expecting the bundled nginx to least_conn-balance long-lived
@@ -194,8 +146,6 @@ services:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_healthy
-      minio:
         condition: service_healthy
     healthcheck:
       test:
@@ -264,11 +214,10 @@ services:
 volumes:
   postgres_data:
   redis_data:
-  minio-data:
     driver: local
 
 networks:
-  # Internal network for service-to-service traffic (db, redis, minio, coturn).
+  # Internal network for service-to-service traffic (db, redis, coturn).
   app-network:
     driver: bridge
   # The EXTERNAL network that the managed Traefik is attached to. Its name is

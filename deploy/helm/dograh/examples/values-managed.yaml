@@ -62,7 +62,4 @@ autoscaling:
     maxReplicas: 12
     targetCPUUtilizationPercentage: 70
 
-# No bundled deps here: the in-chart Postgres/Redis/MinIO manifests are gated on
-# the internal modes (database.mode=internal, redis.mode=internal,
-# storage.mode=internalMinio), so the external/S3 modes set above already keep
-# them from rendering.
+# PostgreSQL and Redis stay external; files use a private S3 bucket.

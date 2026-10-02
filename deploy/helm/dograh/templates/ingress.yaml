@@ -43,21 +43,6 @@ spec:
                 name: {{ include "dograh.web.fullname" . }}
                 port:
                   number: {{ .Values.web.service.port }}
-          {{- if or (eq .Values.storage.mode "internalMinio") (eq .Values.storage.mode "externalMinio") }}
-          - path: /voice-audio/
-            pathType: Prefix
-            backend:
-              service:
-                {{- if eq .Values.storage.mode "internalMinio" }}
-                name: {{ include "dograh.minioHost" . }}
-                {{- else }}
-                # externalMinio: requires an ExternalName Service named
-                # <release>-minio-external pointing at storage.externalMinio.endpoint.
-                name: {{ include "dograh.fullname" . }}-minio-external
-                {{- end }}
-                port:
-                  number: 9000
-          {{- end }}
           {{- if .Values.ui.enabled }}
           - path: /
             pathType: Prefix

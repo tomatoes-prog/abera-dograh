@@ -56,6 +56,8 @@ mcp_app = mcp.http_app(path="/", stateless_http=True)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    from api.services.auth.security import validate_runtime_security, close_login_protection
+    validate_runtime_security()
     async with mcp_app.lifespan(app):
         # warmup arq pool
         await get_arq_redis()
@@ -91,6 +93,7 @@ async def lifespan(app: FastAPI):
             yield  # Run app
         finally:
             logger.info("Starting graceful shutdown...")
+            await close_login_protection()
             await call_event_delivery.shutdown()
             try:
                 await sync_manager.stop()
@@ -113,6 +116,17 @@ app = FastAPI(
         {"url": "http://localhost:8000", "description": "Local development"},
     ],
 )
+
+
+from api.services.filesystem.quota import StorageQuotaExceeded, StorageQuotaUnavailable
+
+@app.exception_handler(StorageQuotaExceeded)
+async def handle_storage_limit(_request: Request, exc: StorageQuotaExceeded):
+    return JSONResponse(status_code=413, content={"code": "STORAGE_LIMIT_EXCEEDED", "detail": str(exc)})
+
+@app.exception_handler(StorageQuotaUnavailable)
+async def handle_storage_busy(_request: Request, exc: StorageQuotaUnavailable):
+    return JSONResponse(status_code=503, content={"detail": str(exc)})
 
 
 @app.exception_handler(AgentLimitExceeded)

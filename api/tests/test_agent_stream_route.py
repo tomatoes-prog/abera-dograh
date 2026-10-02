@@ -14,6 +14,32 @@ class _FakeWebSocket:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("failure", [False, RuntimeError("invalid carrier session")])
+async def test_failed_provider_authentication_creates_no_run_or_slot(failure):
+    from api.routes.agent_stream import agent_stream_websocket
+
+    websocket = _FakeWebSocket()
+    authenticate = AsyncMock(return_value=False)
+    if isinstance(failure, Exception):
+        authenticate.side_effect = failure
+    spec = SimpleNamespace(provider_cls=lambda _: SimpleNamespace(authenticate_external_websocket=authenticate))
+    with (
+        patch("api.routes.agent_stream.telephony_registry") as registry,
+        patch("api.routes.agent_stream.db_client") as db_client,
+        patch("api.routes.agent_stream.call_concurrency") as concurrency,
+        patch("api.routes.agent_stream.authorize_workflow_run_start", new_callable=AsyncMock) as quota,
+    ):
+        registry.get_optional.return_value = spec
+        db_client.get_workflow_by_uuid_unscoped = AsyncMock(return_value=SimpleNamespace(id=11, organization_id=33))
+        db_client.create_workflow_run = AsyncMock()
+        concurrency.acquire_org_slot = AsyncMock()
+        await agent_stream_websocket(websocket, "cloudonix", "workflow-id")
+        db_client.create_workflow_run.assert_not_awaited()
+        concurrency.acquire_org_slot.assert_not_awaited()
+        quota.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_agent_stream_uses_provider_path_param_not_query_param():
     from api.routes.agent_stream import agent_stream_websocket
 
@@ -32,7 +58,7 @@ async def test_agent_stream_uses_provider_path_param_not_query_param():
         current_definition=None,
     )
     workflow_run = SimpleNamespace(id=44)
-    provider = SimpleNamespace(handle_external_websocket=AsyncMock())
+    provider = SimpleNamespace(authenticate_external_websocket=AsyncMock(return_value=True), handle_external_websocket=AsyncMock())
     spec = SimpleNamespace(provider_cls=lambda _config: provider)
 
     with (
@@ -98,7 +124,7 @@ async def test_agent_stream_marks_run_failed_when_quota_exceeded():
         current_definition=None,
     )
     workflow_run = SimpleNamespace(id=44)
-    spec = SimpleNamespace(provider_cls=lambda _config: object())
+    spec = SimpleNamespace(provider_cls=lambda _config: SimpleNamespace(authenticate_external_websocket=AsyncMock(return_value=True)))
     mark_failed_mock = AsyncMock()
 
     with (
@@ -147,7 +173,7 @@ async def test_agent_stream_rejects_when_concurrency_limit_reached():
         released_definition=SimpleNamespace(id=55, template_context_variables={}),
         current_definition=None,
     )
-    spec = SimpleNamespace(provider_cls=lambda _config: object())
+    spec = SimpleNamespace(provider_cls=lambda _config: SimpleNamespace(authenticate_external_websocket=AsyncMock(return_value=True)))
 
     with (
         patch("api.routes.agent_stream.telephony_registry") as registry,

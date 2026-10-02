@@ -1,4 +1,5 @@
 import os
+import hashlib
 from pathlib import Path
 
 from api.enums import Environment
@@ -81,20 +82,9 @@ ENABLE_PROMETHEUS_METRICS = (
 )
 
 # Storage Configuration
-ENABLE_AWS_S3 = os.getenv("ENABLE_AWS_S3", "false").lower() == "true"
-
-# MinIO Configuration
-MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "localhost:9000")
-# Full URL (scheme + host) browsers use to reach object storage. Derives from
-# PUBLIC_BASE_URL (remote nginx proxies /voice-audio/ to MinIO); set explicitly
-# only to point object storage at a separate origin.
-MINIO_PUBLIC_ENDPOINT = (
-    os.getenv("MINIO_PUBLIC_ENDPOINT") or PUBLIC_BASE_URL or "http://localhost:9000"
-)
-MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
-MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin")
-MINIO_BUCKET = os.getenv("MINIO_BUCKET", "voice-audio")
-MINIO_SECURE = os.getenv("MINIO_SECURE", "false").lower() == "true"
+ENABLE_AWS_S3 = True
+ENABLE_CLOUDFLARE_TUNNEL = os.getenv("ENABLE_CLOUDFLARE_TUNNEL", "false").lower() == "true"
+ABERA_STORAGE_LIMIT_BYTES = int(os.getenv("ABERA_STORAGE_LIMIT_BYTES", "0"))
 
 # AWS S3 Configuration
 S3_BUCKET = os.environ.get("S3_BUCKET")
@@ -145,7 +135,7 @@ ENABLE_CALL_RECORDING_UPLOAD = (
 #   * secret set, enforce on  -> invalid/missing tokens rejected (WS close 4401)
 TELEPHONY_WS_TOKEN_SECRET = os.getenv("TELEPHONY_WS_TOKEN_SECRET") or None
 TELEPHONY_WS_TOKEN_ENFORCE = (
-    os.getenv("TELEPHONY_WS_TOKEN_ENFORCE", "false").lower() == "true"
+    os.getenv("TELEPHONY_WS_TOKEN_ENFORCE", "true").lower() == "true"
 )
 
 # Logging configuration
@@ -270,7 +260,12 @@ TURN_CREDENTIAL_TTL = int(os.getenv("TURN_CREDENTIAL_TTL", "86400"))
 FORCE_TURN_RELAY = os.getenv("FORCE_TURN_RELAY", "false").lower() == "true"
 
 # OSS Email/Password Auth
-OSS_JWT_SECRET = os.getenv("OSS_JWT_SECRET", "change-me-in-production")
+OSS_JWT_SECRET = os.getenv("OSS_JWT_SECRET", "")
+# Domain separation keeps media signing distinct from JWT signing.
+TELEPHONY_WS_TOKEN_SECRET = TELEPHONY_WS_TOKEN_SECRET or (
+    hashlib.sha256(("telephony-media-v1:" + OSS_JWT_SECRET).encode()).hexdigest()
+    if OSS_JWT_SECRET else None
+)
 OSS_JWT_EXPIRY_HOURS = int(os.getenv("OSS_JWT_EXPIRY_HOURS", "720"))  # 30 days
 
 TUNER_BASE_URL = os.getenv("TUNER_BASE_URL", "https://api.usetuner.ai")

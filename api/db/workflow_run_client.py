@@ -1,7 +1,7 @@
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
-from sqlalchemy import Float, cast, func
+from sqlalchemy import Float, cast, func, update
 from sqlalchemy.future import select
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -34,6 +34,22 @@ def append_unique_tags(existing_tags: object, new_tags: object) -> list:
 
 
 class WorkflowRunClient(BaseDBClient):
+    async def claim_telephony_media(self, run_id: int, workflow_id: int, organization_id: int) -> bool:
+        """Atomically redeem a media connection once, scoped through its workflow."""
+        async with self.async_session() as session:
+            result = await session.execute(
+                update(WorkflowRunModel).where(
+                    WorkflowRunModel.id == run_id,
+                    WorkflowRunModel.workflow_id == workflow_id,
+                    WorkflowRunModel.workflow_id.in_(select(WorkflowModel.id).where(WorkflowModel.organization_id == organization_id)),
+                    WorkflowRunModel.state == "initialized",
+                    WorkflowRunModel.is_completed == False,
+                ).values(state="running")
+            )
+            await session.commit()
+            return result.rowcount == 1
+
+
     async def create_workflow_run(
         self,
         name: str,

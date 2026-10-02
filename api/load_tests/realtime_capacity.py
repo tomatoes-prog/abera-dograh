@@ -1,6 +1,6 @@
 """Run real WebRTC calls from outside the Dograh host being measured.
 
-The selected workflows must already use openai_realtime/gpt-realtime-2.1.
+The selected workflows must already use openai_realtime/gpt-realtime-2.1-mini.
 Run on a separate load generator with aiortc and PyAV installed, outside the
 EC2 host or Docker VM whose capacity is being measured.
 """
@@ -8,6 +8,8 @@ EC2 host or Docker VM whose capacity is being measured.
 from __future__ import annotations
 
 import argparse
+import math
+import numpy as np
 import asyncio
 import json
 import os
@@ -127,7 +129,10 @@ async def observe_audio(track, result: dict, speech: RepeatingSpeechTrack) -> No
             result["received_audio_frames"] += 1
             # The server latency histogram is the primary timing measurement.
             # Client frames prove that speech reached the caller.
-            if any(bytes(frame.planes[0])):
+            samples = frame.to_ndarray().astype(np.float64)
+            rms = float(np.sqrt(np.mean(samples * samples))) if samples.size else 0.0
+            threshold = 0.003 if frame.format.name.startswith("flt") else 100
+            if rms >= threshold:
                 result["received_speech_frames"] += 1
                 if speech.last_turn_end is not None and speech.turn_number > measured_turn:
                     result["response_ms"].append(round((time.monotonic() - speech.last_turn_end) * 1000, 1))
@@ -256,6 +261,9 @@ async def call(base_url: str, workflow_id: int, token: str, audio: bytes,
                 )
                 result["run_completed"] = bool(details.get("is_completed"))
                 result["usage_info"] = details.get("usage_info")
+                runtime = (details.get("initial_context") or {}).get("runtime_configuration") or {}
+                result["runtime_model"] = runtime.get("realtime_model")
+                result["runtime_provider"] = runtime.get("realtime_provider")
                 if result["run_completed"]:
                     break
             except Exception:
@@ -281,6 +289,10 @@ async def sample_health(base_url: str, token: str, secret: str, samples: list[di
 
 
 async def run(args: argparse.Namespace, audio: bytes) -> dict:
+    config = await asyncio.to_thread(api_json, args.base_url, "/api/v1/user/configurations/user", os.environ["DOGRAH_TEST_ACCESS_TOKEN"])
+    realtime = config.get("realtime") or {}
+    if realtime.get("provider") != "openai_realtime" or realtime.get("model") != args.expected_model:
+        raise ValueError("Realtime configuration does not match the requested model; no calls started")
     token = os.environ["DOGRAH_TEST_ACCESS_TOKEN"]
     secret = os.environ["DOGRAH_DEVOPS_SECRET"]
     ids = [int(value) for value in args.workflow_ids.split(",")]
@@ -300,7 +312,7 @@ async def run(args: argparse.Namespace, audio: bytes) -> dict:
     finally:
         stop.set()
         await monitor
-    return {"started_at": started_at, "expected_model": "gpt-realtime-2.1",
+    return {"started_at": started_at, "expected_model": args.expected_model, "configured_model": realtime["model"],
             "clients": args.clients, "planned_seconds": args.seconds,
             "calls": calls, "health_samples": samples}
 
@@ -311,6 +323,7 @@ def main() -> int:
     parser.add_argument("--workflow-ids", required=True, help="One workflow ID or one per client, comma separated")
     parser.add_argument("--wav", required=True, type=Path, help="Mono PCM16 48-kHz Spanish speech WAV")
     parser.add_argument("--clients", type=int, choices=range(1, 6), required=True)
+    parser.add_argument("--expected-model", default="gpt-realtime-2.1-mini")
     parser.add_argument("--seconds", type=int, default=120)
     parser.add_argument("--speak-seconds", type=float, default=5.0)
     parser.add_argument("--cycle-seconds", type=float, default=20.0)
@@ -326,8 +339,9 @@ def main() -> int:
     result = asyncio.run(run(args, audio))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
-    passed = sum(item["status"] == "completed" and item["received_speech_frames"] > 0
-                 and item["run_completed"]
+    passed = sum(item["status"] == "completed" and len(item["response_ms"]) >= max(2, math.floor((args.seconds - args.warmup_seconds) / args.cycle_seconds) - 1)
+                 and item["run_completed"] and item.get("runtime_model") == args.expected_model
+                 and item.get("runtime_provider") == "openai_realtime"
                  for item in result["calls"])
     print(f"{passed}/{args.clients} calls completed with received speech; result: {args.output}")
     return 0 if passed == args.clients else 1

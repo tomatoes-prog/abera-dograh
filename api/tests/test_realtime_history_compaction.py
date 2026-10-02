@@ -19,6 +19,13 @@ class FakeService:
     def add_event_handler(self, name, handler):
         self.handlers[name] = handler
 
+    async def confirm_conversation_item(self, item_id):
+        return message(item_id, "system")
+
+    async def delete_conversation_item_confirmed(self, item_id):
+        from pipecat.services.openai.realtime.events import ConversationItemDeleteEvent
+        await self.send_client_event(ConversationItemDeleteEvent(item_id=item_id))
+
     async def send_client_event(self, event):
         self.sent.append(event)
 
@@ -191,3 +198,65 @@ async def test_summarize_turns_returns_none_on_empty():
     llm = SimpleNamespace(run_inference=AsyncMock(return_value="   "))
     turns = [SimpleNamespace(turn_id=1, user_text="hola", assistant_text="buenas")]
     assert await summarize_turns(llm, turns) is None
+
+
+@pytest.mark.asyncio
+async def test_unconfirmed_summary_is_retried_without_duplicate_insert_or_deletion():
+    from unittest.mock import AsyncMock
+    service = FakeService()
+    summarize = AsyncMock(return_value="primer resumen")
+    service.confirm_conversation_item = AsyncMock(side_effect=TimeoutError())
+    compactor = make_compactor(service, summarize=summarize)
+    await drive_turns(compactor, service, 20)
+    assert [event.type for event in service.sent] == ["conversation.item.create"]
+    service.confirm_conversation_item.side_effect = None
+    await compactor._run_cycle()
+    assert sum(event.type == "conversation.item.create" for event in service.sent) == 1
+    summarize.assert_awaited_once()
+    assert compactor._pending_summary is None
+
+
+@pytest.mark.asyncio
+async def test_cumulative_summary_replaces_only_our_previous_note():
+    from unittest.mock import AsyncMock
+    service = FakeService()
+    summarize = AsyncMock(side_effect=["dato importante", "dato importante y nuevo"])
+    compactor = make_compactor(service, summarize=summarize)
+    await drive_turns(compactor, service, 20)
+    previous_id = service.sent[0].item.id
+    await service.handlers["on_conversation_item_created"](service, previous_id, message(previous_id, "system"))
+    await service.handlers["on_conversation_item_created"](service, "instructions", message("instructions", "system"))
+    await drive_turns(compactor, service, 20, start=21)
+    inputs = summarize.await_args.args[0]
+    assert inputs[0].assistant_text == "dato importante"
+    deleted = {event.item_id for event in service.sent if event.type == "conversation.item.delete"}
+    assert previous_id in deleted
+    assert "instructions" not in deleted
+    assert len(compactor._summary_item_ids) == 1
+
+
+@pytest.mark.asyncio
+async def test_failed_deletion_is_not_forgotten_or_resummarized():
+    from unittest.mock import AsyncMock
+    service = FakeService()
+    summarize = AsyncMock(return_value="resumen")
+    service.delete_conversation_item_confirmed = AsyncMock(side_effect=TimeoutError())
+    compactor = make_compactor(service, summarize=summarize)
+    await drive_turns(compactor, service, 20)
+    assert compactor._pending_deletions
+    service.delete_conversation_item_confirmed.side_effect = None
+    await compactor._run_cycle()
+    assert not compactor._pending_deletions
+    summarize.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_summary_budget_preserves_prior_context():
+    from unittest.mock import AsyncMock
+    llm = SimpleNamespace(run_inference=AsyncMock(return_value="resumen"))
+    turns = [SimpleNamespace(turn_id=0, user_text="Resumen anterior", assistant_text="dato inicial")]
+    turns += [SimpleNamespace(turn_id=i, user_text="x" * 1000, assistant_text="y" * 1000) for i in range(1, 10)]
+    await summarize_turns(llm, turns)
+    body = llm.run_inference.await_args.args[0].messages[0]["content"]
+    assert "dato inicial" in body
+    assert len(body) <= 6000

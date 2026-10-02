@@ -5,13 +5,8 @@ from loguru import logger
 
 from api.constants import (
     ENABLE_AWS_S3,
+    ABERA_STORAGE_LIMIT_BYTES,
     ENVIRONMENT,
-    MINIO_ACCESS_KEY,
-    MINIO_BUCKET,
-    MINIO_ENDPOINT,
-    MINIO_PUBLIC_ENDPOINT,
-    MINIO_SECRET_KEY,
-    MINIO_SECURE,
     S3_ADDRESSING_STYLE,
     S3_BUCKET,
     S3_ENDPOINT_URL,
@@ -20,7 +15,7 @@ from api.constants import (
 )
 from api.enums import Environment, StorageBackend
 
-from .filesystem import BaseFileSystem, MinioFileSystem, NullFileSystem, S3FileSystem
+from .filesystem import BaseFileSystem, NullFileSystem, S3FileSystem
 
 
 def get_storage_for_backend(backend: str) -> BaseFileSystem:
@@ -28,32 +23,13 @@ def get_storage_for_backend(backend: str) -> BaseFileSystem:
 
     Maps StorageBackend enum codes to actual storage implementations:
     - Code 1 (S3): AWS S3 via S3FileSystem
-    - Code 2 (MINIO): MinIO via MinioFileSystem
+    Historical MinIO values require an explicit data migration.
     """
-    # Code 2: MinIO implementation (local/OSS deployments)
     if backend == StorageBackend.MINIO.value:
-        if not MINIO_PUBLIC_ENDPOINT:
-            raise ValueError(
-                "MINIO_PUBLIC_ENDPOINT is required for MinIO storage. "
-                "Set it to the full URL browsers use to reach MinIO, "
-                "e.g. 'http://localhost:9000' for local dev or "
-                "'https://your-server.example.com' for a remote deployment."
-            )
-        logger.info(
-            f"Initializing {backend} storage at {MINIO_ENDPOINT} "
-            f"(public: {MINIO_PUBLIC_ENDPOINT}) with bucket '{MINIO_BUCKET}'"
-        )
-        return MinioFileSystem(
-            endpoint=MINIO_ENDPOINT,
-            access_key=MINIO_ACCESS_KEY,
-            secret_key=MINIO_SECRET_KEY,
-            bucket_name=MINIO_BUCKET,
-            secure=MINIO_SECURE,
-            public_endpoint=MINIO_PUBLIC_ENDPOINT,
-        )
+        raise ValueError("Legacy MinIO objects must be migrated to S3 before access")
 
     # Code 1: AWS S3 implementation (cloud deployments)
-    elif backend == StorageBackend.S3.value:
+    if backend == StorageBackend.S3.value:
         if not S3_BUCKET:
             raise ValueError(
                 "S3_BUCKET environment variable is required when using S3 storage"
@@ -76,6 +52,7 @@ def get_storage_for_backend(backend: str) -> BaseFileSystem:
             signature_version=S3_SIGNATURE_VERSION,
             addressing_style=S3_ADDRESSING_STYLE,
             key_prefix=key_prefix,
+            storage_limit_bytes=ABERA_STORAGE_LIMIT_BYTES if key_prefix else None,
         )
 
     # Future backend implementations can be added here:

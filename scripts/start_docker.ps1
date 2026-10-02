@@ -16,9 +16,6 @@ function New-HexSecret {
     return -join ($bytes | ForEach-Object { $_.ToString('x2') })
 }
 
-function New-MinioRootUser {
-    return "dograh$((New-HexSecret).Substring(0, 12))"
-}
 
 function Get-DotEnvValue {
     param(
@@ -182,39 +179,20 @@ if ([string]::IsNullOrEmpty($existingRedisPassword)) {
     Write-Host "REDIS_PASSWORD is already set in $EnvFile."
 }
 
-$existingMinioRootUser = Get-DotEnvValue -Path $EnvFile -Key 'MINIO_ROOT_USER'
-if ([string]::IsNullOrEmpty($existingMinioRootUser)) {
-    $existingMinioAccessKey = Get-DotEnvValue -Path $EnvFile -Key 'MINIO_ACCESS_KEY'
-    if ([string]::IsNullOrEmpty($existingMinioAccessKey)) {
-        Set-DotEnvValue -Path $EnvFile -Key 'MINIO_ROOT_USER' -Value (New-MinioRootUser)
-        Write-Host "Created MINIO_ROOT_USER in $EnvFile."
-    } else {
-        Set-DotEnvValue -Path $EnvFile -Key 'MINIO_ROOT_USER' -Value $existingMinioAccessKey
-        Write-Host "Created MINIO_ROOT_USER in $EnvFile from existing MINIO_ACCESS_KEY."
-    }
-} else {
-    Write-Host "MINIO_ROOT_USER is already set in $EnvFile."
-}
-
-$existingMinioRootPassword = Get-DotEnvValue -Path $EnvFile -Key 'MINIO_ROOT_PASSWORD'
-if ([string]::IsNullOrEmpty($existingMinioRootPassword)) {
-    $existingMinioSecretKey = Get-DotEnvValue -Path $EnvFile -Key 'MINIO_SECRET_KEY'
-    if ([string]::IsNullOrEmpty($existingMinioSecretKey)) {
-        Set-DotEnvValue -Path $EnvFile -Key 'MINIO_ROOT_PASSWORD' -Value (New-HexSecret)
-        Write-Host "Created MINIO_ROOT_PASSWORD in $EnvFile."
-    } else {
-        Set-DotEnvValue -Path $EnvFile -Key 'MINIO_ROOT_PASSWORD' -Value $existingMinioSecretKey
-        Write-Host "Created MINIO_ROOT_PASSWORD in $EnvFile from existing MINIO_SECRET_KEY."
-    }
-} else {
-    Write-Host "MINIO_ROOT_PASSWORD is already set in $EnvFile."
-}
+$s3Bucket = Get-DotEnvValue -Path $EnvFile -Key 'S3_BUCKET'
+if ([string]::IsNullOrEmpty($s3Bucket)) { $s3Bucket = $env:S3_BUCKET }
+if ([string]::IsNullOrEmpty($s3Bucket)) { throw 'Set S3_BUCKET and AWS credentials (or an IAM role) in .env before starting. See deploy/abera/IMAGE_OPTIMIZATION.md.' }
+Set-DotEnvValue -Path $EnvFile -Key 'S3_BUCKET' -Value $s3Bucket
+if (-not (Get-DotEnvValue -Path $EnvFile -Key 'S3_REGION')) { Set-DotEnvValue -Path $EnvFile -Key 'S3_REGION' -Value 'us-east-2' }
+$composeArgs = @()
+if ((Get-DotEnvValue -Path $EnvFile -Key 'ENABLE_CLOUDFLARE_TUNNEL') -eq 'true') { $composeArgs += @('--profile', 'tunnel') }
+elseif (-not (Get-DotEnvValue -Path $EnvFile -Key 'BACKEND_API_ENDPOINT')) { Set-DotEnvValue -Path $EnvFile -Key 'BACKEND_API_ENDPOINT' -Value 'http://localhost:8000' }
 
 Write-Host ''
 Write-Host "Docker registry: $Registry"
 Write-Host ''
 Write-Host 'This will run:'
-Write-Host "  `$env:REGISTRY = '$Registry'; `$env:ENABLE_TELEMETRY = '$EnableTelemetry'; docker compose --profile tunnel up --pull always"
+Write-Host "  `$env:REGISTRY = '$Registry'; `$env:ENABLE_TELEMETRY = '$EnableTelemetry'; docker compose $($composeArgs -join " ") up --pull always"
 Write-Host ''
 
 $answer = Read-Host 'Start Dograh now? [Y/n]'
@@ -226,7 +204,7 @@ if ($answer -match '^[Nn]') {
 $env:REGISTRY = $Registry
 $env:ENABLE_TELEMETRY = $EnableTelemetry
 Sync-PostgresPassword -Password (Get-DotEnvValue -Path $EnvFile -Key 'POSTGRES_PASSWORD')
-docker compose --profile tunnel up --pull always
+docker compose @composeArgs up --pull always
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }

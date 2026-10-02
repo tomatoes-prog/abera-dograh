@@ -34,8 +34,8 @@ async def test_managed_agent_limit_is_checked_under_transaction_lock(monkeypatch
     monkeypatch.setenv("DEPLOYMENT_MODE", "abera")
     monkeypatch.setenv("ABERA_MAX_AGENTS", "2")
     session = CountSession(count=2)
-    monkeypatch.setattr(WorkflowClient, "async_session", lambda _self: session)
     client = WorkflowClient.__new__(WorkflowClient)
+    client.async_session = lambda: session
 
     with pytest.raises(AgentLimitExceeded, match="2 agentes"):
         await client.create_workflow("third", {}, user_id=1, organization_id=7)

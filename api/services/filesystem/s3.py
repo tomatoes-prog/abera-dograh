@@ -1,3 +1,8 @@
+import os
+from contextlib import asynccontextmanager
+
+from api.services.filesystem.quota import StorageQuotaExceeded, storage_write_lock
+
 from typing import Any, Dict, Optional
 
 import aioboto3
@@ -18,6 +23,7 @@ class S3FileSystem(BaseFileSystem):
         signature_version: Optional[str] = None,
         addressing_style: Optional[str] = None,
         key_prefix: str = "",
+        storage_limit_bytes: int | None = None,
     ):
         """Initialize S3 filesystem.
 
@@ -31,6 +37,9 @@ class S3FileSystem(BaseFileSystem):
             addressing_style: Optional S3 addressing style (``"path"`` /
                 ``"virtual"`` / ``"auto"``). ``None`` keeps botocore's default.
         """
+        if storage_limit_bytes is not None and (storage_limit_bytes < 1 or not key_prefix):
+            raise ValueError("Managed storage requires a positive limit and tenant prefix")
+        self.storage_limit_bytes = storage_limit_bytes
         self.bucket_name = bucket_name
         self.key_prefix = key_prefix.strip("/")
         self.region_name = region_name
@@ -64,12 +73,35 @@ class S3FileSystem(BaseFileSystem):
             kwargs["config"] = self._config
         return kwargs
 
+    @asynccontextmanager
+    async def _write_budget(self, client, path: str, size: int):
+        if self.storage_limit_bytes is None:
+            yield
+            return
+        async with storage_write_lock(self.bucket_name, self.key_prefix):
+            used = 0
+            paginator = client.get_paginator("list_objects_v2")
+            async for page in paginator.paginate(Bucket=self.bucket_name, Prefix=self.key_prefix + "/"):
+                used += sum(item["Size"] for item in page.get("Contents", []))
+            previous = 0
+            try:
+                existing = await client.head_object(Bucket=self.bucket_name, Key=self._key(path))
+                previous = existing["ContentLength"]
+            except ClientError as exc:
+                if exc.response["Error"]["Code"] not in {"404", "NoSuchKey", "NotFound"}:
+                    raise
+            if used - previous + size > self.storage_limit_bytes:
+                raise StorageQuotaExceeded("El almacenamiento contratado está agotado")
+            yield
+
     async def acreate_file(self, file_path: str, content: AsyncReadable) -> bool:
         try:
             async with self.session.client("s3", **self._client_kwargs()) as s3_client:
-                await s3_client.put_object(
-                    Bucket=self.bucket_name, Key=self._key(file_path), Body=await content.read()
-                )
+                data = await content.read()
+                async with self._write_budget(s3_client, file_path, len(data)):
+                    await s3_client.put_object(
+                        Bucket=self.bucket_name, Key=self._key(file_path), Body=data
+                    )
             return True
         except ClientError:
             return False
@@ -77,9 +109,10 @@ class S3FileSystem(BaseFileSystem):
     async def aupload_file(self, local_path: str, destination_path: str) -> bool:
         try:
             async with self.session.client("s3", **self._client_kwargs()) as s3_client:
-                await s3_client.upload_file(
-                    local_path, self.bucket_name, self._key(destination_path)
-                )
+                async with self._write_budget(s3_client, destination_path, os.path.getsize(local_path)):
+                    await s3_client.upload_file(
+                        local_path, self.bucket_name, self._key(destination_path)
+                    )
             return True
         except ClientError:
             return False
@@ -160,7 +193,9 @@ class S3FileSystem(BaseFileSystem):
         content_type: str = "text/csv",
         max_size: int = 10_485_760,
     ) -> Optional[str]:
-        """Generate a presigned PUT URL for direct file upload."""
+        """Generate a presigned PUT URL; managed writes use the bounded upload proxy."""
+        if self.storage_limit_bytes is not None:
+            raise ValueError("Managed uploads must use the quota-controlled proxy")
         try:
             async with self.session.client("s3", **self._client_kwargs()) as s3_client:
                 url = await s3_client.generate_presigned_url(
@@ -189,11 +224,13 @@ class S3FileSystem(BaseFileSystem):
         """Copy a file within S3 (server-side copy)."""
         try:
             async with self.session.client("s3", **self._client_kwargs()) as s3_client:
-                await s3_client.copy_object(
-                    Bucket=self.bucket_name,
-                    Key=self._key(destination_path),
-                    CopySource={"Bucket": self.bucket_name, "Key": self._key(source_path)},
-                )
+                source = await s3_client.head_object(Bucket=self.bucket_name, Key=self._key(source_path))
+                async with self._write_budget(s3_client, destination_path, source["ContentLength"]):
+                    await s3_client.copy_object(
+                        Bucket=self.bucket_name,
+                        Key=self._key(destination_path),
+                        CopySource={"Bucket": self.bucket_name, "Key": self._key(source_path)},
+                    )
             return True
         except ClientError:
             return False

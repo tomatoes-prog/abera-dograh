@@ -496,6 +496,9 @@ async def test_second_partial_word_interrupts_greeting_and_answers_finished_turn
                 c.user.user_turn_controller.user_turn_strategies is c.normal_strategies
             )
         )
+        # Playback completion and strategy restoration happen upstream of the
+        # output worker; wait for that worker's acknowledgement before counting.
+        await until(lambda: c.output.interruptions == 1)
         assert c.output.interruptions == 1
         # Interrupting audio does not authorize inference from partial text.
         assert c.llm.get_current_step() == (1 if greeting_type == "llm" else 0)

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from api.constants import DEPLOYMENT_MODE, ENABLE_SIGNUP
 from api.db import db_client
@@ -93,7 +93,9 @@ async def signup(request: SignupRequest):
     response_model=AuthResponse,
     dependencies=[Depends(require_local_auth)],
 )
-async def login(request: LoginRequest):
+async def login(request: LoginRequest, http_request: Request):
+    from api.services.auth.security import throttle_login
+    await throttle_login(http_request, request.email)
     # Look up user by email
     user = await db_client.get_user_by_email(request.email)
     if not user or not user.password_hash:

@@ -1171,6 +1171,7 @@ async def _run_pipeline_impl(
     # turns). Off by default; cascade pipelines keep using
     # context_compaction_enabled. OpenAI Realtime only: other providers use
     # different server event names.
+    history_compactor = None
     compaction_turns = int(run_configs.get("realtime_history_compaction_turns", 0) or 0)
     if is_realtime and compaction_turns > 0 and inference_llm is not None:
         from api.services.pipecat.realtime.history_compaction import (
@@ -1366,6 +1367,8 @@ async def _run_pipeline_impl(
     except asyncio.CancelledError:
         logger.warning("Received CancelledError in _run_pipeline")
     finally:
+        if history_compactor is not None:
+            await history_compactor.close()
         # Close MCP sessions here, not in engine.cleanup(). The anyio cancel
         # scopes opened by MCPClient.start() in engine.initialize() are
         # task-affine; this finally runs in the same task as initialize(),

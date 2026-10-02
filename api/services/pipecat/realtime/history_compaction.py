@@ -10,7 +10,7 @@ the call's text LLM and replaces them server-side with a single system note::
 
 The most recent ``keep_last_turns`` turns stay verbatim, in-flight items are
 never touched, and ``function_call``/``function_call_output`` items are only
-removed as complete pairs. Our own summary notes are never deleted. If the
+removed as complete pairs. Our prior summary is replaced only after the new cumulative note is confirmed. If the
 summary inference fails, nothing is deleted and the next trigger retries.
 
 Off unless the run enables it via the ``realtime_history_compaction_turns``
@@ -21,6 +21,7 @@ using ``context_compaction_enabled``.
 from __future__ import annotations
 
 import asyncio
+import uuid
 from dataclasses import dataclass, field
 
 from loguru import logger
@@ -28,7 +29,6 @@ from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.services.openai.realtime.events import (
     ConversationItem,
     ConversationItemCreateEvent,
-    ConversationItemDeleteEvent,
     ItemContent,
 )
 
@@ -102,7 +102,11 @@ async def summarize_turns(
         for turn in turns
     )
     if len(body) > SUMMARY_INPUT_CHAR_BUDGET:
-        body = body[-SUMMARY_INPUT_CHAR_BUDGET:]
+        # Preserve the cumulative summary; truncating only the tail would lose
+        # everything summarized during earlier cycles.
+        previous = next((turn.assistant_text for turn in turns if turn.turn_id == 0), "")
+        prefix = f"Resumen anterior: {previous[:2000]}\n" if previous else ""
+        body = prefix + body[-(SUMMARY_INPUT_CHAR_BUDGET - len(prefix)):]
     instruction = SUMMARY_INSTRUCTIONS.get(language, SUMMARY_INSTRUCTIONS["es"])
     context = LLMContext()
     context.set_messages([{"role": "user", "content": body}])
@@ -149,6 +153,9 @@ class RealtimeHistoryCompactor:
         self._turns: list[_CompletedTurn] = []
         self._compacted_through_turn = 0
         self._summary_item_ids: set[str] = set()
+        self._summary_text = ""
+        self._pending_summary = None
+        self._pending_deletions: dict[str, _TrackedItem] = {}
         self._completed_turns = 0
         self._cycle_lock = asyncio.Lock()
         self._cycle_task: asyncio.Task | None = None
@@ -156,6 +163,16 @@ class RealtimeHistoryCompactor:
     @property
     def enabled(self) -> bool:
         return self._every_n_turns > 0
+
+    async def close(self) -> None:
+        """Cancel inference and provider requests when the voice session ends."""
+        self._is_active = lambda: False
+        if self._cycle_task is not None and not self._cycle_task.done():
+            self._cycle_task.cancel()
+            try:
+                await self._cycle_task
+            except asyncio.CancelledError:
+                pass
 
     def attach(
         self,
@@ -227,8 +244,8 @@ class RealtimeHistoryCompactor:
         turns_seen = max(1, self._completed_turns)
         per_turn = max(2, -(-len(self._items) // turns_seen))
         keep_messages = max(10, self._keep_last_turns * per_turn)
-        # System notes (including our own summaries) are never eligible:
-        # they hold prior compactions and stay tiny.
+        # Keep system instructions. Our summary is replaced separately only
+        # after the next cumulative summary has been acknowledged.
         message_indexes = [
             index
             for index, item in enumerate(self._items)
@@ -267,7 +284,21 @@ class RealtimeHistoryCompactor:
 
     async def _compact_once(self) -> CompactionResult:
         result = CompactionResult()
-        horizon = self._completed_turns - self._keep_last_turns
+        # Retry failed deletions before inserting another summary. Progress never
+        # causes an unacknowledged item to be forgotten.
+        if self._pending_deletions:
+            for item_id in list(self._pending_deletions):
+                try:
+                    await self._service.delete_conversation_item_confirmed(item_id)
+                    del self._pending_deletions[item_id]
+                    self._items = [item for item in self._items if item.item_id != item_id]
+                    self._summary_item_ids.discard(item_id)
+                except Exception:
+                    continue
+            if self._pending_deletions:
+                result.skipped_reason = "deletion confirmation pending"
+                return result
+        horizon = self._turns[-self._keep_last_turns - 1].turn_id if len(self._turns) > self._keep_last_turns else 0
         pending = [
             turn
             for turn in self._turns
@@ -280,7 +311,10 @@ class RealtimeHistoryCompactor:
         if self._summarize is None:
             result.skipped_reason = "no summarizer"
             return result
-        summary = await self._summarize(pending)
+        inputs = pending
+        if self._summary_text:
+            inputs = [_CompletedTurn(0, "Resumen anterior", self._summary_text)] + pending
+        summary = self._pending_summary[1] if self._pending_summary else await self._summarize(inputs)
         if not summary:
             result.skipped_reason = "summary failed"
             logger.warning(
@@ -288,29 +322,43 @@ class RealtimeHistoryCompactor:
                 f"(run {self._workflow_run_id})"
             )
             return result
+        summary = summary[:2000]
         note = SUMMARY_NOTE_PREFIX[self._language] + summary
-        try:
-            await self._service.send_client_event(
-                ConversationItemCreateEvent(
-                    item=ConversationItem(
-                        type="message",
-                        role="system",
+        note_id = uuid.uuid4().hex
+        old_summaries = set(self._summary_item_ids)
+        if self._pending_summary is None:
+            self._pending_summary = (note_id, summary, pending, delete, old_summaries)
+            try:
+                await self._service.send_client_event(
+                    ConversationItemCreateEvent(item=ConversationItem(
+                        id=note_id, type="message", role="system",
                         content=[ItemContent(type="input_text", text=note)],
-                    )
+                    ))
                 )
-            )
+            except Exception as exc:
+                result.skipped_reason = f"summary insert failed: {type(exc).__name__}"
+                return result
+        else:
+            note_id, summary, pending, delete, old_summaries = self._pending_summary
+        try:
+            await self._service.confirm_conversation_item(note_id)
         except Exception as exc:
-            result.skipped_reason = f"summary insert failed: {exc}"
-            logger.warning(f"Realtime compaction: {result.skipped_reason}")
+            from api.services.pipecat.realtime.openai_realtime import RealtimeItemMissing
+            if isinstance(exc, RealtimeItemMissing):
+                self._pending_summary = None
+            result.skipped_reason = f"summary confirmation pending: {type(exc).__name__}"
             return result
+        self._pending_summary = None
+        self._summary_text = summary
+        self._summary_item_ids.add(note_id)
+        delete.extend(_TrackedItem(item_id, "message", role="system") for item_id in old_summaries)
         deleted_ids: set[str] = set()
         for item in delete:
             try:
-                await self._service.send_client_event(
-                    ConversationItemDeleteEvent(item_id=item.item_id)
-                )
+                await self._service.delete_conversation_item_confirmed(item.item_id)
                 deleted_ids.add(item.item_id)
             except Exception as exc:
+                self._pending_deletions[item.item_id] = item
                 logger.warning(
                     f"Realtime compaction: delete {item.item_id} failed: {exc}"
                 )
@@ -319,6 +367,7 @@ class RealtimeHistoryCompactor:
         self._items = [
             item for item in self._items if item.item_id not in deleted_ids
         ]
+        self._summary_item_ids.difference_update(deleted_ids)
         deleted = len(deleted_ids)
         self._compacted_through_turn = max(
             self._compacted_through_turn, max(turn.turn_id for turn in pending)

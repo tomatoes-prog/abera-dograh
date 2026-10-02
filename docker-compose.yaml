@@ -41,7 +41,7 @@ services:
       - app-network
 
   redis:
-    image: redis:7
+    image: redis:7-alpine
     ports:
       - "6379:6379"
     command: >
@@ -56,27 +56,6 @@ services:
     networks:
       - app-network
 
-  minio:
-    image: quay.io/minio/minio
-    container_name: minio
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: "${MINIO_ROOT_USER:-minioadmin}"
-      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD:-minioadmin}"
-      MINIO_API_CORS_ALLOW_ORIGIN: "*"
-    ports:
-      - "127.0.0.1:9000:9000" # Bind to localhost explicitly
-      - "127.0.0.1:9001:9001"
-    volumes:
-      - minio-data:/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - app-network
-
   dograh-init:
     image: bash:5.2
     container_name: dograh_init
@@ -87,7 +66,6 @@ services:
       PUBLIC_HOST: "${PUBLIC_HOST:-}"
       PUBLIC_BASE_URL: "${PUBLIC_BASE_URL:-}"
       BACKEND_API_ENDPOINT: "${BACKEND_API_ENDPOINT:-http://localhost:8000}"
-      MINIO_PUBLIC_ENDPOINT: "${MINIO_PUBLIC_ENDPOINT:-http://localhost:9000}"
       TURN_HOST: "${TURN_HOST:-}"
       TURN_SECRET: "${TURN_SECRET:-}"
       FASTAPI_WORKERS: "${FASTAPI_WORKERS:-1}"
@@ -151,7 +129,7 @@ services:
       ENABLE_SIGNUP: "${ENABLE_SIGNUP:-true}"
 
       # Public origin for this deployment. The API derives BACKEND_API_ENDPOINT,
-      # MINIO_PUBLIC_ENDPOINT and TURN_HOST from PUBLIC_BASE_URL / PUBLIC_HOST when
+      # TURN_HOST from PUBLIC_BASE_URL / PUBLIC_HOST when
       # they are not set explicitly (see api/constants.py), so a standard remote
       # install only needs PUBLIC_BASE_URL + PUBLIC_HOST in .env.
       PUBLIC_BASE_URL: "${PUBLIC_BASE_URL:-}"
@@ -160,7 +138,7 @@ services:
       # Optional explicit override of the public URL the backend builds webhook /
       # embed links from. Defaults to PUBLIC_BASE_URL. When the value is non-public
       # (localhost or a private/reserved IP), the API resolves a running Cloudflare
-      # tunnel's URL at runtime instead (see api/utils/common.py).
+      # tunnel's URL only when ENABLE_CLOUDFLARE_TUNNEL=true.
       BACKEND_API_ENDPOINT: "${BACKEND_API_ENDPOINT:-}"
 
       # Database configuration (using containerized postgres)
@@ -169,9 +147,9 @@ services:
       # Redis configuration (using containerized redis)
       REDIS_URL: "redis://:${REDIS_PASSWORD:-redissecret}@redis:6379"
 
-      # Storage configuration - bundled MinIO by default. Set ENABLE_AWS_S3=true
+      # Storage configuration - private S3 storage; configure S3_BUCKET
       # in .env to make the API use AWS S3 or another S3-compatible server.
-      ENABLE_AWS_S3: "${ENABLE_AWS_S3:-false}"
+      ENABLE_AWS_S3: "true"
 
       # S3 backend configuration. Compose's .env file is used for interpolation,
       # but those values are not automatically injected into containers, so pass
@@ -179,7 +157,7 @@ services:
       AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID:-}"
       AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY:-}"
       AWS_SESSION_TOKEN: "${AWS_SESSION_TOKEN:-}"
-      S3_BUCKET: "${S3_BUCKET:-}"
+      S3_BUCKET: "${S3_BUCKET:?Set a private S3 bucket}"
       S3_REGION: "${S3_REGION:-us-east-1}"
 
       # For a non-AWS S3-compatible server, also set these in Compose's .env
@@ -190,17 +168,6 @@ services:
       S3_ENDPOINT_URL: "${S3_ENDPOINT_URL:-}"
       S3_SIGNATURE_VERSION: "${S3_SIGNATURE_VERSION:-}"
       S3_ADDRESSING_STYLE: "${S3_ADDRESSING_STYLE:-}"
-
-      # MinIO
-      MINIO_ENDPOINT: "minio:9000"
-      # Full URL (with scheme) browsers use to reach MinIO. Defaults to
-      # PUBLIC_BASE_URL for remote deployments (nginx proxies /voice-audio/) and to
-      # http://localhost:9000 for local; override only for a separate object store.
-      MINIO_PUBLIC_ENDPOINT: "${MINIO_PUBLIC_ENDPOINT:-}"
-      MINIO_ACCESS_KEY: "${MINIO_ROOT_USER:-minioadmin}"
-      MINIO_SECRET_KEY: "${MINIO_ROOT_PASSWORD:-minioadmin}"
-      MINIO_BUCKET: "voice-audio"
-      MINIO_SECURE: "false"
 
       # Number of uvicorn worker processes (each is its own process bound to a
       # distinct port starting at 8000). dograh-init renders nginx upstreams
@@ -262,7 +229,7 @@ services:
       # steps: set the secret first (invalid tokens are logged but allowed), then
       # set ENFORCE=true once the logs stay clean.
       TELEPHONY_WS_TOKEN_SECRET: "${TELEPHONY_WS_TOKEN_SECRET:-}"
-      TELEPHONY_WS_TOKEN_ENFORCE: "${TELEPHONY_WS_TOKEN_ENFORCE:-false}"
+      TELEPHONY_WS_TOKEN_ENFORCE: "${TELEPHONY_WS_TOKEN_ENFORCE:-true}"
 
       # Telemetry
       ENABLE_TELEMETRY: "${ENABLE_TELEMETRY:-true}"
@@ -275,8 +242,6 @@ services:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_healthy
-      minio:
         condition: service_healthy
     healthcheck:
       test:
@@ -360,7 +325,6 @@ services:
 volumes:
   postgres_data:
   redis_data:
-  minio-data:
     driver: local
   nginx-generated:
     driver: local
