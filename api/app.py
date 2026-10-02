@@ -33,6 +33,7 @@ from fastapi.responses import JSONResponse
 from loguru import logger
 
 from api.constants import REDIS_URL
+from api.errors.abera import AgentLimitExceeded
 from api.errors.mps import MPS_UNAVAILABLE_PUBLIC_MESSAGE, MPSUnavailableError
 from api.mcp_server import mcp
 from api.routes.main import router as main_router
@@ -112,6 +113,16 @@ app = FastAPI(
         {"url": "http://localhost:8000", "description": "Local development"},
     ],
 )
+
+
+@app.exception_handler(AgentLimitExceeded)
+async def handle_abera_agent_limit(
+    _request: Request, exc: AgentLimitExceeded
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=409,
+        content={"code": "AGENT_LIMIT_EXCEEDED", "detail": str(exc)},
+    )
 
 
 @app.exception_handler(MPSUnavailableError)

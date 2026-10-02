@@ -1,13 +1,15 @@
+import os
 from datetime import UTC, datetime
 from typing import Optional
 
 from loguru import logger
-from sqlalchemy import func, update
+from sqlalchemy import func, text, update
 from sqlalchemy.future import select
 from sqlalchemy.orm import load_only, selectinload
 
 from api.db.base_client import BaseDBClient
 from api.db.models import WorkflowDefinitionModel, WorkflowModel, WorkflowRunModel
+from api.errors.abera import AgentLimitExceeded
 
 
 class WorkflowClient(BaseDBClient):
@@ -71,6 +73,31 @@ class WorkflowClient(BaseDBClient):
     ) -> WorkflowModel:
         async with self.async_session() as session:
             try:
+                if os.getenv("DEPLOYMENT_MODE") == "abera":
+                    if organization_id is None:
+                        raise ValueError("Abera workflows require an organization")
+                    try:
+                        limit = int(os.environ["ABERA_MAX_AGENTS"])
+                    except (KeyError, ValueError) as exc:
+                        raise ValueError("ABERA_MAX_AGENTS must be configured") from exc
+                    if limit < 1:
+                        raise ValueError("ABERA_MAX_AGENTS must be positive")
+                    # A transaction-scoped advisory lock serializes creates for
+                    # this organization. Counting and inserting under the same
+                    # lock prevents simultaneous requests from overbooking.
+                    await session.execute(
+                        text("SELECT pg_advisory_xact_lock(717191, :org_id)"),
+                        {"org_id": organization_id},
+                    )
+                    current = await session.scalar(
+                        select(func.count(WorkflowModel.id)).where(
+                            WorkflowModel.organization_id == organization_id
+                        )
+                    )
+                    if current >= limit:
+                        raise AgentLimitExceeded(
+                            f"El plan permite como máximo {limit} agentes"
+                        )
                 new_workflow = WorkflowModel(
                     name=name,
                     workflow_definition=workflow_definition,  # Keep for backwards compatibility

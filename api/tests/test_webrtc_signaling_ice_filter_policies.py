@@ -105,6 +105,16 @@ def test_get_ice_servers_omits_public_stun_in_relay_only_mode(monkeypatch):
     assert urls == ["turn:100.64.1.10:3478"]
 
 
+def test_server_uses_private_turn_address_when_coturn_shares_ec2_host(monkeypatch):
+    monkeypatch.setattr(webrtc_signaling, "FORCE_TURN_RELAY", True)
+    monkeypatch.setattr(webrtc_signaling, "TURN_INTERNAL_HOST", "10.0.1.12")
+    _stub_turn(monkeypatch, host="203.0.113.10")
+
+    assert _urls(webrtc_signaling.get_ice_servers(user_id="1")) == [
+        "turn:10.0.1.12:3478"
+    ]
+
+
 def test_get_ice_servers_keeps_public_stun_when_not_relay_only(monkeypatch):
     # Unchanged behaviour off the relay-only path.
     monkeypatch.setattr(webrtc_signaling, "FORCE_TURN_RELAY", False)

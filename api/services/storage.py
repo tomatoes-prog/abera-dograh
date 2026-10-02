@@ -1,3 +1,6 @@
+import os
+import re
+
 from loguru import logger
 
 from api.constants import (
@@ -60,12 +63,19 @@ def get_storage_for_backend(backend: str) -> BaseFileSystem:
         logger.info(
             f"Initializing {backend} storage with bucket '{bucket}' in region '{region}'"
         )
+        key_prefix = ""
+        if os.getenv("DEPLOYMENT_MODE") == "abera":
+            subscription_id = os.environ["ABERA_SUBSCRIPTION_ID"]
+            if not re.fullmatch(r"[a-z0-9][a-z0-9-]{2,47}", subscription_id):
+                raise ValueError("Invalid ABERA_SUBSCRIPTION_ID for S3 isolation")
+            key_prefix = f"subscriptions/{subscription_id}"
         return S3FileSystem(
             bucket_name=bucket,
             region_name=region,
             endpoint_url=S3_ENDPOINT_URL,
             signature_version=S3_SIGNATURE_VERSION,
             addressing_style=S3_ADDRESSING_STYLE,
+            key_prefix=key_prefix,
         )
 
     # Future backend implementations can be added here:

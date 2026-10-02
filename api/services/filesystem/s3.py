@@ -17,6 +17,7 @@ class S3FileSystem(BaseFileSystem):
         endpoint_url: Optional[str] = None,
         signature_version: Optional[str] = None,
         addressing_style: Optional[str] = None,
+        key_prefix: str = "",
     ):
         """Initialize S3 filesystem.
 
@@ -31,6 +32,7 @@ class S3FileSystem(BaseFileSystem):
                 ``"virtual"`` / ``"auto"``). ``None`` keeps botocore's default.
         """
         self.bucket_name = bucket_name
+        self.key_prefix = key_prefix.strip("/")
         self.region_name = region_name
         self.endpoint_url = endpoint_url
         self.session = aioboto3.Session()
@@ -43,6 +45,11 @@ class S3FileSystem(BaseFileSystem):
         if addressing_style:
             config_kwargs["s3"] = {"addressing_style": addressing_style}
         self._config = Config(**config_kwargs) if config_kwargs else None
+
+    def _key(self, file_path: str) -> str:
+        if not self.key_prefix:
+            return file_path
+        return f"{self.key_prefix}/{file_path.lstrip('/')}"
 
     def _client_kwargs(self) -> Dict[str, Any]:
         """Common kwargs for every ``session.client("s3", ...)`` call.
@@ -61,7 +68,7 @@ class S3FileSystem(BaseFileSystem):
         try:
             async with self.session.client("s3", **self._client_kwargs()) as s3_client:
                 await s3_client.put_object(
-                    Bucket=self.bucket_name, Key=file_path, Body=await content.read()
+                    Bucket=self.bucket_name, Key=self._key(file_path), Body=await content.read()
                 )
             return True
         except ClientError:
@@ -71,7 +78,7 @@ class S3FileSystem(BaseFileSystem):
         try:
             async with self.session.client("s3", **self._client_kwargs()) as s3_client:
                 await s3_client.upload_file(
-                    local_path, self.bucket_name, destination_path
+                    local_path, self.bucket_name, self._key(destination_path)
                 )
             return True
         except ClientError:
@@ -93,7 +100,7 @@ class S3FileSystem(BaseFileSystem):
         """
         try:
             async with self.session.client("s3", **self._client_kwargs()) as s3_client:
-                params = {"Bucket": self.bucket_name, "Key": file_path}
+                params = {"Bucket": self.bucket_name, "Key": self._key(file_path)}
 
                 # Make artifacts viewable inline in the browser when requested
                 if force_inline:
@@ -133,7 +140,7 @@ class S3FileSystem(BaseFileSystem):
         try:
             async with self.session.client("s3", **self._client_kwargs()) as s3_client:
                 response = await s3_client.head_object(
-                    Bucket=self.bucket_name, Key=file_path
+                    Bucket=self.bucket_name, Key=self._key(file_path)
                 )
                 return {
                     "size": response.get("ContentLength"),
@@ -160,7 +167,7 @@ class S3FileSystem(BaseFileSystem):
                     "put_object",
                     Params={
                         "Bucket": self.bucket_name,
-                        "Key": file_path,
+                        "Key": self._key(file_path),
                         "ContentType": content_type,
                     },
                     ExpiresIn=expiration,
@@ -173,7 +180,7 @@ class S3FileSystem(BaseFileSystem):
         """Download a file from S3 to local path."""
         try:
             async with self.session.client("s3", **self._client_kwargs()) as s3_client:
-                await s3_client.download_file(self.bucket_name, source_path, local_path)
+                await s3_client.download_file(self.bucket_name, self._key(source_path), local_path)
             return True
         except ClientError:
             return False
@@ -184,8 +191,8 @@ class S3FileSystem(BaseFileSystem):
             async with self.session.client("s3", **self._client_kwargs()) as s3_client:
                 await s3_client.copy_object(
                     Bucket=self.bucket_name,
-                    Key=destination_path,
-                    CopySource={"Bucket": self.bucket_name, "Key": source_path},
+                    Key=self._key(destination_path),
+                    CopySource={"Bucket": self.bucket_name, "Key": self._key(source_path)},
                 )
             return True
         except ClientError:

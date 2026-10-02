@@ -496,6 +496,16 @@ class UserConfigurationValidator:
         return True
 
     def _check_aws_bedrock_api_key(self, model: str, service_config) -> bool:
+        if (
+            getattr(service_config, "provider", None)
+            == ServiceProviders.AWS_NOVA_SONIC
+            and not service_config.aws_access_key
+            and not service_config.aws_secret_key
+        ):
+            from api.services.abera.bedrock import validate_managed_nova
+
+            validate_managed_nova(service_config.model, service_config.aws_region)
+            return True
         if not service_config.aws_access_key or not service_config.aws_secret_key:
             raise ValueError("AWS access key and secret key are required for Bedrock")
         return True

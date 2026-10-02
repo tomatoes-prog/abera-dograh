@@ -259,6 +259,7 @@ TURN_SECRET = os.getenv("TURN_SECRET")
 # Host browsers dial for TURN/ICE. Derives from PUBLIC_HOST; set explicitly only
 # when the TURN server runs on a separate host from the app.
 TURN_HOST = os.getenv("TURN_HOST") or PUBLIC_HOST or "localhost"
+TURN_INTERNAL_HOST = os.getenv("TURN_INTERNAL_HOST")
 TURN_PORT = int(os.getenv("TURN_PORT", "3478"))
 TURN_TLS_PORT = int(os.getenv("TURN_TLS_PORT", "5349"))
 TURN_CREDENTIAL_TTL = int(os.getenv("TURN_CREDENTIAL_TTL", "86400"))

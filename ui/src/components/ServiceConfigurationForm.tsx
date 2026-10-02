@@ -666,7 +666,8 @@ export function ServiceConfigurationForm({
                         {apiKeys[service].map((key, index) => (
                             <div key={index} className="flex gap-2">
                                 <Input
-                                    type="text"
+                                    type="password"
+                                    autoComplete="new-password"
                                     placeholder="Enter API key"
                                     value={key}
                                     onChange={(e) => {

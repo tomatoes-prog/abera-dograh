@@ -1,4 +1,5 @@
 import asyncio
+import os
 
 from loguru import logger
 
@@ -36,6 +37,14 @@ from pipecat.frames.frames import (
 from pipecat.pipeline.worker import PipelineWorker
 from pipecat.processors.audio.audio_buffer_processor import AudioBufferProcessor
 from pipecat.utils.enums import EndTaskReason
+
+
+def _recording_enabled() -> bool:
+    if not ENABLE_CALL_RECORDING_UPLOAD:
+        return False
+    if os.getenv("DEPLOYMENT_MODE") == "abera":
+        return os.getenv("ABERA_PLAN") == "pro"
+    return True
 
 
 async def _capture_call_event(
@@ -106,6 +115,7 @@ def register_event_handlers(
         sample_rate=sample_rate,
         num_channels=num_channels,
     )
+    recording_enabled = _recording_enabled()
     # Track both events to ensure the initial response is only triggered after both occur
     ready_state = {
         "pipeline_started": False,
@@ -202,7 +212,8 @@ def register_event_handlers(
     @transport.event_handler("on_client_connected")
     async def on_client_connected(_transport, _participant):
         logger.debug("In on_client_connected callback handler")
-        await audio_buffer.start_recording()
+        if recording_enabled:
+            await audio_buffer.start_recording()
         ready_state["client_connected"] = True
         await maybe_trigger_initial_response()
 
@@ -215,7 +226,8 @@ def register_event_handlers(
         )
 
         # Stop recordings
-        await audio_buffer.stop_recording()
+        if recording_enabled:
+            await audio_buffer.stop_recording()
 
         # A disconnect right after a handoff is the external PBX taking the
         # customer leg, not the caller hanging up. The reason stays distinct
@@ -316,7 +328,8 @@ def register_event_handlers(
         workflow_run = await db_client.get_workflow_run_by_id(workflow_run_id)
 
         # Stop recordings
-        await audio_buffer.stop_recording()
+        if recording_enabled:
+            await audio_buffer.stop_recording()
 
         # Add trace URL if available (must be done before conversation tracing ends)
         if task.turn_trace_observer:
@@ -459,20 +472,24 @@ def register_event_handlers(
             except Exception as e:
                 logger.error(f"Error saving workflow run logs: {e}", exc_info=True)
 
-        # Upload artifacts straight from the in-memory buffers so nothing has
-        # to cross a process/host boundary via temp files. Must complete
-        # before the completion job is enqueued so QA and webhooks see the
-        # artifacts in storage.
+        # Finish uploads before QA and webhooks inspect the artifacts. Abera
+        # uses bounded-memory temporary files in this process for Pro tracks.
+        temporary_paths: list[str] = []
         try:
             mixed_audio_wav = None
             user_audio_wav = None
             bot_audio_wav = None
+            audio_paths: dict[str, str] = {}
 
-            if not ENABLE_CALL_RECORDING_UPLOAD:
-                logger.info(
-                    "Call recording upload is disabled "
-                    "(ENABLE_CALL_RECORDING_UPLOAD=false), skipping audio upload"
-                )
+            if not recording_enabled:
+                logger.info("Call recording is disabled for this deployment or plan")
+            elif os.getenv("DEPLOYMENT_MODE") == "abera":
+                for track in ("mixed", "user", "bot"):
+                    buffer = getattr(in_memory_audio_buffers, track)
+                    if not buffer.is_empty:
+                        path = await buffer.to_wav_tempfile()
+                        audio_paths[track] = path
+                        temporary_paths.append(path)
             else:
                 if not in_memory_audio_buffers.mixed.is_empty:
                     mixed_audio_wav = await in_memory_audio_buffers.mixed.to_wav_bytes()
@@ -500,10 +517,22 @@ def register_event_handlers(
                 mixed_audio_wav=mixed_audio_wav,
                 user_audio_wav=user_audio_wav,
                 bot_audio_wav=bot_audio_wav,
+                mixed_audio_path=audio_paths.get("mixed"),
+                user_audio_path=audio_paths.get("user"),
+                bot_audio_path=audio_paths.get("bot"),
                 transcript_text=transcript_text,
             )
         except Exception as e:
             logger.error(f"Error uploading call artifacts: {e}", exc_info=True)
+        finally:
+            try:
+                await in_memory_audio_buffers.close()
+            finally:
+                for path in temporary_paths:
+                    try:
+                        os.unlink(path)
+                    except OSError:
+                        logger.exception("Could not remove temporary recording file")
 
         # Combined task: runs integrations (including QA), then calculates
         # cost (so QA token usage is captured in usage_info)
@@ -522,6 +551,8 @@ def register_audio_data_handler(
     in_memory_buffers: InMemoryRecordingBuffers,
 ):
     """Register event handler for audio data"""
+    if not _recording_enabled():
+        return
     logger.info(f"Registering audio data handler for workflow run {workflow_run_id}")
 
     @audio_buffer.event_handler("on_audio_data")

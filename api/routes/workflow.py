@@ -22,6 +22,7 @@ from api.enums import (
     WorkflowRunMode,
     WorkflowStatus,
 )
+from api.errors.abera import AgentLimitExceeded
 from api.schemas.ai_model_configuration import OrganizationAIModelConfigurationV2
 from api.schemas.workflow import WorkflowRunResponseSchema
 from api.schemas.workflow_configurations import WorkflowConfigurationDefaults
@@ -556,6 +557,10 @@ async def create_workflow_from_template(
     Raises:
         HTTPException: If MPS API call fails
     """
+    if DEPLOYMENT_MODE == "abera":
+        raise HTTPException(
+            status_code=403, detail="La generación administrada no está disponible"
+        )
     try:
         # Call MPS API to generate workflow using the client
         if DEPLOYMENT_MODE == "oss":
@@ -1397,6 +1402,8 @@ async def duplicate_workflow_endpoint(
                 workflow.workflow_configurations
             ),
         }
+    except AgentLimitExceeded:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:

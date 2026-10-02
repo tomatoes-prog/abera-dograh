@@ -1168,6 +1168,57 @@ async def _run_pipeline_impl(
         task.turn_tracking_observer
     )
 
+    # Realtime server-side history compaction (summarize + delete every N
+    # turns). Off by default; cascade pipelines keep using
+    # context_compaction_enabled. OpenAI Realtime only: other providers use
+    # different server event names.
+    compaction_turns = int(run_configs.get("realtime_history_compaction_turns", 0) or 0)
+    if is_realtime and compaction_turns > 0 and inference_llm is not None:
+        from api.services.pipecat.realtime.history_compaction import (
+            RealtimeHistoryCompactor,
+            summarize_turns,
+        )
+        from api.services.pipecat.realtime.openai_realtime import (
+            DograhOpenAIRealtimeLLMService,
+        )
+
+        if isinstance(llm, DograhOpenAIRealtimeLLMService):
+            compaction_language = (
+                getattr(getattr(user_config, "realtime", None), "language", None)
+                or "es"
+            )
+
+            async def _summarize_for_compaction(turns):
+                return await summarize_turns(
+                    inference_llm,
+                    turns,
+                    language=compaction_language,
+                    workflow_run_id=workflow_run_id,
+                )
+
+            history_compactor = RealtimeHistoryCompactor(
+                every_n_turns=compaction_turns,
+                language=compaction_language,
+                summarize=_summarize_for_compaction,
+                workflow_run_id=workflow_run_id,
+            )
+            history_compactor.attach(
+                llm,
+                is_active=lambda: not getattr(llm, "_disconnecting", False),
+            )
+            transcript_log_coordinator.subscribe_turn_completed(
+                history_compactor.notify_turn_completed
+            )
+            logger.info(
+                "Realtime history compaction every "
+                f"{compaction_turns} turns (run {workflow_run_id})"
+            )
+        else:
+            logger.info(
+                "Realtime history compaction requested but the realtime "
+                f"service is not OpenAI (run {workflow_run_id})"
+            )
+
     for runtime_session in integration_runtime_sessions:
         runtime_session.attach(task)
         logger.info(

@@ -61,6 +61,11 @@ async def ensure_organization_bootstrapped(
     Never raises. A provisioning failure must not fail authentication — the
     caller is a legitimately authenticated user either way.
     """
+    # Abera provisions the tenant through its own control plane. An
+    # authenticated request must never mint Dograh MPS keys or Cloudonix SIP.
+    if DEPLOYMENT_MODE == "abera":
+        return True
+
     if await _is_bootstrap_complete(organization_id):
         return True
 

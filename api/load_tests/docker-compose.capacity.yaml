@@ -1,0 +1,13 @@
+# Merge with docker-compose.yaml from the repository root. These build clauses
+# force the local test to run this fork instead of the public Dograh images.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    image: abera/dograh-api:capacity
+  ui:
+    build:
+      context: .
+      dockerfile: ui/Dockerfile
+    image: abera/dograh-ui:capacity

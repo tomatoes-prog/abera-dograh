@@ -1397,15 +1397,27 @@ def create_realtime_llm_service(user_config, audio_config: "AudioConfig"):
             ),
         )
     elif provider == ServiceProviders.AWS_NOVA_SONIC.value:
+        if realtime_config.aws_access_key or realtime_config.aws_secret_key:
+            if not realtime_config.aws_access_key or not realtime_config.aws_secret_key:
+                raise ValueError("Both AWS credentials are required for Nova Sonic")
+            nova_access_key = realtime_config.aws_access_key
+            nova_secret_key = realtime_config.aws_secret_key
+            nova_session_token = realtime_config.aws_session_token or None
+        else:
+            from api.services.abera.bedrock import temporary_nova_credentials
+
+            nova_access_key, nova_secret_key, nova_session_token = (
+                temporary_nova_credentials(model, realtime_config.aws_region)
+            )
         from api.services.pipecat.realtime.aws_nova_sonic import (
             DograhAWSNovaSonicLLMService,
         )
         from pipecat.services.aws.nova_sonic.llm import AudioConfig as NovaAudioConfig
 
         return DograhAWSNovaSonicLLMService(
-            secret_access_key=realtime_config.aws_secret_key,
-            access_key_id=realtime_config.aws_access_key,
-            session_token=realtime_config.aws_session_token or None,
+            secret_access_key=nova_secret_key,
+            access_key_id=nova_access_key,
+            session_token=nova_session_token,
             region=realtime_config.aws_region,
             audio_config=NovaAudioConfig(
                 input_sample_rate=audio_config.transport_in_sample_rate,

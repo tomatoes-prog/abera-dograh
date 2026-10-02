@@ -778,6 +778,27 @@ async def authorize_workflow_run_start(
             workflow_configurations=workflow_configurations,
         )
 
+        if DEPLOYMENT_MODE == "abera":
+            if uses_managed_model_services_v2(user_config) or _dograh_api_keys(
+                user_config
+            ):
+                return QuotaCheckResult(
+                    has_quota=False,
+                    error_code="unsupported_provider",
+                    error_message="Configure proveedores propios en Abera Dograh",
+                )
+            from api.services.abera.bedrock import managed_nova_enabled
+
+            if managed_nova_enabled():
+                # The billing reservation path must be connected before Pro
+                # can admit calls. Never fall through to MPS or fail open.
+                return QuotaCheckResult(
+                    has_quota=False,
+                    error_code="metering_unavailable",
+                    error_message="No se pudo verificar el saldo de minutos",
+                )
+            return QuotaCheckResult(has_quota=True)
+
         if DEPLOYMENT_MODE != "oss":
             return await _authorize_hosted_workflow_run_start(
                 workflow_owner=workflow_owner,

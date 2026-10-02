@@ -26,6 +26,11 @@ DEFAULT_TURN_START_STRATEGY = "default"
 DEFAULT_TURN_START_MIN_WORDS = 3
 DEFAULT_TURN_STOP_STRATEGY = "transcription"
 DEFAULT_CONTEXT_COMPACTION_ENABLED = False
+# Realtime server-side history compaction cadence (completed turns between
+# summarize-and-delete cycles). 0 disables. Cascade pipelines ignore it and
+# keep using context_compaction_enabled.
+DEFAULT_REALTIME_HISTORY_COMPACTION_TURNS = 0
+MAX_REALTIME_HISTORY_COMPACTION_TURNS = 120
 MAX_CALL_DISPOSITIONS = 50
 MAX_CALL_DISPOSITION_CODE_LENGTH = 64
 MAX_CALL_DISPOSITION_DESCRIPTION_LENGTH = 1_000
@@ -151,6 +156,15 @@ class WorkflowConfigurationDefaults(BaseModel):
     )
     dictionary: str = ""
     context_compaction_enabled: bool = DEFAULT_CONTEXT_COMPACTION_ENABLED
+    realtime_history_compaction_turns: int = Field(
+        default=DEFAULT_REALTIME_HISTORY_COMPACTION_TURNS,
+        ge=0,
+        le=MAX_REALTIME_HISTORY_COMPACTION_TURNS,
+        description=(
+            "Realtime only: summarize and delete server-side history every N "
+            "completed turns, keeping recent turns verbatim. 0 disables."
+        ),
+    )
     tts_cache_enabled: bool = Field(
         default=False,
         description="Reuse generated speech for repeated phrases. Supports MiniMax TTS.",

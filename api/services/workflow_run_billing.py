@@ -1,7 +1,8 @@
 """Workflow-run billing hooks.
 
 Dograh does not rate or deduct credits locally. MPS owns credit accounting.
-For hosted deployments, Dograh reports completed platform usage to MPS.
+For hosted Dograh deployments, Dograh reports completed platform usage to MPS.
+Abera subscriptions use their own billing ledger and never report to MPS.
 When a server-minted MPS correlation id exists, MPS uses model-service usage
 as the canonical duration. Otherwise Dograh reports the completed run duration.
 """
@@ -42,7 +43,7 @@ def _is_usage_not_ready_error(exc: Exception) -> bool:
 
 async def report_workflow_run_platform_usage(workflow_run) -> None:
     """Report hosted platform usage for a completed workflow run to MPS."""
-    if DEPLOYMENT_MODE == "oss":
+    if DEPLOYMENT_MODE in {"oss", "abera"}:
         return
 
     if getattr(workflow_run, "mode", None) == WorkflowRunMode.TEXTCHAT.value:

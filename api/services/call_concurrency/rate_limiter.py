@@ -1,3 +1,4 @@
+import os
 import time
 import uuid
 from dataclasses import dataclass
@@ -172,6 +173,13 @@ class RateLimiter:
         local slot_id = ARGV[4]
         local scope_max_concurrent = tonumber(ARGV[5])
         local fleet_member = ARGV[6]
+        local managed_runtime = ARGV[7]
+
+        -- A maintenance operation closes admission before waiting for active
+        -- calls. This check and slot acquisition share one Redis transaction.
+        if managed_runtime == '1' and redis.call('GET', 'abera:draining') == '1' then
+            return nil
+        end
 
         -- Remove stale entries (older than the stale-call timeout)
         redis.call('ZREMRANGEBYSCORE', key, 0, stale_cutoff)
@@ -219,6 +227,7 @@ class RateLimiter:
                 slot_id,
                 scope_max_concurrent if scope_max_concurrent is not None else 0,
                 f"{organization_id}:{slot_id}",
+                "1" if os.getenv("DEPLOYMENT_MODE") == "abera" else "0",
             )
             if not result:
                 return None

@@ -29,7 +29,7 @@ from pipecat.transports.smallwebrtc.connection import SmallWebRTCConnection
 from pipecat.utils.run_context import set_current_org_id, set_current_run_id
 from starlette.websockets import WebSocketState
 
-from api.constants import ENABLE_COTURN, ENVIRONMENT, FORCE_TURN_RELAY, SERVER_IP
+from api.constants import ENABLE_COTURN, ENVIRONMENT, FORCE_TURN_RELAY, SERVER_IP, TURN_INTERNAL_HOST
 from api.db import db_client
 from api.db.models import UserModel
 from api.enums import Environment, WorkflowRunMode
@@ -268,9 +268,16 @@ def get_ice_servers(user_id: Optional[str] = None) -> List[RTCIceServer]:
     if TURN_SECRET and user_id:
         try:
             credentials = generate_turn_credentials(user_id)
+            # The browser receives the public address from /turn/credentials.
+            # A managed EC2 host reaches its co-located TURN listener through
+            # the private address, avoiding a public-IP hairpin inside the VPC.
+            internal_uris = [
+                uri.replace(f":{TURN_HOST}:", f":{TURN_INTERNAL_HOST or TURN_HOST}:", 1)
+                for uri in credentials["uris"]
+            ]
             servers.append(
                 RTCIceServer(
-                    urls=credentials["uris"],
+                    urls=internal_uris,
                     username=credentials["username"],
                     credential=credentials["password"],
                 )
@@ -290,8 +297,8 @@ def get_ice_servers(user_id: Optional[str] = None) -> List[RTCIceServer]:
         servers.append(
             RTCIceServer(
                 urls=[
-                    f"turn:{TURN_HOST}:{TURN_PORT}",
-                    f"turn:{TURN_HOST}:{TURN_PORT}?transport=tcp",
+                    f"turn:{TURN_INTERNAL_HOST or TURN_HOST}:{TURN_PORT}",
+                    f"turn:{TURN_INTERNAL_HOST or TURN_HOST}:{TURN_PORT}?transport=tcp",
                 ],
                 username=turn_username,
                 credential=turn_password,

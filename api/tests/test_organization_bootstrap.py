@@ -29,6 +29,18 @@ def _byok_config() -> OrganizationAIModelConfigurationV2:
     return OrganizationAIModelConfigurationV2.model_construct(mode="byok", dograh=None)
 
 
+@pytest.mark.asyncio
+async def test_abera_mode_never_calls_dograh_providers(monkeypatch):
+    monkeypatch.setattr(bootstrap, "DEPLOYMENT_MODE", "abera")
+    read = AsyncMock(side_effect=AssertionError("bootstrap must not read state"))
+    monkeypatch.setattr(bootstrap.db_client, "get_configuration", read)
+    result = await bootstrap.ensure_organization_bootstrapped(
+        ORG_ID, created_by=CREATED_BY
+    )
+    assert result is True
+    read.assert_not_awaited()
+
+
 @pytest.fixture(autouse=True)
 def sentinel(monkeypatch):
     """Bootstrap sentinel row; absent by default. Autouse so no test hits the DB."""
