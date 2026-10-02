@@ -606,6 +606,8 @@ export type ByokPipelineAiModelConfiguration = {
     } & OpenAillmService) | ({
         provider: 'atlascloud';
     } & AtlasCloudLlmService) | ({
+        provider: 'hopper';
+    } & HopperLlmConfiguration) | ({
         provider: 'google_vertex';
     } & GoogleVertexLlmConfiguration) | ({
         provider: 'groq';
@@ -744,6 +746,8 @@ export type ByokRealtimeAiModelConfiguration = {
     } & OpenAillmService) | ({
         provider: 'atlascloud';
     } & AtlasCloudLlmService) | ({
+        provider: 'hopper';
+    } & HopperLlmConfiguration) | ({
         provider: 'google_vertex';
     } & GoogleVertexLlmConfiguration) | ({
         provider: 'groq';
@@ -3350,6 +3354,28 @@ export type HealthResponse = {
 };
 
 /**
+ * Hopper
+ */
+export type HopperLlmConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'hopper';
+    /**
+     * Api Key
+     *
+     * API key from your Hopper console.
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Hopper chat model.
+     */
+    model?: string;
+};
+
+/**
  * HttpApiConfig
  *
  * Configuration for HTTP API tools.
@@ -5734,6 +5760,12 @@ export type SarvamLlmConfiguration = {
      */
     model?: string;
     /**
+     * Base Url
+     *
+     * Sarvam API base URL.
+     */
+    base_url?: string;
+    /**
      * Temperature
      *
      * Sampling temperature. Sarvam recommends 0.5 for balanced conversational responses.
@@ -7176,6 +7208,18 @@ export type TransferAgentToolDefinition = {
  * Configuration for Transfer Call tools.
  */
 export type TransferCallConfig = {
+    /**
+     * Introduction Enabled
+     *
+     * Play a generated introduction in the agent's voice to both parties before connecting them. Supported for Twilio calls with a TTS provider. Realtime speech-to-speech agents and synthesis failures skip the introduction.
+     */
+    introduction_enabled?: boolean;
+    /**
+     * Introduction Prompt
+     *
+     * Instructions for the transfer introduction, including language.
+     */
+    introduction_prompt?: string;
     /**
      * Destination Source
      *

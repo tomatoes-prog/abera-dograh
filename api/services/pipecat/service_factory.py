@@ -18,7 +18,11 @@ from api.services.configuration.options import (
     DEEPGRAM_FLUX_MODELS,
     GOOGLE_VERTEX_DEFAULT_LOCATION,
 )
-from api.services.configuration.registry import ServiceProviders
+from api.services.configuration.registry import (
+    ATLASCLOUD_API_BASE_URL,
+    HOPPER_API_BASE_URL,
+    ServiceProviders,
+)
 from api.services.pipecat.gemini_json_schema_adapter import (
     DograhGeminiJSONSchemaAdapter,
 )
@@ -1152,6 +1156,10 @@ def create_llm_service_from_provider(
         ServiceProviders.OPENAI.value,
         ServiceProviders.ATLASCLOUD.value,
     ):
+        # Voicemail and QA configs with their own provider pass no base_url;
+        # without this default the OpenAI client sends the Atlas Cloud key to OpenAI.
+        if provider == ServiceProviders.ATLASCLOUD.value and not base_url:
+            base_url = ATLASCLOUD_API_BASE_URL
         kwargs = {}
         if base_url:
             _validate_runtime_service_url(base_url, "base_url")
@@ -1174,6 +1182,12 @@ def create_llm_service_from_provider(
         return GroqLLMService(
             api_key=api_key,
             settings=GroqLLMSettings(model=model, temperature=0.1),
+        )
+    elif provider == ServiceProviders.HOPPER.value:
+        return OpenAILLMService(
+            api_key=api_key,
+            base_url=HOPPER_API_BASE_URL,
+            settings=OpenAILLMSettings(model=model, temperature=0.1),
         )
     elif provider == ServiceProviders.OPENROUTER.value:
         kwargs = {}
@@ -1264,8 +1278,11 @@ def create_llm_service_from_provider(
             ),
         )
     elif provider == ServiceProviders.SARVAM.value:
+        base_url = base_url or "https://api.sarvam.ai/v1"
+        _validate_runtime_service_url(base_url, "base_url")
         return SarvamLLMService(
             api_key=api_key,
+            base_url=base_url,
             settings=SarvamLLMSettings(
                 model=model,
                 temperature=temperature if temperature is not None else 0.5,
@@ -1571,6 +1588,7 @@ def create_llm_service(
         kwargs["base_url"] = user_config.llm.base_url
         kwargs["temperature"] = user_config.llm.temperature
     elif provider == ServiceProviders.SARVAM.value:
+        kwargs["base_url"] = getattr(user_config.llm, "base_url", None)
         kwargs["temperature"] = user_config.llm.temperature
 
     return create_llm_service_from_provider(

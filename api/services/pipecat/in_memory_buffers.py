@@ -86,7 +86,7 @@ class InMemoryAudioBuffer:
 
             # Encoding copies PCM; keep it off the event loop and exclude writes.
             data = await asyncio.to_thread(_encode)
-        logger.info(f"Encoded {total_size} bytes of {self._track} audio")
+        logger.debug(f"Encoded {total_size} bytes of {self._track} audio")
         return data
 
     async def to_wav_tempfile(self) -> str:
