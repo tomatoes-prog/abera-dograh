@@ -46,9 +46,11 @@ No se reconstruyeron estos componentes ni se cambiaron sus implementaciones.
 ## Recorte de video y tamaño restante de la API
 
 La imagen anterior pesaba 1.160.535.702 bytes. Al retirar OpenCV pasa a
-992.190.533 bytes: 168.345.169 bytes menos (14,5 % adicional). La etiqueta
-local es `abera/dograh-api:voice-only`; los contenedores existentes siguen
-usando sus imágenes anteriores.
+992.198.326 bytes: 168.337.376 bytes menos (14,5 % adicional). La etiqueta
+local es `abera/dograh-api:voice-only`. API, UI y Redis locales se activaron
+con las imágenes optimizadas, conservando el entorno y los volúmenes existentes.
+Los scripts de entrada se normalizan dentro de la imagen a LF; el smoke verifica
+que no contengan CRLF antes de ejecutar sus shebangs en Linux.
 
 Se instala `aiortc==1.15.0` explícitamente en los requisitos de Dograh y se
 omite el extra `webrtc` de Pipecat, porque ese extra instala OpenCV para video.
@@ -187,3 +189,25 @@ local existente, carga/latencia desde Colombia y promoción de imágenes. Pro si
 cerrado hasta conectar la autorización de minutos. Las grabaciones Pro conservan
 el spool de disco aprobado; no son una subida continua a S3 y sus fallos de envío
 todavía necesitan una política durable de reintentos antes de prometer retención.
+
+## Arranque local con el entorno existente
+
+Se conserva el proyecto Compose `abera-dograh` y su `.env` original. El override
+local y `start-voice-only.ps1` están fuera de este worktree, en
+`../dograh-local-data/`. PostgreSQL conserva su volumen. Redis 7 Alpine conserva
+el suyo. Se guardó un `pg_dump` antes del cambio.
+
+No había un bucket AWS configurado. Para esta prueba se reutiliza el bucket
+`voice-audio` de RustFS mediante S3, con credenciales existentes y endpoint
+`http://host.docker.internal:9000`, accesible desde contenedores y host. Después
+de verificar los 199 objetos referenciados se adaptaron a `s3` las referencias
+principales y de pistas de 57 runs locales; las claves y contenidos se conservan.
+Una transcripción histórica se descargó mediante URL firmada con HTTP 200.
+No se desplegaron recursos AWS ni se ejecutó una prueba paga de IA.
+
+UI `/auth/login` y API `/api/v1/health`: HTTP 200. La consulta de versión desde
+UI declara backend `reachable`, API y UI 1.47.0. Health API: aproximadamente
+170 ms sin Cloudflare. Una muestra en reposo dio API 834 MiB, UI 123 MiB y Redis
+21 MiB. Son lecturas locales con los servicios originales habilitados, sin nuevos
+límites de CPU/RAM; no validan capacidad de la instancia propuesta ni llamadas
+concurrentes.

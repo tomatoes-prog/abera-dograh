@@ -144,6 +144,10 @@ COPY --chown=dograh:dograh \
      ./scripts/drain_web.sh \
      ./scripts/
 
+# Existing Windows checkouts can retain CRLF despite .gitattributes.
+# Normalize entrypoints inside the image before Linux executes their shebangs.
+RUN sed -i 's/\r$//' ./scripts/*.sh
+
 # ts_validator Node deps (built in ts-deps stage with full node:22-slim image).
 # The validator runs as a short-lived subprocess from api/mcp_server/ts_bridge.py.
 COPY --from=ts-deps --chown=dograh:dograh /ts_validator/node_modules ./api/mcp_server/ts_validator/node_modules

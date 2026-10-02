@@ -14,6 +14,9 @@ def run(*args):
     return subprocess.check_output(args, stderr=subprocess.STDOUT)
 
 
+for entrypoint in Path("/app/scripts").glob("*.sh"):
+    assert b"\r" not in entrypoint.read_bytes(), f"Windows line endings in entrypoint: {entrypoint.name}"
+
 for tool in ("gcc", "g++", "make", "git", "npm", "yarn", "uv"):
     assert shutil.which(tool) is None, f"Build tool leaked into runtime: {tool}"
 for module in ("av", "aiortc", "pipecat.transports.smallwebrtc.transport", "onnxruntime", "numba", "soundfile", "api.app"):
