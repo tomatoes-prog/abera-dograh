@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppConfig } from "@/context/AppConfigContext";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { useAuth } from "@/lib/auth";
 
 import { CaptchaChallenge } from "./CaptchaChallenge";
@@ -36,6 +37,7 @@ import { LeadModalShell } from "./LeadModalShell";
 import { submitLead } from "./submitLead";
 import { type OnboardingAnswers, submitOnboarding } from "./submitOnboarding";
 
+
 interface OnboardingModalProps {
   open: boolean;
   // Called after a tracked submit to dismiss the gate and stamp the server-side
@@ -44,6 +46,7 @@ interface OnboardingModalProps {
 }
 
 export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
+    const copy = useCopy();
   const { user } = useAuth(); // logged-in identity → onboarding email (sent silently)
   const { config } = useAppConfig();
   // Deployment provenance (analytics only).
@@ -139,7 +142,7 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
           });
           // Only the on-prem/enterprise lead path sends an email; plain onboarding
           // does not. Confirm the email just for this path.
-          toast.success("Check your inbox - we just emailed you the next steps (give it a minute).");
+          toast.success(copy("Check your inbox - we just emailed you the next steps (give it a minute)."));
         }
       } catch {
         // Swallowed — the user is already in the product; calls are timeout-bounded.
@@ -151,8 +154,8 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
     if (!baseValid) {
       toast.error(
         isOtherProvider && !migratingOtherProvider.trim()
-          ? "Please tell us which provider you're migrating from"
-          : "Please answer all the questions",
+          ? copy("Please tell us which provider you're migrating from")
+          : copy("Please answer all the questions"),
       );
       return;
     }
@@ -161,7 +164,7 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
       const err = validateWorkEmail(ef.workEmail);
       if (err) { setEfEmailError(err); return; }
       if (!ef.name.trim() || !ef.company.trim() || !ef.jobTitle.trim() || !ef.phone.trim() || !ef.volume) {
-        toast.error("Please complete the on-prem details below, or remove that section.");
+        toast.error(copy("Please complete the on-prem details below, or remove that section."));
         return;
       }
       setCaptchaActive(true);
@@ -190,14 +193,14 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
       }}
       icon={Rocket}
       eyebrow="Welcome"
-      title="Welcome to Dograh"
-      description="A few quick questions so we can tailor your experience. Takes ~20 seconds."
+      title={copy("Welcome to Dograh")}
+      description={copy("A few quick questions so we can tailor your experience. Takes ~20 seconds.")}
       primary={{ label: "Get started", onClick: handleSubmit, disabled: !canSubmit, loading: submitting }}
       overlay={captchaActive ? <CaptchaChallenge onVerified={submitWithOnPrem} onCancel={() => setCaptchaActive(false)} /> : undefined}
     >
       <div className="grid gap-4">
         <div className="space-y-1.5">
-          <Label htmlFor="ob-persona">What best describes you?</Label>
+          <Label htmlFor="ob-persona">{copy("What best describes you?")}</Label>
           <Select
             value={persona}
             onValueChange={(v) => {
@@ -210,10 +213,10 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
               }
             }}
           >
-            <SelectTrigger id="ob-persona"><SelectValue placeholder="Select one" /></SelectTrigger>
+            <SelectTrigger id="ob-persona"><SelectValue placeholder={copy("Select one")} /></SelectTrigger>
             <SelectContent>
               {ONBOARDING_PERSONA_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                <SelectItem key={o.value} value={o.value}>{copy(o.label)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -221,7 +224,7 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
 
         {showOnPrem && (
           <div className="space-y-1.5">
-            <Label htmlFor="ob-onprem">Do you need on-prem deployment for compliance &amp; data residency?</Label>
+            <Label htmlFor="ob-onprem">{copy("Do you need on-prem deployment for compliance & data residency?")}</Label>
             <Select
               value={onPremNeed}
               onValueChange={(v) => {
@@ -229,10 +232,10 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
                 if (v !== "yes") collapseOnPrem();
               }}
             >
-              <SelectTrigger id="ob-onprem"><SelectValue placeholder="Select one" /></SelectTrigger>
+              <SelectTrigger id="ob-onprem"><SelectValue placeholder={copy("Select one")} /></SelectTrigger>
               <SelectContent>
                 {ONBOARDING_ONPREM_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  <SelectItem key={o.value} value={o.value}>{copy(o.label)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -240,18 +243,13 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
             {showManagedNote && (
               <div className="mt-2 space-y-3 rounded-lg border border-border/60 bg-muted/30 p-3">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-xs leading-relaxed text-muted-foreground">
-                    We offer a <span className="font-medium text-foreground">Managed On-Prem</span> deployment
-                    for compliance and data residency.
-                  </p>
+                  <p className="text-xs leading-relaxed text-muted-foreground">{copy("We offer a ")}<span className="font-medium text-foreground">{copy("Managed On-Prem")}</span>{copy(" deployment for compliance and data residency.")}</p>
                   {onPremExpanded && (
                     <button
                       type="button"
                       onClick={collapseOnPrem}
                       className="shrink-0 text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-                    >
-                      Remove
-                    </button>
+                    >{copy("Remove")}</button>
                   )}
                 </div>
 
@@ -260,9 +258,7 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
                     type="button"
                     onClick={expandOnPrem}
                     className="text-xs font-medium text-cta underline-offset-4 hover:underline"
-                  >
-                    Talk to us about on-prem →
-                  </button>
+                  >{copy("Talk to us about on-prem →")}</button>
                 ) : (
                   <div className="space-y-3">
                     <EnterpriseLeadFields
@@ -272,9 +268,7 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
                       showDeployment={false}
                       emailError={efEmailError}
                     />
-                    <p className="text-[0.7rem] text-muted-foreground">
-                      Our team will reach out about on-prem. Prefer not to? Click &ldquo;Remove&rdquo;.
-                    </p>
+                    <p className="text-[0.7rem] text-muted-foreground">{copy("Our team will reach out about on-prem. Prefer not to? Click “Remove”.")}</p>
                   </div>
                 )}
               </div>
@@ -283,19 +277,19 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
         )}
 
         <div className="space-y-1.5">
-          <Label htmlFor="ob-volume">Expected monthly call volume</Label>
+          <Label htmlFor="ob-volume">{copy("Expected monthly call volume")}</Label>
           <Select value={volume} onValueChange={setVolume}>
-            <SelectTrigger id="ob-volume"><SelectValue placeholder="Select one" /></SelectTrigger>
+            <SelectTrigger id="ob-volume"><SelectValue placeholder={copy("Select one")} /></SelectTrigger>
             <SelectContent>
               {ONBOARDING_VOLUME_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                <SelectItem key={o.value} value={o.value}>{copy(o.label)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="ob-migrating">Are you migrating from another provider?</Label>
+          <Label htmlFor="ob-migrating">{copy("Are you migrating from another provider?")}</Label>
           <Select
             value={migratingFrom}
             onValueChange={(v) => {
@@ -304,20 +298,20 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
               if (v === "no") setSwitchReason("");
             }}
           >
-            <SelectTrigger id="ob-migrating"><SelectValue placeholder="Select one" /></SelectTrigger>
+            <SelectTrigger id="ob-migrating"><SelectValue placeholder={copy("Select one")} /></SelectTrigger>
             <SelectContent>
               {ONBOARDING_MIGRATION_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                <SelectItem key={o.value} value={o.value}>{copy(o.label)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
 
           {isOtherProvider && (
             <div className="mt-2 space-y-1.5">
-              <Label htmlFor="ob-other-provider">Other provider</Label>
+              <Label htmlFor="ob-other-provider">{copy("Other provider")}</Label>
               <Input
                 id="ob-other-provider"
-                placeholder="Enter the provider here"
+                placeholder={copy("Enter the provider here")}
                 value={migratingOtherProvider}
                 onChange={(e) => setMigratingOtherProvider(e.target.value)}
               />
@@ -326,13 +320,12 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
 
           {isMigrating && (
             <div className="mt-2 space-y-1.5">
-              <Label htmlFor="ob-switch-reason">
-                Why are you switching? <span className="text-muted-foreground">(optional)</span>
+              <Label htmlFor="ob-switch-reason">{copy("Why are you switching? ")}<span className="text-muted-foreground">{copy("(optional)")}</span>
               </Label>
               <Textarea
                 id="ob-switch-reason"
                 rows={2}
-                placeholder="e.g. cost, self-hosting, concurrency, data security, latency"
+                placeholder={copy("e.g. cost, self-hosting, concurrency, data security, latency")}
                 value={switchReason}
                 onChange={(e) => setSwitchReason(e.target.value)}
               />
@@ -341,12 +334,12 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="ob-heard">How did you hear about us?</Label>
+          <Label htmlFor="ob-heard">{copy("How did you hear about us?")}</Label>
           <Select value={howHeard} onValueChange={setHowHeard}>
-            <SelectTrigger id="ob-heard"><SelectValue placeholder="Select one" /></SelectTrigger>
+            <SelectTrigger id="ob-heard"><SelectValue placeholder={copy("Select one")} /></SelectTrigger>
             <SelectContent>
               {ONBOARDING_HEARD_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                <SelectItem key={o.value} value={o.value}>{copy(o.label)}</SelectItem>
               ))}
             </SelectContent>
           </Select>

@@ -18,13 +18,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { useCopy } from "@/i18n/LocaleProvider";
 import { detailFromError } from '@/lib/apiError';
 import { useAuth } from '@/lib/auth';
 
 import CampaignAdvancedSettings, { getTimezoneValue, type TimeSlot } from '../../CampaignAdvancedSettings';
 import TrafficSplitEditor, { trafficSplitError } from '../../TrafficSplitEditor';
 
+
 export default function EditCampaignPage() {
+    const copy = useCopy();
     const { user, getAccessToken, redirectToLogin, loading } = useAuth();
     const router = useRouter();
     const params = useParams();
@@ -93,13 +96,13 @@ export default function EditCampaignPage() {
             ]);
 
             if (response.error || !response.data) {
-                throw new Error(detailFromError(response.error, 'Failed to load campaign'));
+                throw new Error(copy(detailFromError(response.error, 'Failed to load campaign')));
             }
             if (defaultsResponse.error || !defaultsResponse.data) {
-                throw new Error(detailFromError(defaultsResponse.error, 'Failed to load campaign limits'));
+                throw new Error(copy(detailFromError(defaultsResponse.error, 'Failed to load campaign limits')));
             }
             if (configsResponse.error || !configsResponse.data) {
-                throw new Error(detailFromError(configsResponse.error, 'Failed to load telephony configurations'));
+                throw new Error(copy(detailFromError(configsResponse.error, 'Failed to load telephony configurations')));
             }
 
             if (response.data) {
@@ -161,12 +164,12 @@ export default function EditCampaignPage() {
             }
         } catch (error) {
             console.error('Failed to fetch campaign:', error);
-            toast.error(error instanceof Error ? error.message : 'Failed to load campaign');
+            toast.error(error instanceof Error ? error.message : copy("Failed to load campaign"));
             router.replace(`/campaigns/${campaignId}`);
         } finally {
             setIsLoading(false);
         }
-    }, [user, getAccessToken, campaignId, router]);
+    }, [user, getAccessToken, campaignId, copy, router]);
 
     // Initial load
     useEffect(() => {
@@ -183,7 +186,7 @@ export default function EditCampaignPage() {
         setSubmitError(null);
 
         if (!campaignName.trim()) {
-            toast.error('Campaign name is required');
+            toast.error(copy("Campaign name is required"));
             return;
         }
 
@@ -197,24 +200,24 @@ export default function EditCampaignPage() {
         if (maxConcurrencyValue !== null && (
             !Number.isInteger(maxConcurrencyValue) || maxConcurrencyValue < 1 || maxConcurrencyValue > effectiveLimit
         )) {
-            toast.error(`Max concurrent calls must be between 1 and your organization limit (${effectiveLimit})`);
+            toast.error(copy("Max concurrent calls must be between 1 and your organization limit ({value0})", {value0: effectiveLimit}));
             return;
         }
         const dialRate = Number(rateLimitPerSecond);
         if (!Number.isInteger(dialRate) || dialRate < 1 || dialRate > orgConcurrentLimit) {
-            toast.error(`Calls started per second must be between 1 and ${orgConcurrentLimit}`);
+            toast.error(copy("Calls started per second must be between 1 and {value0}", {value0: orgConcurrentLimit}));
             return;
         }
 
         // Validate schedule slots if enabled
         if (scheduleEnabled) {
             if (timeSlots.length === 0) {
-                toast.error('Add at least one time slot');
+                toast.error(copy("Add at least one time slot"));
                 return;
             }
             for (const slot of timeSlots) {
                 if (slot.start_time >= slot.end_time) {
-                    toast.error('Start time must be before end time for each slot');
+                    toast.error(copy("Start time must be before end time for each slot"));
                     return;
                 }
             }
@@ -270,14 +273,14 @@ export default function EditCampaignPage() {
             });
 
             if (response.error) {
-                const errorMessage = detailFromError(response.error, 'Failed to update campaign');
+                const errorMessage = copy(detailFromError(response.error, 'Failed to update campaign'));
                 setSubmitError(errorMessage);
                 toast.error(errorMessage);
                 return;
             }
 
             if (response.data) {
-                toast.success('Campaign updated successfully');
+                toast.success(copy("Campaign updated successfully"));
                 router.push(`/campaigns/${campaignId}`);
             }
         } catch (error) {
@@ -308,7 +311,7 @@ export default function EditCampaignPage() {
     if (!campaign) {
         return (
             <div className="container mx-auto p-6 space-y-6 max-w-2xl">
-                <p className="text-center text-muted-foreground">Campaign not found</p>
+                <p className="text-center text-muted-foreground">{copy("Campaign not found")}</p>
             </div>
         );
     }
@@ -321,28 +324,24 @@ export default function EditCampaignPage() {
                     onClick={handleBack}
                     className="mb-4"
                 >
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Campaign
-                </Button>
-                <h1 className="text-3xl font-bold mb-2">Edit Campaign</h1>
-                <p className="text-muted-foreground">Modify campaign settings</p>
+                    <ArrowLeft className="h-4 w-4 mr-2" />{copy("Back to Campaign")}</Button>
+                <h1 className="text-3xl font-bold mb-2">{copy("Edit Campaign")}</h1>
+                <p className="text-muted-foreground">{copy("Modify campaign settings")}</p>
             </div>
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Campaign Settings</CardTitle>
-                    <CardDescription>
-                        Update name, concurrency, retry, and schedule configuration
-                    </CardDescription>
+                    <CardTitle>{copy("Campaign Settings")}</CardTitle>
+                    <CardDescription>{copy("Update name, concurrency, retry, and schedule configuration")}</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-6">
                         {/* Campaign Name */}
                         <div className="space-y-2">
-                            <Label htmlFor="campaign-name">Campaign Name</Label>
+                            <Label htmlFor="campaign-name">{copy("Campaign Name")}</Label>
                             <Input
                                 id="campaign-name"
-                                placeholder="Enter campaign name"
+                                placeholder={copy("Enter campaign name")}
                                 value={campaignName}
                                 onChange={(e) => setCampaignName(e.target.value)}
                                 maxLength={255}
@@ -402,16 +401,14 @@ export default function EditCampaignPage() {
                                 type="submit"
                                 disabled={isSubmitting || !campaignName.trim()}
                             >
-                                {isSubmitting ? 'Saving...' : 'Save Changes'}
+                                {isSubmitting ? copy("Saving...") : copy("Save Changes")}
                             </Button>
                             <Button
                                 type="button"
                                 variant="outline"
                                 onClick={handleBack}
                                 disabled={isSubmitting}
-                            >
-                                Cancel
-                            </Button>
+                            >{copy("Cancel")}</Button>
                         </div>
                     </form>
                 </CardContent>

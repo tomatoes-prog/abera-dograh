@@ -16,11 +16,14 @@ import type {
 import { AIModelConfigurationV2Editor, type ModelConfigurationDefaultsV2 } from "@/components/AIModelConfigurationV2Editor";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUserConfig } from "@/context/UserConfigContext";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { detailFromError } from "@/lib/apiError";
 import { useAuth } from "@/lib/auth";
 import { fetchModelConfigurationPricing } from "@/lib/modelConfigurationPricing";
 
+
 export default function ModelConfigurationV2({ docsUrl }: { docsUrl?: string }) {
+    const copy = useCopy();
     const auth = useAuth();
     const { refreshConfig } = useUserConfig();
     const hasFetched = useRef(false);
@@ -46,19 +49,19 @@ export default function ModelConfigurationV2({ docsUrl }: { docsUrl?: string }) 
             ]);
 
             if (defaultsResult.error) {
-                setError(detailFromError(defaultsResult.error, "Failed to load model configuration defaults"));
+                setError(copy(detailFromError(defaultsResult.error, "Failed to load model configuration defaults")));
                 setLoading(false);
                 return;
             }
             if (configResult.error) {
-                setError(detailFromError(configResult.error, "Failed to load model configuration"));
+                setError(copy(detailFromError(configResult.error, "Failed to load model configuration")));
                 setLoading(false);
                 return;
             }
 
             const nextDefaults = defaultsResult.data as ModelConfigurationDefaultsV2;
             if (!nextDefaults || !configResult.data) {
-                setError("Failed to load model configuration");
+                setError(copy("Failed to load model configuration"));
                 setLoading(false);
                 return;
             }
@@ -70,7 +73,7 @@ export default function ModelConfigurationV2({ docsUrl }: { docsUrl?: string }) 
 
         load();
 
-    }, [auth.loading, auth.user]);
+    }, [auth.loading, auth.user, copy]);
 
     const saveConfiguration = async (configuration: OrganizationAiModelConfigurationV2) => {
         if (!defaults) return;
@@ -82,7 +85,7 @@ export default function ModelConfigurationV2({ docsUrl }: { docsUrl?: string }) 
         });
 
         if (result.error) {
-            throw new Error(detailFromError(result.error, "Failed to save model configuration"));
+            throw new Error(copy(detailFromError(result.error, "Failed to save model configuration")));
         }
         if (!result.data) {
             throw new Error("Failed to save model configuration");
@@ -108,12 +111,10 @@ export default function ModelConfigurationV2({ docsUrl }: { docsUrl?: string }) 
         <div className="w-full max-w-4xl mx-auto space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold">AI Models Configuration</h1>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                        Organization-scoped model settings.{" "}
+                    <h1 className="text-3xl font-bold">{copy("AI Models Configuration")}</h1>
+                    <p className="mt-2 text-sm text-muted-foreground">{copy("Organization-scoped model settings.")}{" "}
                         {docsUrl && (
-                            <a href={docsUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline">
-                                Learn more <ExternalLink className="h-3 w-3" />
+                            <a href={docsUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline">{copy("Learn more ")}<ExternalLink className="h-3 w-3" />
                             </a>
                         )}
                     </p>

@@ -17,11 +17,15 @@ import { Card } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { dateFnsLocale } from "@/i18n/format";
+import { useCopy } from "@/i18n/LocaleProvider";
+import { useUiLocale } from "@/i18n/LocaleProvider";
 import { useAuth } from '@/lib/auth';
 
 import { DispositionChart } from './components/DispositionChart';
 import { DurationChart } from './components/DurationChart';
 import { MetricsCards } from './components/MetricsCards';
+
 
 interface WorkflowOption {
   id: number;
@@ -51,6 +55,8 @@ interface DailyReport {
 }
 
 export default function ReportsPage() {
+    const { locale } = useUiLocale();
+    const copy = useCopy();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedWorkflow, setSelectedWorkflow] = useState<string>('all');
   const [workflows, setWorkflows] = useState<WorkflowOption[]>([]);
@@ -119,14 +125,14 @@ export default function ReportsPage() {
         }
       } catch (err) {
         console.error('Failed to fetch report:', err);
-        setError('Failed to load report data');
+        setError(copy("Failed to load report data"));
       } finally {
         setLoading(false);
       }
     };
 
     fetchReport();
-  }, [selectedDate, selectedWorkflow, timezone, auth.isAuthenticated]);
+  }, [selectedDate, selectedWorkflow, timezone, auth.isAuthenticated, copy]);
 
   const handlePreviousDay = () => {
     setSelectedDate(subDays(selectedDate, 1));
@@ -187,11 +193,11 @@ export default function ReportsPage() {
         link.click();
         document.body.removeChild(link);
       } else {
-        alert('No data available for download');
+        alert(copy("No data available for download"));
       }
     } catch (err) {
       console.error('Failed to download CSV:', err);
-      alert('Failed to download CSV data');
+      alert(copy("Failed to download CSV data"));
     }
   };
 
@@ -202,7 +208,7 @@ export default function ReportsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold">Daily Reports</h1>
+          <h1 className="text-3xl font-bold">{copy("Daily Reports")}</h1>
         </div>
 
         {/* Date Navigation & Workflow Selector */}
@@ -210,10 +216,10 @@ export default function ReportsPage() {
           {/* Workflow Selector */}
           <Select value={selectedWorkflow} onValueChange={setSelectedWorkflow}>
             <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Select workflow" />
+              <SelectValue placeholder={copy("Select workflow")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Workflows</SelectItem>
+              <SelectItem value="all">{copy("All Workflows")}</SelectItem>
               {workflows.map((workflow) => (
                 <SelectItem key={workflow.id} value={workflow.id.toString()}>
                   {workflow.name}
@@ -236,7 +242,7 @@ export default function ReportsPage() {
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-[200px]">
                   <Calendar className="mr-2 h-4 w-4" />
-                  {format(selectedDate, 'MMM dd, yyyy')}
+                  {format(selectedDate, 'MMM dd, yyyy', {locale: dateFnsLocale(locale)})}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
@@ -263,10 +269,8 @@ export default function ReportsPage() {
 
       {/* Timezone Display and Download Button */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-        <div className="text-sm text-muted-foreground">
-          Showing data for {timezone} timezone
-          {selectedWorkflow !== 'all' && (
-            <span> • Filtered by: {workflows.find(w => w.id.toString() === selectedWorkflow)?.name}</span>
+        <div className="text-sm text-muted-foreground">{copy("Showing data for ")}{timezone}{copy(" timezone")}{selectedWorkflow !== 'all' && (
+            <span>{copy(" • Filtered by: ")}{workflows.find(w => w.id.toString() === selectedWorkflow)?.name}</span>
           )}
         </div>
 
@@ -278,9 +282,7 @@ export default function ReportsPage() {
             onClick={handleDownloadCSV}
             className="flex items-center gap-2"
           >
-            <Download className="h-4 w-4" />
-            Download CSV
-          </Button>
+            <Download className="h-4 w-4" />{copy("Download CSV")}</Button>
         )}
       </div>
 
@@ -320,9 +322,8 @@ export default function ReportsPage() {
           {/* No Data Message */}
           {report.metrics.total_runs === 0 && (
             <Card className="p-6">
-              <p className="text-center text-muted-foreground">
-                No workflow runs found for {format(selectedDate, 'MMMM dd, yyyy')}
-                {selectedWorkflow !== 'all' && ' for the selected workflow'}
+              <p className="text-center text-muted-foreground">{copy("No workflow runs found for ")}{format(selectedDate, 'MMMM dd, yyyy', {locale: dateFnsLocale(locale)})}
+                {selectedWorkflow !== 'all' && copy(" for the selected workflow")}
               </p>
             </Card>
           )}

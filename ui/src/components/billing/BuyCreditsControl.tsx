@@ -13,8 +13,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { PostHogEvent } from "@/constants/posthog-events";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { MAX_TOPUP_USD, MIN_TOPUP_USD, startTopUp, TOPUP_PRESETS } from "@/lib/billing/topup";
 import { cn } from "@/lib/utils";
+
 
 // Round to whole cents and reject non-positive / non-finite input so a typo
 // (e.g. "5.999", "-1", "abc") can't produce a NaN or fractional-cent order.
@@ -25,6 +27,7 @@ const parseAmount = (raw: string): number | null => {
 };
 
 export function BuyCreditsControl({ className }: { className?: string }) {
+    const copy = useCopy();
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
   const [custom, setCustom] = useState("");
@@ -62,7 +65,7 @@ export function BuyCreditsControl({ className }: { className?: string }) {
       await startTopUp(amount);
     } catch {
       // The seam is intentionally unimplemented until Razorpay lands.
-      setError("Self-serve top-up is coming soon. Use \"Hire an Expert\" or contact us for now.");
+      setError(copy("Self-serve top-up is coming soon. Use \"Hire an Expert\" or contact us for now."));
     } finally {
       setBusy(false);
     }
@@ -77,14 +80,12 @@ export function BuyCreditsControl({ className }: { className?: string }) {
             "bg-cta text-cta-foreground shadow-xs hover:bg-cta/90 focus-visible:ring-cta/50",
             className,
           )}
-        >
-          Buy Credits
-        </Button>
+        >{copy("Buy Credits")}</Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-72 space-y-3">
         <div className="space-y-0.5">
-          <p className="text-sm font-medium">Top up credits</p>
-          <p className="text-xs text-muted-foreground">Pick an amount (min ${MIN_TOPUP_USD}).</p>
+          <p className="text-sm font-medium">{copy("Top up credits")}</p>
+          <p className="text-xs text-muted-foreground">{copy("Pick an amount (min $")}{MIN_TOPUP_USD}).</p>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -111,8 +112,8 @@ export function BuyCreditsControl({ className }: { className?: string }) {
               inputMode="decimal"
               value={custom}
               onChange={(e) => onCustomChange(e.target.value)}
-              placeholder="Custom"
-              aria-label={`Custom amount (min $${MIN_TOPUP_USD})`}
+              placeholder={copy("Custom")}
+              aria-label={copy("Custom amount (min ${value0})", {value0: MIN_TOPUP_USD})}
               className="h-9 w-24 pl-5"
             />
           </div>
@@ -126,7 +127,7 @@ export function BuyCreditsControl({ className }: { className?: string }) {
           disabled={!valid || busy}
           className="w-full bg-cta text-cta-foreground shadow-xs hover:bg-cta/90 focus-visible:ring-cta/50"
         >
-          {busy ? "Starting…" : valid && amount != null ? `Buy $${amount}` : "Buy Credits"}
+          {busy ? copy("Starting…") : valid && amount != null ? copy("Buy ${value0}", {value0: amount}) : copy("Buy Credits")}
         </Button>
       </PopoverContent>
     </Popover>

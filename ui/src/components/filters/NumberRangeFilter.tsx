@@ -1,9 +1,13 @@
+"use client";
+
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { NumberRangeValue } from "@/types/filters";
+
 
 interface NumberRangeFilterProps {
   value: NumberRangeValue;
@@ -26,6 +30,7 @@ export const NumberRangeFilter: React.FC<NumberRangeFilterProps> = ({
   step = 1,
   presets = [],
 }) => {
+    const copy = useCopy();
   // Local state for fast typing - only syncs to parent on blur
   const [localMin, setLocalMin] = useState<string>(value.min?.toString() ?? "");
   const [localMax, setLocalMax] = useState<string>(value.max?.toString() ?? "");
@@ -61,7 +66,7 @@ export const NumberRangeFilter: React.FC<NumberRangeFilterProps> = ({
               size="sm"
               onClick={() => handlePresetClick(preset)}
             >
-              {preset.label}
+              {copy(preset.label)}
             </Button>
           ))}
         </div>
@@ -69,13 +74,12 @@ export const NumberRangeFilter: React.FC<NumberRangeFilterProps> = ({
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
-          <Label htmlFor="min-value">
-            Min {unit && `(${unit})`}
+          <Label htmlFor="min-value">{copy("Min ")}{unit && copy("({value0})", {value0: unit})}
           </Label>
           <Input
             id="min-value"
             type="number"
-            placeholder={`Min ${unit || 'value'}`}
+            placeholder={copy("Min {value0}", {value0: unit || 'value'})}
             value={localMin}
             onChange={(e) => setLocalMin(e.target.value)}
             onBlur={handleMinBlur}
@@ -86,13 +90,12 @@ export const NumberRangeFilter: React.FC<NumberRangeFilterProps> = ({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="max-value">
-            Max {unit && `(${unit})`}
+          <Label htmlFor="max-value">{copy("Max ")}{unit && copy("({value0})", {value0: unit})}
           </Label>
           <Input
             id="max-value"
             type="number"
-            placeholder={`Max ${unit || 'value'}`}
+            placeholder={copy("Max {value0}", {value0: unit || 'value'})}
             value={localMax}
             onChange={(e) => setLocalMax(e.target.value)}
             onBlur={handleMaxBlur}

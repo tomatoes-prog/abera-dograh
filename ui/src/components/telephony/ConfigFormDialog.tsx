@@ -36,9 +36,11 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { detailFromError } from "@/lib/apiError";
 import { useAuth } from "@/lib/auth";
 import { copyTextToClipboard } from "@/lib/clipboard";
+
 
 interface ConfigFormDialogProps {
   open: boolean;
@@ -104,6 +106,7 @@ export function ConfigFormDialog({
   suggestDefaultOutbound = false,
   onSaved,
 }: ConfigFormDialogProps) {
+    const copy = useCopy();
   const { user, getAccessToken } = useAuth();
   const [providers, setProviders] = useState<TelephonyProviderMetadata[]>([]);
   const [providerName, setProviderName] = useState<string>("");
@@ -188,7 +191,7 @@ export function ConfigFormDialog({
   const handleSubmit = async () => {
     if (!currentProvider) return;
     if (!isEdit && !name.trim()) {
-      toast.error("Name is required");
+      toast.error(copy("Name is required"));
       return;
     }
 
@@ -210,8 +213,8 @@ export function ConfigFormDialog({
             body: { name: name || undefined, config: configPayload },
           },
         );
-        if (res.error) throw new Error(detailFromError(res.error, "Failed to save configuration"));
-        toast.success("Configuration updated");
+        if (res.error) throw new Error(copy(detailFromError(res.error, "Failed to save configuration")));
+        toast.success(copy("Configuration updated"));
       } else {
         const res = await createTelephonyConfigurationApiV1OrganizationsTelephonyConfigsPost(
           {
@@ -223,13 +226,13 @@ export function ConfigFormDialog({
             },
           },
         );
-        if (res.error) throw new Error(detailFromError(res.error, "Failed to save configuration"));
-        toast.success("Configuration created");
+        if (res.error) throw new Error(copy(detailFromError(res.error, "Failed to save configuration")));
+        toast.success(copy("Configuration created"));
       }
       onOpenChange(false);
       onSaved();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save");
+      toast.error(err instanceof Error ? err.message : copy("Failed to save"));
     } finally {
       setSubmitting(false);
     }
@@ -240,27 +243,27 @@ export function ConfigFormDialog({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {isEdit ? "Edit telephony configuration" : "Add telephony configuration"}
+            {isEdit ? copy("Edit telephony configuration") : copy("Add telephony configuration")}
           </DialogTitle>
           <DialogDescription>
             {isEdit
-              ? "Update credentials for this configuration. Phone numbers are managed separately."
-              : "Connect a telephony provider account. Phone numbers are added after the configuration is created."}
+              ? copy("Update credentials for this configuration. Phone numbers are managed separately.")
+              : copy("Connect a telephony provider account. Phone numbers are added after the configuration is created.")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           {isEdit && existing && (
             <div className="space-y-1">
-              <Label>Configuration ID</Label>
+              <Label>{copy("Configuration ID")}</Label>
               <button
                 type="button"
                 onClick={() => {
                   copyTextToClipboard(String(existing.id))
-                    .then(() => toast.success("Configuration ID copied"))
-                    .catch(() => toast.error("Failed to copy ID"));
+                    .then(() => toast.success(copy("Configuration ID copied")))
+                    .catch(() => toast.error(copy("Failed to copy ID")));
                 }}
-                title="Click to copy"
+                title={copy("Click to copy")}
                 className="group flex w-full items-center gap-2 rounded-md border bg-muted/20 p-2 text-left font-mono text-xs transition-colors hover:bg-muted/40"
               >
                 <code className="flex-1 truncate">{existing.id}</code>
@@ -270,24 +273,24 @@ export function ConfigFormDialog({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="cfg-name">Name</Label>
+            <Label htmlFor="cfg-name">{copy("Name")}</Label>
             <Input
               id="cfg-name"
-              placeholder="e.g. Twilio US prod"
+              placeholder={copy("e.g. Twilio US prod")}
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="cfg-provider">Provider</Label>
+            <Label htmlFor="cfg-provider">{copy("Provider")}</Label>
             <Select
               value={providerName}
               onValueChange={setProviderName}
               disabled={lockedProvider || providers.length === 0}
             >
               <SelectTrigger id="cfg-provider">
-                <SelectValue placeholder="Select a provider" />
+                <SelectValue placeholder={copy("Select a provider")} />
               </SelectTrigger>
               <SelectContent>
                 {providers.map((p) => (
@@ -298,9 +301,7 @@ export function ConfigFormDialog({
               </SelectContent>
             </Select>
             {lockedProvider && (
-              <p className="text-xs text-muted-foreground">
-                Provider cannot be changed after creation.
-              </p>
+              <p className="text-xs text-muted-foreground">{copy("Provider cannot be changed after creation.")}</p>
             )}
             {currentProvider?.docs_url && (
               <a
@@ -309,7 +310,7 @@ export function ConfigFormDialog({
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-xs text-blue-600 underline"
               >
-                {currentProvider.display_name} docs <ExternalLink className="h-3 w-3" />
+                {currentProvider.display_name}{copy(" docs ")}<ExternalLink className="h-3 w-3" />
               </a>
             )}
           </div>
@@ -317,11 +318,9 @@ export function ConfigFormDialog({
           {!isEdit && (
             <div className="flex items-center justify-between rounded border p-3">
               <div>
-                <Label className="text-sm">Set as default for outbound calls</Label>
-                <p className="text-xs text-muted-foreground">
-                  Used by test calls and campaigns when no specific config is selected.
-                  {suggestDefaultOutbound
-                    ? " Your organization has no default yet."
+                <Label className="text-sm">{copy("Set as default for outbound calls")}</Label>
+                <p className="text-xs text-muted-foreground">{copy("Used by test calls and campaigns when no specific config is selected.")}{suggestDefaultOutbound
+                    ? copy(" Your organization has no default yet.")
                     : ""}
                 </p>
               </div>
@@ -339,11 +338,9 @@ export function ConfigFormDialog({
                     </div>
                   )}
                   <Label htmlFor={`cfg-field-${field.name}`}>
-                    {field.label}
+                    {copy(field.label)}
                     {!field.required && field.type !== "readonly" && (
-                      <span className="ml-1 text-xs text-muted-foreground">
-                        (optional)
-                      </span>
+                      <span className="ml-1 text-xs text-muted-foreground">{copy("(optional)")}</span>
                     )}
                   </Label>
                   <FieldInput
@@ -353,7 +350,7 @@ export function ConfigFormDialog({
                     isEdit={isEdit}
                   />
                   {field.description && (
-                    <p className="text-xs text-muted-foreground">{field.description}</p>
+                    <p className="text-xs text-muted-foreground">{copy(field.description)}</p>
                   )}
                 </div>
               ))}
@@ -362,11 +359,9 @@ export function ConfigFormDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
-            Cancel
-          </Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>{copy("Cancel")}</Button>
           <Button onClick={handleSubmit} disabled={submitting || !currentProvider}>
-            {submitting ? "Saving..." : isEdit ? "Save changes" : "Create"}
+            {submitting ? copy("Saving...") : isEdit ? copy("Save changes") : copy("Create")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -384,17 +379,16 @@ interface FieldInputProps {
 // Skip from_numbers in the metadata-driven form — phone numbers are managed
 // via the dedicated phone-numbers endpoints and a different UI.
 function FieldInput({ field, value, onChange, isEdit }: FieldInputProps) {
+    const copy = useCopy();
   if (field.name === "from_numbers") {
     return (
-      <p className="text-xs text-muted-foreground">
-        Phone numbers are managed separately on the configuration page.
-      </p>
+      <p className="text-xs text-muted-foreground">{copy("Phone numbers are managed separately on the configuration page.")}</p>
     );
   }
 
   const placeholder =
     field.placeholder ??
-    (field.sensitive && isEdit ? "Leave masked to keep existing" : "");
+    (field.sensitive && isEdit ? copy("Leave masked to keep existing") : "");
 
   // Server-generated and not editable. Shown because the customer has to copy
   // it into configuration we do not control, so it cannot be hidden the way
@@ -407,10 +401,10 @@ function FieldInput({ field, value, onChange, isEdit }: FieldInputProps) {
         type="button"
         onClick={() => {
           copyTextToClipboard(generated)
-            .then(() => toast.success(`${field.label} copied`))
-            .catch(() => toast.error("Failed to copy"));
+            .then(() => toast.success(copy("{value0} copied", {value0: field.label})))
+            .catch(() => toast.error(copy("Failed to copy")));
         }}
-        title="Click to copy"
+        title={copy("Click to copy")}
         className="group flex w-full items-center gap-2 rounded-md border bg-muted/20 p-2 text-left font-mono text-xs transition-colors hover:bg-muted/40"
       >
         <code className="flex-1 truncate">{generated}</code>
@@ -457,13 +451,13 @@ function FieldInput({ field, value, onChange, isEdit }: FieldInputProps) {
         onValueChange={(next) => onChange(next === "__none__" ? undefined : next)}
       >
         <SelectTrigger id={`cfg-field-${field.name}`}>
-          <SelectValue placeholder={placeholder || "Select an option"} />
+          <SelectValue placeholder={placeholder || copy("Select an option")} />
         </SelectTrigger>
         <SelectContent>
-          {!field.required && <SelectItem value="__none__">Not configured</SelectItem>}
+          {!field.required && <SelectItem value="__none__">{copy("Not configured")}</SelectItem>}
           {(field.options ?? []).map((option) => (
             <SelectItem key={option.value} value={option.value}>
-              {option.label}
+              {copy(option.label)}
             </SelectItem>
           ))}
         </SelectContent>

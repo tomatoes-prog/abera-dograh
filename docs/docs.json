@@ -173,6 +173,7 @@
               "deployment/introduction",
               "deployment/docker",
               "deployment/authentication",
+              "deployment/ui-language",
               "deployment/custom-domain",
               "deployment/scaling",
               "deployment/update",

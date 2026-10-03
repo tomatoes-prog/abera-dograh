@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { KNOWLEDGE_BASE_DOC_URL } from "@/constants/documentation";
+import { useCopy } from "@/i18n/LocaleProvider";
+
 
 interface DocumentSelectorProps {
     value: string[];
@@ -29,6 +31,7 @@ export const DocumentSelector = ({
     description = "Select documents that the agent can reference during conversations.",
     showLabel = true,
 }: DocumentSelectorProps) => {
+    const copy = useCopy();
     // Only show completed documents
     const completedDocuments = useMemo(
         () => documents.filter((doc) => doc.processing_status === "completed"),
@@ -60,21 +63,17 @@ export const DocumentSelector = ({
                         {description && (
                             <Label className="text-xs text-muted-foreground">
                             {description}{" "}
-                            <a href={KNOWLEDGE_BASE_DOC_URL} target="_blank" rel="noopener noreferrer" className="underline">Learn more</a>
+                            <a href={KNOWLEDGE_BASE_DOC_URL} target="_blank" rel="noopener noreferrer" className="underline">{copy("Learn more")}</a>
                         </Label>
                         )}
                     </>
                 )}
                 <div className="border rounded-md p-4 space-y-3">
-                    <div className="text-sm text-muted-foreground text-center">
-                        No documents available. Upload documents to the knowledge base first.
-                    </div>
+                    <div className="text-sm text-muted-foreground text-center">{copy("No documents available. Upload documents to the knowledge base first.")}</div>
                     <div className="flex justify-center">
                         <Button variant="outline" size="sm" asChild>
                             <Link href="/files" target="_blank">
-                                <ExternalLink className="h-4 w-4 mr-2" />
-                                Upload Documents
-                            </Link>
+                                <ExternalLink className="h-4 w-4 mr-2" />{copy("Upload Documents")}</Link>
                         </Button>
                     </div>
                 </div>
@@ -90,7 +89,7 @@ export const DocumentSelector = ({
                     {description && (
                         <Label className="text-xs text-muted-foreground">
                             {description}{" "}
-                            <a href={KNOWLEDGE_BASE_DOC_URL} target="_blank" rel="noopener noreferrer" className="underline">Learn more</a>
+                            <a href={KNOWLEDGE_BASE_DOC_URL} target="_blank" rel="noopener noreferrer" className="underline">{copy("Learn more")}</a>
                         </Label>
                     )}
                 </>
@@ -123,7 +122,7 @@ export const DocumentSelector = ({
                                             {doc.filename}
                                         </div>
                                         <div className="text-xs text-muted-foreground">
-                                            {formatFileSize(doc.file_size_bytes)} • {doc.retrieval_mode === 'full_document' ? 'Full Document' : `${doc.total_chunks} chunks`}
+                                            {formatFileSize(doc.file_size_bytes)} • {doc.retrieval_mode === 'full_document' ? copy("Full Document") : copy("{value0} chunks", {value0: doc.total_chunks})}
                                         </div>
                                     </div>
                                 </label>
@@ -137,16 +136,13 @@ export const DocumentSelector = ({
                         target="_blank"
                         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
                     >
-                        <ExternalLink className="h-4 w-4" />
-                        Manage Documents
-                    </Link>
+                        <ExternalLink className="h-4 w-4" />{copy("Manage Documents")}</Link>
                 </div>
             </div>
 
             {value.length > 0 && (
                 <p className="text-xs text-muted-foreground">
-                    {value.length} {value.length === 1 ? "document" : "documents"} selected
-                </p>
+                    {value.length} {value.length === 1 ? copy("document") : copy("documents")}{copy(" selected")}</p>
             )}
         </div>
     );

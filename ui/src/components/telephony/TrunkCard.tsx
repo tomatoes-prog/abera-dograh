@@ -48,7 +48,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { detailFromError } from "@/lib/apiError";
+
 
 interface TrunkCardProps {
   configuration: TelephonyConfigurationDetail;
@@ -75,6 +77,7 @@ export function TrunkCard({
   onAddPhoneNumber,
   onEditPhoneNumber,
 }: TrunkCardProps) {
+    const copy = useCopy();
   const providerUi = trunkProviderUi(configuration.provider);
   const trunks = configuration.trunks ?? [];
 
@@ -107,7 +110,7 @@ export function TrunkCard({
   const handleSubmit = async () => {
     const trimmed = name.trim();
     if (!trimmed) {
-      toast.error("Trunk name is required");
+      toast.error(copy("Trunk name is required"));
       return;
     }
     const invalid = providerUi.validate?.(trimmed, settings);
@@ -130,13 +133,13 @@ export function TrunkCard({
             { path: { config_id: configuration.id }, body },
           );
       if (response.error) {
-        throw new Error(detailFromError(response.error, "Failed to save trunk"));
+        throw new Error(copy(detailFromError(response.error, "Failed to save trunk")));
       }
-      toast.success(editing ? "Trunk updated" : "Trunk added");
+      toast.success(editing ? copy("Trunk updated") : copy("Trunk added"));
       setDialogOpen(false);
       await onChanged();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save trunk");
+      toast.error(error instanceof Error ? error.message : copy("Failed to save trunk"));
     } finally {
       setSubmitting(false);
     }
@@ -153,13 +156,13 @@ export function TrunkCard({
           },
         );
       if (response.error) {
-        throw new Error(detailFromError(response.error, "Failed to delete trunk"));
+        throw new Error(copy(detailFromError(response.error, "Failed to delete trunk")));
       }
-      toast.success(`Trunk "${deleteTarget.name}" deleted`);
+      toast.success(copy("Trunk \"{value0}\" deleted", {value0: deleteTarget.name}));
       setDeleteTarget(null);
       await onChanged();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete trunk");
+      toast.error(error instanceof Error ? error.message : copy("Failed to delete trunk"));
     } finally {
       setSubmitting(false);
     }
@@ -172,23 +175,15 @@ export function TrunkCard({
       <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div className="space-y-1">
-            <CardTitle>Outbound trunks</CardTitle>
-            <CardDescription>
-              Each trunk is one route to a carrier or PBX. Numbers listed under a
-              trunk dial out on it; numbers with no trunk are managed in Phone
-              numbers below.
-            </CardDescription>
+            <CardTitle>{copy("Outbound trunks")}</CardTitle>
+            <CardDescription>{copy("Each trunk is one route to a carrier or PBX. Numbers listed under a trunk dial out on it; numbers with no trunk are managed in Phone numbers below.")}</CardDescription>
           </div>
           <Button size="sm" onClick={openCreate} disabled={submitting}>
-            <Plus className="h-4 w-4 mr-2" /> Add trunk
-          </Button>
+            <Plus className="h-4 w-4 mr-2" />{copy(" Add trunk")}</Button>
         </CardHeader>
         <CardContent className="space-y-4">
           {trunks.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No trunks yet. Add one pointing at your SIP carrier or PBX to place
-              outbound calls on this configuration.
-            </p>
+            <p className="text-sm text-muted-foreground">{copy("No trunks yet. Add one pointing at your SIP carrier or PBX to place outbound calls on this configuration.")}</p>
           ) : (
             trunks.map((trunk) => {
               const assigned = phoneNumbers.filter(
@@ -204,9 +199,7 @@ export function TrunkCard({
                       <p className="flex items-center gap-2 text-sm font-medium">
                         <span className="truncate font-mono">{trunk.name}</span>
                         {!trunk.enabled && (
-                          <Badge variant="outline" className="font-normal">
-                            Disabled
-                          </Badge>
+                          <Badge variant="outline" className="font-normal">{copy("Disabled")}</Badge>
                         )}
                       </p>
                       {summary && (
@@ -222,15 +215,14 @@ export function TrunkCard({
                         disabled={submitting}
                         onClick={() => onAddPhoneNumber(trunk)}
                       >
-                        <Plus className="h-4 w-4 mr-2" /> Add number
-                      </Button>
+                        <Plus className="h-4 w-4 mr-2" />{copy(" Add number")}</Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         disabled={submitting}
                         onClick={() => openEdit(trunk)}
-                        aria-label={`Edit trunk ${trunk.name}`}
-                        title="Edit trunk"
+                        aria-label={copy("Edit trunk {value0}", {value0: trunk.name})}
+                        title={copy("Edit trunk")}
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -239,8 +231,8 @@ export function TrunkCard({
                         size="sm"
                         disabled={submitting}
                         onClick={() => setDeleteTarget(trunk)}
-                        aria-label={`Delete trunk ${trunk.name}`}
-                        title="Delete trunk"
+                        aria-label={copy("Delete trunk {value0}", {value0: trunk.name})}
+                        title={copy("Delete trunk")}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
@@ -248,9 +240,7 @@ export function TrunkCard({
                   </div>
 
                   {assigned.length === 0 ? (
-                    <p className="p-3 text-sm text-muted-foreground">
-                      No numbers on this trunk yet.
-                    </p>
+                    <p className="p-3 text-sm text-muted-foreground">{copy("No numbers on this trunk yet.")}</p>
                   ) : (
                     <ul className="divide-y">
                       {assigned.map((number) => (
@@ -268,21 +258,19 @@ export function TrunkCard({
                               </span>
                             )}
                             {!number.is_active && (
-                              <Badge variant="outline">Inactive</Badge>
+                              <Badge variant="outline">{copy("Inactive")}</Badge>
                             )}
                             {number.is_default_caller_id && (
                               <Badge className="gap-1">
-                                <Star className="h-3 w-3 fill-current" /> Default
-                                caller
-                              </Badge>
+                                <Star className="h-3 w-3 fill-current" />{copy(" Default caller")}</Badge>
                             )}
                           </div>
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => onEditPhoneNumber(number)}
-                            aria-label={`Edit ${number.address}`}
-                            title="Edit phone number"
+                            aria-label={copy("Edit {value0}", {value0: number.address})}
+                            title={copy("Edit phone number")}
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -300,21 +288,18 @@ export function TrunkCard({
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editing ? "Edit trunk" : "Add trunk"}</DialogTitle>
-            <DialogDescription>
-              Dograh provisions this trunk with {configuration.provider} and dials
-              your carrier over it.
-            </DialogDescription>
+            <DialogTitle>{editing ? copy("Edit trunk") : copy("Add trunk")}</DialogTitle>
+            <DialogDescription>{copy("Dograh provisions this trunk with ")}{configuration.provider}{copy(" and dials your carrier over it.")}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="trunk-name">Name</Label>
+              <Label htmlFor="trunk-name">{copy("Name")}</Label>
               <Input
                 id="trunk-name"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="e.g. primary-carrier"
+                placeholder={copy("e.g. primary-carrier")}
                 disabled={submitting}
               />
             </div>
@@ -332,10 +317,8 @@ export function TrunkCard({
 
             <div className="flex items-center justify-between rounded-md border p-3">
               <div className="space-y-0.5">
-                <Label htmlFor="trunk-enabled">Enabled</Label>
-                <p className="text-xs text-muted-foreground">
-                  Calls are never routed over a disabled trunk.
-                </p>
+                <Label htmlFor="trunk-enabled">{copy("Enabled")}</Label>
+                <p className="text-xs text-muted-foreground">{copy("Calls are never routed over a disabled trunk.")}</p>
               </div>
               <Switch
                 id="trunk-enabled"
@@ -351,11 +334,9 @@ export function TrunkCard({
               variant="outline"
               onClick={() => setDialogOpen(false)}
               disabled={submitting}
-            >
-              Cancel
-            </Button>
+            >{copy("Cancel")}</Button>
             <Button onClick={handleSubmit} disabled={submitting}>
-              {submitting ? "Saving..." : "Save trunk"}
+              {submitting ? copy("Saving...") : copy("Save trunk")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -367,16 +348,14 @@ export function TrunkCard({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete trunk?</AlertDialogTitle>
+            <AlertDialogTitle>{copy("Delete trunk?")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {deleteTarget?.name} will be deactivated with{" "}
-              {configuration.provider} and calls will stop routing over it. Numbers
-              still assigned to it must be moved first.
-            </AlertDialogDescription>
+              {deleteTarget?.name}{copy(" will be deactivated with")}{" "}
+              {configuration.provider}{copy(" and calls will stop routing over it. Numbers still assigned to it must be moved first.")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+            <AlertDialogCancel>{copy("Cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>{copy("Delete")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

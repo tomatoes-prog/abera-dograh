@@ -1,3 +1,5 @@
+"use client";
+
 import * as LucideIcons from 'lucide-react';
 import { Circle, ExternalLink, type LucideIcon, X } from 'lucide-react';
 import { useEffect, useMemo } from 'react';
@@ -5,8 +7,10 @@ import { useEffect, useMemo } from 'react';
 import type { NodeSpec } from '@/client/types.gen';
 import { useNodeSpecs } from '@/components/flow/renderer';
 import { Button } from '@/components/ui/button';
+import { useCopy } from "@/i18n/LocaleProvider";
 
 import { FlowNode, NodeType } from './types';
+
 
 type AddNodePanelProps = {
     isOpen: boolean;
@@ -46,11 +50,12 @@ function NodeSection({
     onNodeSelect: (nodeType: NodeType) => void;
     nodeTypeCounts: Map<string, number>;
 }) {
+    const copy = useCopy();
     if (specs.length === 0) return null;
     return (
         <div className="space-y-3">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {title}
+                {copy(title)}
             </h3>
             <div className="space-y-2">
                 {specs.map((spec) => {
@@ -69,7 +74,7 @@ function NodeSection({
                             disabled={disabled}
                             title={
                                 disabled
-                                    ? `${spec.display_name} limit reached for this workflow`
+                                    ? copy("{value0} limit reached for this workflow", {value0: copy(spec.display_name)})
                                     : undefined
                             }
                         >
@@ -79,10 +84,10 @@ function NodeSection({
                                 </div>
                                 <div className="flex flex-col items-start text-left min-w-0">
                                     <span className="font-medium text-sm">
-                                        {spec.display_name}
+                                        {copy(spec.display_name)}
                                     </span>
                                     <span className="text-xs text-muted-foreground whitespace-normal">
-                                        {spec.description}
+                                        {copy(spec.description)}
                                     </span>
                                 </div>
                             </div>
@@ -95,6 +100,7 @@ function NodeSection({
 }
 
 export default function AddNodePanel({ isOpen, onNodeSelect, onClose, nodes }: AddNodePanelProps) {
+    const copy = useCopy();
     const { specs } = useNodeSpecs();
 
     // Group registered specs into their display sections, preserving SECTIONS order.
@@ -132,16 +138,14 @@ export default function AddNodePanel({ isOpen, onNodeSelect, onClose, nodes }: A
             <div className="p-4 h-full overflow-y-auto">
                 <div className="flex justify-between items-center mb-6">
                     <div className="flex flex-col gap-1">
-                        <h2 className="text-lg font-semibold">Add New Node</h2>
+                        <h2 className="text-lg font-semibold">{copy("Add New Node")}</h2>
                         <a
                             href="https://docs.dograh.com/voice-agent/introduction"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
                         >
-                            <ExternalLink className="w-3 h-3" />
-                            View Nodes Documentation
-                        </a>
+                            <ExternalLink className="w-3 h-3" />{copy("View Nodes Documentation")}</a>
                     </div>
                     <Button variant="ghost" size="icon" onClick={onClose}>
                         <X className="w-5 h-5" />
@@ -151,8 +155,8 @@ export default function AddNodePanel({ isOpen, onNodeSelect, onClose, nodes }: A
                 <div className="space-y-6">
                     {sections.map(({ title, specs }) => (
                         <NodeSection
-                            key={title}
-                            title={title}
+                            key={copy(title)}
+                            title={copy(title)}
                             specs={specs}
                             onNodeSelect={onNodeSelect}
                             nodeTypeCounts={nodeTypeCounts}

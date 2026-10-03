@@ -8,12 +8,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { useAuth } from '@/lib/auth';
 import { impersonateAsSuperadmin } from "@/lib/utils";
+
 
 type ImpersonationTarget = "provider" | "email";
 
 export default function SuperadminPage() {
+    const copy = useCopy();
     const [providerUserId, setProviderUserId] = useState("");
     const [email, setEmail] = useState("");
     const [error, setError] = useState<{ target: ImpersonationTarget; message: string } | null>(null);
@@ -81,27 +84,25 @@ export default function SuperadminPage() {
         <>
             <main className="container mx-auto p-6 space-y-6 max-w-5xl">
                 <div className="text-center">
-                    <h1 className="text-3xl font-bold mb-2">Superadmin Dashboard</h1>
-                    <p className="text-sm text-muted-foreground">Manage users and view system-wide data</p>
+                    <h1 className="text-3xl font-bold mb-2">{copy("Superadmin Dashboard")}</h1>
+                    <p className="text-sm text-muted-foreground">{copy("Manage users and view system-wide data")}</p>
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2">
                         <Card>
                             <CardHeader>
-                                <CardTitle>Provider User ID</CardTitle>
-                                <CardDescription>
-                                    Impersonate with the Stack provider user ID
-                                </CardDescription>
+                                <CardTitle>{copy("Provider User ID")}</CardTitle>
+                                <CardDescription>{copy("Impersonate with the Stack provider user ID")}</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <form onSubmit={handleProviderImpersonate} className="space-y-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="providerUserId">Provider User ID</Label>
+                                        <Label htmlFor="providerUserId">{copy("Provider User ID")}</Label>
                                         <Input
                                             id="providerUserId"
                                             value={providerUserId}
                                             onChange={(e) => setProviderUserId(e.target.value)}
-                                            placeholder="Provider user ID"
+                                            placeholder={copy("Provider user ID")}
                                             required
                                         />
                                     </div>
@@ -119,11 +120,9 @@ export default function SuperadminPage() {
                                     >
                                         {loadingTarget === "provider" ? (
                                             <>
-                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                Processing...
-                                            </>
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />{copy("Processing...")}</>
                                         ) : (
-                                            'Impersonate by Provider ID'
+                                            copy("Impersonate by Provider ID")
                                         )}
                                     </Button>
                                 </form>
@@ -132,21 +131,19 @@ export default function SuperadminPage() {
 
                         <Card>
                             <CardHeader>
-                                <CardTitle>Email</CardTitle>
-                                <CardDescription>
-                                    Impersonate with a primary email address
-                                </CardDescription>
+                                <CardTitle>{copy("Email")}</CardTitle>
+                                <CardDescription>{copy("Impersonate with a primary email address")}</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <form onSubmit={handleEmailImpersonate} className="space-y-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="email">Email Address</Label>
+                                        <Label htmlFor="email">{copy("Email Address")}</Label>
                                         <Input
                                             id="email"
                                             type="email"
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
-                                            placeholder="user@example.com"
+                                            placeholder={copy("user@example.com")}
                                             required
                                         />
                                     </div>
@@ -164,11 +161,9 @@ export default function SuperadminPage() {
                                     >
                                         {loadingTarget === "email" ? (
                                             <>
-                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                Processing...
-                                            </>
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />{copy("Processing...")}</>
                                         ) : (
-                                            'Impersonate by Email'
+                                            copy("Impersonate by Email")
                                         )}
                                     </Button>
                                 </form>
@@ -177,17 +172,13 @@ export default function SuperadminPage() {
 
                         <Card className="md:col-span-2">
                             <CardHeader>
-                                <CardTitle>Workflow Runs</CardTitle>
-                                <CardDescription>
-                                    View and manage all workflow runs across organizations
-                                </CardDescription>
+                                <CardTitle>{copy("Workflow Runs")}</CardTitle>
+                                <CardDescription>{copy("View and manage all workflow runs across organizations")}</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <Link href="/superadmin/runs">
                                     <Button className="w-full md:w-auto">
-                                        <List className="mr-2 h-4 w-4" />
-                                        View All Runs
-                                        <ArrowRight className="ml-2 h-4 w-4" />
+                                        <List className="mr-2 h-4 w-4" />{copy("View All Runs")}<ArrowRight className="ml-2 h-4 w-4" />
                                     </Button>
                                 </Link>
                             </CardContent>

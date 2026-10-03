@@ -3,6 +3,8 @@
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
+import { useCopy, useUiLocale } from "@/i18n/LocaleProvider";
+
 declare global {
   interface Window {
     chatwootSDK?: {
@@ -15,10 +17,12 @@ declare global {
       position?: "left" | "right";
       type?: "standard" | "expanded_bubble";
       launcherTitle?: string;
+      locale?: string;
     };
     $chatwoot?: {
       toggleBubbleVisibility?: (visibility: "hide" | "show") => void;
       toggle?: (state?: "open" | "close") => void;
+      setLocale?: (locale: string) => void;
     };
   }
 }
@@ -35,6 +39,9 @@ const isBuilderPath = (pathname: string) =>
 
 export default function ChatwootWidget() {
   const pathname = usePathname();
+  const copy = useCopy();
+  const { locale } = useUiLocale();
+  const chatLocale = locale === "es-419" ? "es" : "en";
 
   // Load the Chatwoot SDK exactly once for the lifetime of the app.
   useEffect(() => {
@@ -53,7 +60,8 @@ export default function ChatwootWidget() {
     window.chatwootSettings = {
       position: "right",
       type: "standard",
-      launcherTitle: "Chat with us",
+      launcherTitle: copy("Chat with us"),
+      locale: chatLocale,
     };
 
     // Check if script is already loaded
@@ -83,7 +91,17 @@ export default function ChatwootWidget() {
     };
 
     document.body.appendChild(script);
-  }, []);
+  }, [copy, chatLocale]);
+
+  // Chatwoot's documented locale API updates an existing widget without
+  // recreating the SDK or losing an active support conversation.
+  useEffect(() => {
+    const applyLocale = () => window.$chatwoot?.setLocale?.(chatLocale);
+    if (window.chatwootSettings) window.chatwootSettings.locale = chatLocale;
+    applyLocale();
+    window.addEventListener("chatwoot:ready", applyLocale, { once: true });
+    return () => window.removeEventListener("chatwoot:ready", applyLocale);
+  }, [chatLocale]);
 
   // Show/hide the bubble per route using Chatwoot's native API. We never tear
   // down and recreate the SDK — doing so left the bubble permanently hidden

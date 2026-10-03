@@ -5,14 +5,17 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useCopy } from "@/i18n/LocaleProvider";
 
 import { DisabledNotice } from "./shared";
+
 
 export function AiSimulatorPlaceholder({
     disabledReason,
 }: {
     disabledReason: string | null;
 }) {
+    const copy = useCopy();
     const [simulatorPrompt, setSimulatorPrompt] = useState(
         "Act like a skeptical prospect. Push on pricing, ask about integrations, and end the chat if the assistant becomes repetitive.",
     );
@@ -20,19 +23,15 @@ export function AiSimulatorPlaceholder({
     return (
         <div className="flex min-h-0 flex-1 flex-col gap-3">
             {disabledReason ? <DisabledNotice reason={disabledReason} /> : null}
-            <p className="text-sm text-muted-foreground">
-                Drive multi-turn, agent-vs-agent tests with a persona prompt.
-            </p>
+            <p className="text-sm text-muted-foreground">{copy("Drive multi-turn, agent-vs-agent tests with a persona prompt.")}</p>
             <Textarea
                 value={simulatorPrompt}
                 onChange={(event) => setSimulatorPrompt(event.target.value)}
-                placeholder="Describe the simulated user..."
+                placeholder={copy("Describe the simulated user...")}
                 className="min-h-32 resize-none text-sm leading-6"
             />
             <Button size="sm" disabled className="self-start">
-                <Sparkles className="h-4 w-4" />
-                Coming soon
-            </Button>
+                <Sparkles className="h-4 w-4" />{copy("Coming soon")}</Button>
         </div>
     );
 }

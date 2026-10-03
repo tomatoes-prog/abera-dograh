@@ -18,10 +18,15 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useOrganizationTimezone } from '@/hooks/useOrganizationTimezone';
+import { useCopy } from "@/i18n/LocaleProvider";
+import { useUiLocale } from "@/i18n/LocaleProvider";
 import { useAuth } from '@/lib/auth';
 import { formatDate } from '@/lib/dateTime';
 
+
 export default function CampaignsPage() {
+    const { locale } = useUiLocale();
+    const copy = useCopy();
     const { user, getAccessToken, redirectToLogin, loading } = useAuth();
     const organizationTimezone = useOrganizationTimezone();
     const router = useRouter();
@@ -96,21 +101,17 @@ export default function CampaignsPage() {
         <div className="container mx-auto p-6 space-y-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold mb-2">Campaigns</h1>
-                    <p>Manage your bulk workflow execution campaigns</p>
+                    <h1 className="text-3xl font-bold mb-2">{copy("Campaigns")}</h1>
+                    <p>{copy("Manage your bulk workflow execution campaigns")}</p>
                 </div>
                     <Button onClick={handleCreateCampaign}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Create Campaign
-                    </Button>
+                        <Plus className="h-4 w-4 mr-2" />{copy("Create Campaign")}</Button>
                 </div>
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>All Campaigns</CardTitle>
-                        <CardDescription>
-                            View and manage your campaigns
-                        </CardDescription>
+                        <CardTitle>{copy("All Campaigns")}</CardTitle>
+                        <CardDescription>{copy("View and manage your campaigns")}</CardDescription>
                     </CardHeader>
                     <CardContent>
                         {isLoading ? (
@@ -124,13 +125,13 @@ export default function CampaignsPage() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>ID</TableHead>
-                                            <TableHead>Name</TableHead>
-                                            <TableHead>Workflow</TableHead>
-                                            <TableHead>State</TableHead>
-                                            <TableHead>Progress</TableHead>
-                                            <TableHead>Created</TableHead>
-                                            <TableHead className="text-right">Action</TableHead>
+                                            <TableHead>{copy("ID")}</TableHead>
+                                            <TableHead>{copy("Name")}</TableHead>
+                                            <TableHead>{copy("Workflow")}</TableHead>
+                                            <TableHead>{copy("State")}</TableHead>
+                                            <TableHead>{copy("Progress")}</TableHead>
+                                            <TableHead>{copy("Created")}</TableHead>
+                                            <TableHead className="text-right">{copy("Action")}</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -152,7 +153,7 @@ export default function CampaignsPage() {
                                                     {campaign.executed_count} / {campaign.total_queued_count}
                                                 </TableCell>
                                                 <TableCell>
-                                                    {formatDate(campaign.created_at, organizationTimezone)}
+                                                    {formatDate(campaign.created_at, organizationTimezone, locale)}
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <Button
@@ -162,9 +163,7 @@ export default function CampaignsPage() {
                                                             e.stopPropagation();
                                                             handleRowClick(campaign.id);
                                                         }}
-                                                    >
-                                                        View
-                                                    </Button>
+                                                    >{copy("View")}</Button>
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -173,11 +172,9 @@ export default function CampaignsPage() {
                             </div>
                         ) : (
                             <div className="text-center py-8">
-                                <p className="mb-4">No campaigns found</p>
+                                <p className="mb-4">{copy("No campaigns found")}</p>
                                 <Button onClick={handleCreateCampaign} variant="outline">
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    Create your first campaign
-                                </Button>
+                                    <Plus className="h-4 w-4 mr-2" />{copy("Create your first campaign")}</Button>
                             </div>
                         )}
                     </CardContent>

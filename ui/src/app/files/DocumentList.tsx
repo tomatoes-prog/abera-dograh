@@ -14,16 +14,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useOrganizationTimezone } from '@/hooks/useOrganizationTimezone';
+import { useCopy } from "@/i18n/LocaleProvider";
+import { useUiLocale } from "@/i18n/LocaleProvider";
 import { formatDateTime } from '@/lib/dateTime';
 import logger from '@/lib/logger';
 
 import DocumentEditor, { isEditableDocument } from './DocumentEditor';
+
 
 interface DocumentListProps {
   refreshTrigger: number;
 }
 
 export default function DocumentList({ refreshTrigger }: DocumentListProps) {
+    const { locale } = useUiLocale();
+    const copy = useCopy();
   const organizationTimezone = useOrganizationTimezone();
   const [documents, setDocuments] = useState<DocumentResponseSchema[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,12 +54,12 @@ export default function DocumentList({ refreshTrigger }: DocumentListProps) {
 
       setDocuments(response.data.documents);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch documents');
+      setError(err instanceof Error ? err.message : copy("Failed to fetch documents"));
       logger.error('Error fetching documents:', err);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [copy]);
 
   // Fetch documents on mount and when refreshTrigger changes
   useEffect(() => {
@@ -78,7 +83,7 @@ export default function DocumentList({ refreshTrigger }: DocumentListProps) {
   }, [documents, fetchDocuments]);
 
   const handleDelete = async (documentUuid: string, filename: string) => {
-    if (!confirm(`Are you sure you want to delete "${filename}"?`)) return;
+    if (!confirm(copy("Are you sure you want to delete \"{value0}\"?", {value0: filename}))) return;
 
     try {
       const response = await deleteDocumentApiV1KnowledgeBaseDocumentsDocumentUuidDelete({
@@ -91,10 +96,10 @@ export default function DocumentList({ refreshTrigger }: DocumentListProps) {
         throw new Error('Failed to delete document');
       }
 
-      toast.success(`Deleted "${filename}"`);
+      toast.success(copy("Deleted \"{value0}\"", {value0: filename}));
       fetchDocuments();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete document');
+      toast.error(err instanceof Error ? err.message : copy("Failed to delete document"));
       logger.error('Error deleting document:', err);
     }
   };
@@ -110,27 +115,23 @@ export default function DocumentList({ refreshTrigger }: DocumentListProps) {
     // after an edit, and after that re-index fails.
     if (doc.has_live_content && isBusy(doc)) {
       return (
-        <Badge variant="secondary" className="animate-pulse">
-          Updating
-        </Badge>
+        <Badge variant="secondary" className="animate-pulse">{copy("Updating")}</Badge>
       );
     }
     if (doc.has_live_content && doc.processing_status === 'failed') {
-      return <Badge variant="destructive">Update failed</Badge>;
+      return <Badge variant="destructive">{copy("Update failed")}</Badge>;
     }
     switch (doc.processing_status) {
       case 'completed':
-        return <Badge className="bg-green-500">Completed</Badge>;
+        return <Badge className="bg-green-500">{copy("Completed")}</Badge>;
       case 'processing':
         return (
-          <Badge variant="secondary" className="animate-pulse">
-            Processing
-          </Badge>
+          <Badge variant="secondary" className="animate-pulse">{copy("Processing")}</Badge>
         );
       case 'pending':
-        return <Badge variant="outline">Pending</Badge>;
+        return <Badge variant="outline">{copy("Pending")}</Badge>;
       case 'failed':
-        return <Badge variant="destructive">Failed</Badge>;
+        return <Badge variant="destructive">{copy("Failed")}</Badge>;
       default:
         return <Badge variant="outline">{doc.processing_status}</Badge>;
     }
@@ -179,7 +180,7 @@ export default function DocumentList({ refreshTrigger }: DocumentListProps) {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search documents..."
+            placeholder={copy("Search documents...")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
@@ -201,8 +202,8 @@ export default function DocumentList({ refreshTrigger }: DocumentListProps) {
           <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground">
             {searchQuery
-              ? 'No documents match your search'
-              : 'No documents uploaded yet'}
+              ? copy("No documents match your search")
+              : copy("No documents uploaded yet")}
           </p>
         </div>
       ) : (
@@ -212,7 +213,7 @@ export default function DocumentList({ refreshTrigger }: DocumentListProps) {
               key={doc.document_uuid}
               role={canOpen(doc) ? 'button' : undefined}
               tabIndex={canOpen(doc) ? 0 : undefined}
-              aria-label={canOpen(doc) ? `Edit ${doc.filename}` : undefined}
+              aria-label={canOpen(doc) ? copy("Edit {value0}", {value0: doc.filename}) : undefined}
               className={`flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors ${
                 canOpen(doc)
                   ? 'cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring'
@@ -236,36 +237,31 @@ export default function DocumentList({ refreshTrigger }: DocumentListProps) {
                     <span className="font-medium truncate">{doc.filename}</span>
                     {getStatusBadge(doc)}
                     {doc.retrieval_mode === 'full_document' ? (
-                      <Badge variant="outline" className="text-xs">Full Document</Badge>
+                      <Badge variant="outline" className="text-xs">{copy("Full Document")}</Badge>
                     ) : (
-                      <Badge variant="outline" className="text-xs">Chunked</Badge>
+                      <Badge variant="outline" className="text-xs">{copy("Chunked")}</Badge>
                     )}
                   </div>
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <span>{formatFileSize(doc.file_size_bytes)}</span>
                     {doc.processing_status === 'completed' && doc.retrieval_mode !== 'full_document' && (
-                      <span>{doc.total_chunks} chunks</span>
+                      <span>{doc.total_chunks}{copy(" chunks")}</span>
                     )}
-                    <span>{formatDateTime(doc.created_at, organizationTimezone)}</span>
+                    <span>{formatDateTime(doc.created_at, organizationTimezone, locale)}</span>
                   </div>
                   {doc.has_live_content && isBusy(doc) && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Agents keep using the previous version until the update finishes.
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">{copy("Agents keep using the previous version until the update finishes.")}</p>
                   )}
                   {doc.processing_error && (
-                    <p className="text-xs text-destructive mt-1">
-                      Error: {doc.processing_error}
-                      {doc.has_live_content && ' Agents are still using the previous version.'}
+                    <p className="text-xs text-destructive mt-1">{copy("Error: ")}{doc.processing_error}
+                      {doc.has_live_content && copy(" Agents are still using the previous version.")}
                     </p>
                   )}
                   {doc.processing_status === 'failed' &&
                    doc.docling_metadata &&
                    typeof doc.docling_metadata === 'object' &&
                    'duplicate_of' in doc.docling_metadata && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Duplicate of another document
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">{copy("Duplicate of another document")}</p>
                   )}
                 </div>
               </div>
@@ -279,7 +275,7 @@ export default function DocumentList({ refreshTrigger }: DocumentListProps) {
                     size="sm"
                     onClick={() => setEditingDoc(doc)}
                     disabled={isBusy(doc)}
-                    title={isBusy(doc) ? 'Available once processing finishes' : 'Edit'}
+                    title={isBusy(doc) ? copy("Available once processing finishes") : copy("Edit")}
                   >
                     <Pencil className="w-4 h-4" />
                   </Button>

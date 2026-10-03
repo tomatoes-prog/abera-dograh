@@ -32,6 +32,8 @@ import {
 import { useAppConfig } from "@/context/AppConfigContext";
 import { useOrgConfig } from "@/context/OrgConfigContext";
 import { useOrganizationTimezone } from "@/hooks/useOrganizationTimezone";
+import { useCopy } from "@/i18n/LocaleProvider";
+import { useUiLocale } from "@/i18n/LocaleProvider";
 import { detailFromError } from "@/lib/apiError";
 import { useAuth } from "@/lib/auth";
 import { getBillingActivity, getBillingDateRange, getBillingPeriod } from "@/lib/billingFilters";
@@ -40,21 +42,22 @@ import { trackMetaInitiateCheckout } from "@/lib/metaPixel";
 
 import { BillingLedgerFilters } from "./BillingLedgerFilters";
 
+
 const LEDGER_PAGE_SIZE = 50;
 
-const formatCredits = (value: number | null | undefined) => (
-    (value ?? 0).toLocaleString(undefined, {
+const formatCredits = (value: number | null | undefined, locale = "en") => (
+    (value ?? 0).toLocaleString(locale, {
         maximumFractionDigits: 2,
         minimumFractionDigits: 0,
     })
 );
 
-const formatAmount = (amountMinor?: number | null, currency?: string | null) => {
+const formatAmount = (amountMinor?: number | null, currency?: string | null, locale = "en") => {
     if (amountMinor == null) {
         return "-";
     }
 
-    return new Intl.NumberFormat(undefined, {
+    return new Intl.NumberFormat(locale, {
         style: "currency",
         currency: currency || "USD",
     }).format(amountMinor / 100);
@@ -85,13 +88,13 @@ const getLedgerEntryLabel = (entry: MpsCreditLedgerEntryResponse) => {
     return formatTitleCase(entry.entry_type);
 };
 
-const formatBillableQuantity = (entry: MpsCreditLedgerEntryResponse) => {
+const formatBillableQuantity = (entry: MpsCreditLedgerEntryResponse, locale = "en") => {
     if (entry.billable_quantity == null || !entry.quantity_unit) {
         return null;
     }
 
     const unit = entry.quantity_unit === "minute" ? "min" : entry.quantity_unit;
-    return `${formatCredits(entry.billable_quantity)} ${unit}`;
+    return `${formatCredits(entry.billable_quantity, locale)} ${unit}`;
 };
 
 const getRunHref = (entry: MpsCreditLedgerEntryResponse) => {
@@ -111,6 +114,8 @@ const getPageFromSearchParams = (
 };
 
 export default function BillingPage() {
+    const { locale } = useUiLocale();
+    const copy = useCopy();
     const router = useRouter();
     const searchParams = useSearchParams();
     const auth = useAuth();
@@ -173,14 +178,14 @@ export default function BillingPage() {
                 });
 
                 if (response.error) {
-                    throw new Error(detailFromError(response.error, "Failed to fetch billing credits"));
+                    throw new Error(copy(detailFromError(response.error, "Failed to fetch billing credits")));
                 }
 
                 if (!controller.signal.aborted) setCredits(response.data ?? null);
             } catch (error) {
                 if (controller.signal.aborted) return;
                 console.error("Failed to fetch billing credits:", error);
-                const message = error instanceof Error ? error.message : "Failed to fetch billing credits";
+                const message = error instanceof Error ? error.message : copy("Failed to fetch billing credits");
                 setFetchError(message);
                 toast.error(message);
             } finally {
@@ -189,9 +194,7 @@ export default function BillingPage() {
         };
         void fetchCredits();
         return () => controller.abort();
-    }, [auth.isAuthenticated, auth.loading, configLoading, orgLoading,
-        orgContext?.organization_id, isOssMode, currentPage, activity,
-        startDate, endDate, organizationTimezone, refreshKey]);
+    }, [auth.isAuthenticated, auth.loading, configLoading, orgLoading, orgContext?.organization_id, isOssMode, currentPage, activity, startDate, endDate, organizationTimezone, refreshKey, copy]);
 
     const handleRefresh = () => {
         setRefreshKey(value => value + 1);
@@ -232,7 +235,7 @@ export default function BillingPage() {
             window.location.href = checkoutUrl;
         } catch (error) {
             console.error("Failed to create credit purchase URL:", error);
-            toast.error("Failed to open checkout");
+            toast.error(copy("Failed to open checkout"));
             setPurchasing(false);
         }
     };
@@ -257,20 +260,16 @@ export default function BillingPage() {
         <div className="container mx-auto p-6 space-y-6">
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold mb-2">Billing</h1>
-                    <p className="text-muted-foreground">
-                        Credits, balance, and account usage for your organization.
-                    </p>
+                    <h1 className="text-3xl font-bold mb-2">{copy("Billing")}</h1>
+                    <p className="text-muted-foreground">{copy("Credits, balance, and account usage for your organization.")}</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <Button variant="outline" onClick={handleRefresh} disabled={loading}>
-                        <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-                        Refresh
-                    </Button>
+                        <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />{copy("Refresh")}</Button>
                     {canPurchaseCredits && (
                         <Button onClick={handlePurchaseCredits} disabled={purchasing}>
                             <CreditCard className="h-4 w-4 mr-2" />
-                            {purchasing ? "Opening..." : "Add Credits"}
+                            {purchasing ? copy("Opening...") : copy("Add Credits")}
                         </Button>
                     )}
                 </div>
@@ -280,28 +279,19 @@ export default function BillingPage() {
                 <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-950/30">
                     <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600 dark:text-amber-400" />
                     <div className="text-sm text-amber-900 dark:text-amber-200">
-                        <p className="font-medium">Credit purchases are unavailable in OSS mode</p>
-                        <p className="mt-1">
-                            You can&apos;t purchase credits from this self-hosted app. Sign up and
-                            purchase credits at{" "}
+                        <p className="font-medium">{copy("Credit purchases are unavailable in OSS mode")}</p>
+                        <p className="mt-1">{copy("You can't purchase credits from this self-hosted app. Sign up and purchase credits at")}{" "}
                             <a
                                 href="https://app.dograh.com"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-1 font-medium underline underline-offset-2"
-                            >
-                                app.dograh.com
-                                <ExternalLink className="h-3 w-3" />
-                            </a>
-                            . Then add the generated service key in{" "}
+                            >{copy("app.dograh.com")}<ExternalLink className="h-3 w-3" />
+                            </a>{copy(". Then add the generated service key in")}{" "}
                             <Link
                                 href="/model-configurations"
                                 className="font-medium underline underline-offset-2"
-                            >
-                                Model Configurations
-                            </Link>
-                            . Usage for that service key is visible in app.dograh.com.
-                        </p>
+                            >{copy("Model Configurations")}</Link>{copy(". Usage for that service key is visible in app.dograh.com.")}</p>
                     </div>
                 </div>
             )}
@@ -309,25 +299,25 @@ export default function BillingPage() {
             <div className="grid gap-4 md:grid-cols-2">
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardDescription>{isOssMode ? "Credits remaining" : "Credit balance"}</CardDescription>
+                        <CardDescription>{isOssMode ? copy("Credits remaining") : copy("Credit balance")}</CardDescription>
                         <CardTitle className="flex items-center gap-2 text-3xl">
                             <CircleDollarSign className="h-6 w-6 text-muted-foreground" />
-                            {formatCredits(remainingCredits)}
+                            {formatCredits(remainingCredits, locale)}
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-sm text-muted-foreground">1 credit = 1 cent</p>
+                        <p className="text-sm text-muted-foreground">{copy("1 credit = 1 cent")}</p>
                     </CardContent>
                 </Card>
 
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardDescription>{isOssMode ? "Credits used" : "All-time credits used"}</CardDescription>
-                        <CardTitle className="text-3xl">{formatCredits(usedCredits)}</CardTitle>
+                        <CardDescription>{isOssMode ? copy("Credits used") : copy("All-time credits used")}</CardDescription>
+                        <CardTitle className="text-3xl">{formatCredits(usedCredits, locale)}</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <p className="text-sm text-muted-foreground">
-                            {isOssMode ? "Current allocation usage" : "Total ledger debits"}
+                            {isOssMode ? copy("Current allocation usage") : copy("Total ledger debits")}
                         </p>
                     </CardContent>
                 </Card>
@@ -336,8 +326,8 @@ export default function BillingPage() {
             {!isOssMode ? (
                 <Card>
                     <CardHeader>
-                        <CardTitle>Credit Ledger</CardTitle>
-                        <CardDescription>Filter credits and usage by date, or view all activity.</CardDescription>
+                        <CardTitle>{copy("Credit Ledger")}</CardTitle>
+                        <CardDescription>{copy("Filter credits and usage by date, or view all activity.")}</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <BillingLedgerFilters
@@ -355,28 +345,28 @@ export default function BillingPage() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow className="bg-muted/50">
-                                            <TableHead>Date</TableHead>
-                                            <TableHead>Activity</TableHead>
-                                            <TableHead>Origin</TableHead>
-                                            <TableHead>Run</TableHead>
-                                            <TableHead className="text-right">Credits added / used</TableHead>
-                                            <TableHead className="text-right">Balance</TableHead>
-                                            <TableHead className="text-right">Amount paid</TableHead>
+                                            <TableHead>{copy("Date")}</TableHead>
+                                            <TableHead>{copy("Activity")}</TableHead>
+                                            <TableHead>{copy("Origin")}</TableHead>
+                                            <TableHead>{copy("Run")}</TableHead>
+                                            <TableHead className="text-right">{copy("Credits added / used")}</TableHead>
+                                            <TableHead className="text-right">{copy("Balance")}</TableHead>
+                                            <TableHead className="text-right">{copy("Amount paid")}</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {ledgerEntries.map((entry) => {
                                             const delta = entry.credits_delta ?? 0;
                                             const runHref = getRunHref(entry);
-                                            const billableQuantity = formatBillableQuantity(entry);
+                                            const billableQuantity = formatBillableQuantity(entry, locale);
                                             return (
                                                 <TableRow key={entry.id}>
                                                     <TableCell>
-                                                        {formatDateTime(entry.created_at, organizationTimezone)}
+                                                        {formatDateTime(entry.created_at, organizationTimezone, locale)}
                                                     </TableCell>
                                                     <TableCell>
                                                         <div className="flex flex-col gap-1">
-                                                            <span className="font-medium">{getLedgerEntryLabel(entry)}</span>
+                                                            <span className="font-medium">{copy(getLedgerEntryLabel(entry))}</span>
                                                             {billableQuantity && (
                                                                 <span className="text-xs text-muted-foreground">{billableQuantity}</span>
                                                             )}
@@ -404,11 +394,11 @@ export default function BillingPage() {
                                                     </TableCell>
                                                     <TableCell className={`text-right font-medium ${delta >= 0 ? "text-green-600" : "text-destructive"}`}>
                                                         {delta >= 0 ? "+" : ""}
-                                                        {formatCredits(delta)}
+                                                        {formatCredits(delta, locale)}
                                                     </TableCell>
-                                                    <TableCell className="text-right">{formatCredits(entry.balance_after)}</TableCell>
+                                                    <TableCell className="text-right">{formatCredits(entry.balance_after, locale)}</TableCell>
                                                     <TableCell className="text-right">
-                                                        {formatAmount(entry.amount_minor, entry.amount_currency)}
+                                                        {formatAmount(entry.amount_minor, entry.amount_currency, locale)}
                                                     </TableCell>
                                                 </TableRow>
                                             );
@@ -417,15 +407,11 @@ export default function BillingPage() {
                                 </Table>
                             </div>
                         ) : (
-                            <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
-                                No entries match these filters.
-                            </div>
+                            <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">{copy("No entries match these filters.")}</div>
                         )}
                         {!loading && !fetchError && ledgerTotalPages > 1 && (
                             <div className="flex items-center justify-between mt-6">
-                                <p className="text-sm text-muted-foreground">
-                                    Page {ledgerPage} of {ledgerTotalPages} ({ledgerTotalCount} matching entries)
-                                </p>
+                                <p className="text-sm text-muted-foreground">{copy("Page ")}{ledgerPage}{copy(" of ")}{ledgerTotalPages} ({ledgerTotalCount}{copy(" matching entries)")}</p>
                                 <div className="flex gap-2">
                                     <Button
                                         variant="outline"
@@ -433,17 +419,13 @@ export default function BillingPage() {
                                         onClick={() => handlePageChange(ledgerPage - 1)}
                                         disabled={ledgerPage <= 1 || loading}
                                     >
-                                        <ChevronLeft className="h-4 w-4" />
-                                        Previous
-                                    </Button>
+                                        <ChevronLeft className="h-4 w-4" />{copy("Previous")}</Button>
                                     <Button
                                         variant="outline"
                                         size="sm"
                                         onClick={() => handlePageChange(ledgerPage + 1)}
                                         disabled={ledgerPage >= ledgerTotalPages || loading}
-                                    >
-                                        Next
-                                        <ChevronRight className="h-4 w-4" />
+                                    >{copy("Next")}<ChevronRight className="h-4 w-4" />
                                     </Button>
                                 </div>
                             </div>
@@ -453,13 +435,13 @@ export default function BillingPage() {
             ) : (
                 <Card>
                     <CardHeader>
-                        <CardTitle>Credit Usage</CardTitle>
+                        <CardTitle>{copy("Credit Usage")}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <Progress value={usagePercent} />
                         <div className="flex justify-between text-sm text-muted-foreground">
-                            <span>{usagePercent}% used</span>
-                            <span>{formatCredits(remainingCredits)} of {formatCredits(totalQuota)} remaining</span>
+                            <span>{usagePercent}{copy("% used")}</span>
+                            <span>{formatCredits(remainingCredits, locale)}{copy(" of ")}{formatCredits(totalQuota, locale)}{copy(" remaining")}</span>
                         </div>
                     </CardContent>
                 </Card>

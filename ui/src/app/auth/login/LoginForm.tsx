@@ -10,8 +10,12 @@ import { AuthShell } from "@/components/auth/AuthShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { apiErrorMessage } from "@/i18n/errors";
+import { useCopy } from "@/i18n/LocaleProvider";
+
 
 export function LoginForm({ signupEnabled }: { signupEnabled: boolean }) {
+    const copy = useCopy();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -26,8 +30,8 @@ export function LoginForm({ signupEnabled }: { signupEnabled: boolean }) {
       });
 
       if (res.error || !res.data) {
-        const detail = (res.error as { detail?: string })?.detail;
-        toast.error(detail || "Login failed");
+        const detail = apiErrorMessage(res.error, copy);
+        toast.error(detail);
         return;
       }
 
@@ -40,7 +44,7 @@ export function LoginForm({ signupEnabled }: { signupEnabled: boolean }) {
 
       window.location.href = "/after-sign-in";
     } catch {
-      toast.error("An error occurred. Please try again.");
+      toast.error(copy("An error occurred. Please try again."));
     } finally {
       setLoading(false);
     }
@@ -49,46 +53,41 @@ export function LoginForm({ signupEnabled }: { signupEnabled: boolean }) {
   return (
     <AuthShell enterpriseSlot={<AuthEnterpriseCTA />}>
       <div className="space-y-1.5 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
-        <p className="text-sm text-muted-foreground">
-          Enter your email and password to continue
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{copy("Sign in")}</h1>
+        <p className="text-sm text-muted-foreground">{copy("Enter your email and password to continue")}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{copy("Email")}</Label>
           <Input
             id="email"
             type="email"
-            placeholder="you@example.com"
+            placeholder={copy("you@example.com")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">{copy("Password")}</Label>
           <Input
             id="password"
             type="password"
-            placeholder="Enter your password"
+            placeholder={copy("Enter your password")}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
         </div>
         <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Signing in..." : "Sign in"}
+          {loading ? copy("Signing in...") : copy("Sign in")}
         </Button>
       </form>
 
       {signupEnabled && (
-        <p className="text-center text-sm text-muted-foreground">
-          Don&apos;t have an account?{" "}
-          <Link href="/auth/signup" className="text-primary underline-offset-4 hover:underline">
-            Sign up
-          </Link>
+        <p className="text-center text-sm text-muted-foreground">{copy("Don't have an account?")}{" "}
+          <Link href="/auth/signup" className="text-primary underline-offset-4 hover:underline">{copy("Sign up")}</Link>
         </p>
       )}
     </AuthShell>

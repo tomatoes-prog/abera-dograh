@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useCopy } from "@/i18n/LocaleProvider";
+
 
 interface MathCaptchaProps {
   // Called whenever validity changes, so the parent can enable/disable submit.
@@ -14,6 +16,7 @@ interface MathCaptchaProps {
 // Dead-simple anti-spam: "What is X + Y?". Generated client-side on mount.
 // Math.random is allowed in browser runtime (this is not a workflow script).
 export function MathCaptcha({ onValidChange, id = "math-captcha" }: MathCaptchaProps) {
+    const copy = useCopy();
   const [a, setA] = useState(0);
   const [b, setB] = useState(0);
   const [answer, setAnswer] = useState("");
@@ -29,15 +32,14 @@ export function MathCaptcha({ onValidChange, id = "math-captcha" }: MathCaptchaP
 
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={id}>
-        Quick check: what is {a} + {b}?
+      <Label htmlFor={id}>{copy("Quick check: what is ")}{a} + {b}?
       </Label>
       <Input
         id={id}
         inputMode="numeric"
         value={answer}
         onChange={(e) => setAnswer(e.target.value)}
-        placeholder="Answer"
+        placeholder={copy("Answer")}
         className="w-32"
       />
     </div>

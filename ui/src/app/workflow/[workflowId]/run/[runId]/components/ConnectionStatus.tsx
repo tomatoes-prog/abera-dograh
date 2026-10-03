@@ -1,17 +1,23 @@
+"use client";
+
 import { Loader2 } from 'lucide-react';
+
+import { useCopy } from "@/i18n/LocaleProvider";
+
 
 interface ConnectionStatusProps {
     connectionStatus: 'idle' | 'connecting' | 'connected' | 'failed';
 }
 
 export const ConnectionStatus = ({ connectionStatus }: ConnectionStatusProps) => {
+    const copy = useCopy();
     if (connectionStatus === 'idle') return null;
 
     if (connectionStatus === 'connecting') {
         return (
             <div className="flex items-center justify-center space-x-2 text-blue-600">
                 <Loader2 className="h-5 w-5 animate-spin" />
-                <span className="text-sm font-medium">Establishing Connection...</span>
+                <span className="text-sm font-medium">{copy("Establishing Connection...")}</span>
             </div>
         );
     }
@@ -20,7 +26,7 @@ export const ConnectionStatus = ({ connectionStatus }: ConnectionStatusProps) =>
         return (
             <div className="flex items-center justify-center space-x-2 text-green-600">
                 <div className="h-2 w-2 bg-green-600 rounded-full animate-pulse" />
-                <span className="text-sm font-medium">Connected</span>
+                <span className="text-sm font-medium">{copy("Connected")}</span>
             </div>
         );
     }
@@ -29,7 +35,7 @@ export const ConnectionStatus = ({ connectionStatus }: ConnectionStatusProps) =>
         return (
             <div className="flex items-center justify-center space-x-2 text-red-600">
                 <div className="h-2 w-2 bg-red-600 rounded-full" />
-                <span className="text-sm font-medium">Connection Failed</span>
+                <span className="text-sm font-medium">{copy("Connection Failed")}</span>
             </div>
         );
     }

@@ -37,7 +37,10 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { useOrganizationTimezone } from '@/hooks/useOrganizationTimezone';
+import { useCopy } from "@/i18n/LocaleProvider";
+import { useUiLocale } from "@/i18n/LocaleProvider";
 import { formatDate } from '@/lib/dateTime';
+
 
 interface Workflow {
     id: number;
@@ -66,6 +69,8 @@ export function WorkflowTable({
     folders,
     currentFolderId = null,
 }: WorkflowTableProps) {
+    const { locale } = useUiLocale();
+    const copy = useCopy();
     const router = useRouter();
     const organizationTimezone = useOrganizationTimezone();
     const [isPending, startTransition] = useTransition();
@@ -93,14 +98,14 @@ export function WorkflowTable({
             });
 
             if (response.data) {
-                toast.success(`Workflow ${action.toLowerCase()}d successfully`);
+                toast.success(copy("Workflow {value0}d successfully", {value0: action.toLowerCase()}));
                 startTransition(() => {
                     router.refresh();
                 });
             }
         } catch (error) {
             console.error(`Error ${action.toLowerCase()}ing workflow:`, error);
-            toast.error(`Failed to ${action.toLowerCase()} workflow`);
+            toast.error(copy("Failed to {value0} workflow", {value0: action.toLowerCase()}));
         } finally {
             setLoadingWorkflowId(null);
         }
@@ -117,14 +122,14 @@ export function WorkflowTable({
                 throw new Error('Failed to move agent');
             }
             toast.success(
-                folderId === null ? 'Moved to Uncategorized' : 'Agent moved',
+                folderId === null ? copy("Moved to Uncategorized") : copy("Agent moved"),
             );
             startTransition(() => {
                 router.refresh();
             });
         } catch (error) {
             console.error('Error moving workflow:', error);
-            toast.error('Failed to move agent');
+            toast.error(copy("Failed to move agent"));
         } finally {
             setMovingWorkflowId(null);
         }
@@ -136,11 +141,11 @@ export function WorkflowTable({
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead className="font-semibold">ID</TableHead>
-                            <TableHead className="font-semibold">Agent Name</TableHead>
-                            <TableHead className="font-semibold">Created At</TableHead>
-                            <TableHead className="font-semibold text-center">Total Runs</TableHead>
-                            <TableHead className="font-semibold text-right">Actions</TableHead>
+                            <TableHead className="font-semibold">{copy("ID")}</TableHead>
+                            <TableHead className="font-semibold">{copy("Agent Name")}</TableHead>
+                            <TableHead className="font-semibold">{copy("Created At")}</TableHead>
+                            <TableHead className="font-semibold text-center">{copy("Total Runs")}</TableHead>
+                            <TableHead className="font-semibold text-right">{copy("Actions")}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -149,7 +154,7 @@ export function WorkflowTable({
                                 key={workflow.id}
                                 role="link"
                                 tabIndex={0}
-                                aria-label={`Edit ${workflow.name}`}
+                                aria-label={copy("Edit {value0}", {value0: workflow.name})}
                                 className={`cursor-pointer hover:bg-muted/50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring transition-colors ${showArchived ? 'opacity-60' : ''}`}
                                 onClick={() => handleEdit(workflow.id)}
                                 onKeyDown={(event) => {
@@ -167,7 +172,7 @@ export function WorkflowTable({
                                     {workflow.name}
                                 </TableCell>
                                 <TableCell>
-                                    {formatDate(workflow.created_at, organizationTimezone)}
+                                    {formatDate(workflow.created_at, organizationTimezone, locale)}
                                 </TableCell>
                                 <TableCell className="text-center">
                                     <span className="inline-flex items-center justify-center min-w-[2rem] px-2 py-1 text-sm font-semibold bg-muted rounded-full">
@@ -185,9 +190,7 @@ export function WorkflowTable({
                                             onClick={() => handleEdit(workflow.id)}
                                             className="flex items-center gap-2"
                                         >
-                                            <Pencil size={16} />
-                                            Edit
-                                        </Button>
+                                            <Pencil size={16} />{copy("Edit")}</Button>
                                         {folders && (
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
@@ -201,20 +204,16 @@ export function WorkflowTable({
                                                             <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                                                         ) : (
                                                             <FolderInput size={16} />
-                                                        )}
-                                                        Move
-                                                    </Button>
+                                                        )}{copy("Move")}</Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" className="w-52">
-                                                    <DropdownMenuLabel>Move to folder</DropdownMenuLabel>
+                                                    <DropdownMenuLabel>{copy("Move to folder")}</DropdownMenuLabel>
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuItem
                                                         disabled={currentFolderId === null}
                                                         onClick={() => handleMove(workflow.id, null)}
                                                     >
-                                                        <Inbox size={14} className="mr-2" />
-                                                        Uncategorized
-                                                        {currentFolderId === null && (
+                                                        <Inbox size={14} className="mr-2" />{copy("Uncategorized")}{currentFolderId === null && (
                                                             <Check size={14} className="ml-auto" />
                                                         )}
                                                     </DropdownMenuItem>
@@ -244,20 +243,16 @@ export function WorkflowTable({
                                             {loadingWorkflowId === workflow.id ? (
                                                 <>
                                                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                                    {showArchived ? 'Restoring...' : 'Archiving...'}
+                                                    {showArchived ? copy("Restoring...") : copy("Archiving...")}
                                                 </>
                                             ) : (
                                                 <>
                                                     {showArchived ? (
                                                         <>
-                                                            <RotateCcw size={16} />
-                                                            Restore
-                                                        </>
+                                                            <RotateCcw size={16} />{copy("Restore")}</>
                                                     ) : (
                                                         <>
-                                                            <Archive size={16} />
-                                                            Archive
-                                                        </>
+                                                            <Archive size={16} />{copy("Archive")}</>
                                                     )}
                                                 </>
                                             )}

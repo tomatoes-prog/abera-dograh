@@ -1,0 +1,29 @@
+name: UI localization
+on:
+  pull_request:
+    paths: ["ui/**", "api/services/workflow/dto.py", "api/services/configuration/registry.py", "api/services/telephony/providers/**", "api/services/integrations/**", "api/schemas/widget_texts.py", "scripts/audit_ui_metadata.py", ".github/workflows/ui-i18n.yml"]
+permissions:
+  contents: read
+jobs:
+  localization:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: npm ci
+        working-directory: ui
+      - run: npm run i18n:audit
+        working-directory: ui
+      - run: python scripts/audit_ui_metadata.py
+      - run: npm test
+        working-directory: ui
+      - run: npx tsc --noEmit
+        working-directory: ui

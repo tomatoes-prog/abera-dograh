@@ -9,6 +9,8 @@ import * as React from "react"
 import { DayButton, DayPicker, getDefaultClassNames } from "react-day-picker"
 
 import { Button, buttonVariants } from "@/components/ui/button"
+import { dateFnsLocale } from "@/i18n/format";
+import { useUiLocale } from "@/i18n/LocaleProvider";
 import { cn } from "@/lib/utils"
 
 function Calendar({
@@ -23,10 +25,12 @@ function Calendar({
 }: React.ComponentProps<typeof DayPicker> & {
   buttonVariant?: React.ComponentProps<typeof Button>["variant"]
 }) {
+  const { locale } = useUiLocale()
   const defaultClassNames = getDefaultClassNames()
 
   return (
     <DayPicker
+      locale={dateFnsLocale(locale)}
       showOutsideDays={showOutsideDays}
       className={cn(
         "bg-background group/calendar p-3 [--cell-size:--spacing(8)] [[data-slot=card-content]_&]:bg-transparent [[data-slot=popover-content]_&]:bg-transparent",
@@ -37,7 +41,7 @@ function Calendar({
       captionLayout={captionLayout}
       formatters={{
         formatMonthDropdown: (date) =>
-          date.toLocaleString("default", { month: "short" }),
+          date.toLocaleString(locale, { month: "short" }),
         ...formatters,
       }}
       classNames={{

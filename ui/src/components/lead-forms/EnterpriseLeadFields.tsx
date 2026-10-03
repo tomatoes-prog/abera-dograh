@@ -15,12 +15,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useCopy } from "@/i18n/LocaleProvider";
 
 import {
   ENTERPRISE_DEPLOYMENT_OPTIONS,
   ENTERPRISE_VOLUME_OPTIONS,
 } from "./leadFieldOptions";
 import { PhoneField } from "./PhoneField";
+
 
 export interface EnterpriseFieldsValue {
   name: string;
@@ -63,30 +65,31 @@ export function EnterpriseLeadFields({
   showDeployment,
   emailError,
 }: EnterpriseLeadFieldsProps) {
+    const copy = useCopy();
   return (
     <div className="grid gap-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor={`${p}-name`}>Name</Label>
-          <Input id={`${p}-name`} placeholder="Your full name" value={value.name} onChange={(e) => onChange({ name: e.target.value })} />
+          <Label htmlFor={`${p}-name`}>{copy("Name")}</Label>
+          <Input id={`${p}-name`} placeholder={copy("Your full name")} value={value.name} onChange={(e) => onChange({ name: e.target.value })} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor={`${p}-company`}>Company name</Label>
-          <Input id={`${p}-company`} placeholder="Acme Inc." value={value.company} onChange={(e) => onChange({ company: e.target.value })} />
+          <Label htmlFor={`${p}-company`}>{copy("Company name")}</Label>
+          <Input id={`${p}-company`} placeholder={copy("Acme Inc.")} value={value.company} onChange={(e) => onChange({ company: e.target.value })} />
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor={`${p}-title`}>Job title</Label>
-          <Input id={`${p}-title`} placeholder="VP Operations" value={value.jobTitle} onChange={(e) => onChange({ jobTitle: e.target.value })} />
+          <Label htmlFor={`${p}-title`}>{copy("Job title")}</Label>
+          <Input id={`${p}-title`} placeholder={copy("VP Operations")} value={value.jobTitle} onChange={(e) => onChange({ jobTitle: e.target.value })} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor={`${p}-email`}>Work email</Label>
+          <Label htmlFor={`${p}-email`}>{copy("Work email")}</Label>
           <Input
             id={`${p}-email`}
             type="email"
-            placeholder="you@company.com"
+            placeholder={copy("you@company.com")}
             value={value.workEmail}
             onChange={(e) => onChange({ workEmail: e.target.value })}
           />
@@ -96,16 +99,16 @@ export function EnterpriseLeadFields({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor={`${p}-phone`}>Phone</Label>
+          <Label htmlFor={`${p}-phone`}>{copy("Phone")}</Label>
           <PhoneField id={`${p}-phone`} value={value.phone} onChange={(phone) => onChange({ phone })} required />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor={`${p}-volume`}>Monthly call volume</Label>
+          <Label htmlFor={`${p}-volume`}>{copy("Monthly call volume")}</Label>
           <Select value={value.volume} onValueChange={(v) => onChange({ volume: v })}>
-            <SelectTrigger id={`${p}-volume`}><SelectValue placeholder="Select" /></SelectTrigger>
+            <SelectTrigger id={`${p}-volume`}><SelectValue placeholder={copy("Select")} /></SelectTrigger>
             <SelectContent>
               {ENTERPRISE_VOLUME_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                <SelectItem key={o.value} value={o.value}>{copy(o.label)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -114,12 +117,12 @@ export function EnterpriseLeadFields({
 
       {showDeployment && (
         <div className="space-y-1.5">
-          <Label htmlFor={`${p}-deployment`}>Need enterprise deployment (SSO, on-prem, data residency)?</Label>
+          <Label htmlFor={`${p}-deployment`}>{copy("Need enterprise deployment (SSO, on-prem, data residency)?")}</Label>
           <Select value={value.deployment} onValueChange={(v) => onChange({ deployment: v })}>
-            <SelectTrigger id={`${p}-deployment`}><SelectValue placeholder="Select" /></SelectTrigger>
+            <SelectTrigger id={`${p}-deployment`}><SelectValue placeholder={copy("Select")} /></SelectTrigger>
             <SelectContent>
               {ENTERPRISE_DEPLOYMENT_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                <SelectItem key={o.value} value={o.value}>{copy(o.label)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -127,14 +130,13 @@ export function EnterpriseLeadFields({
       )}
 
       <div className="space-y-1.5">
-        <Label htmlFor={`${p}-goal`}>
-          What do you want the voice agent to do? <span className="text-muted-foreground">(optional)</span>
+        <Label htmlFor={`${p}-goal`}>{copy("What do you want the voice agent to do? ")}<span className="text-muted-foreground">{copy("(optional)")}</span>
         </Label>
         <Textarea
           id={`${p}-goal`}
           value={value.agentGoal}
           onChange={(e) => onChange({ agentGoal: e.target.value })}
-          placeholder="Use case, regulatory context, current stack…"
+          placeholder={copy("Use case, regulatory context, current stack…")}
           rows={3}
         />
       </div>

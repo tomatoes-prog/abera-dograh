@@ -57,9 +57,12 @@ import { useAppConfig } from "@/context/AppConfigContext";
 import { useLeadForms } from "@/context/LeadFormsContext";
 import { useTelephonyConfigWarnings } from "@/context/TelephonyConfigWarningsContext";
 import { useLatestReleaseVersion } from "@/hooks/useLatestReleaseVersion";
+import { useCopy } from "@/i18n/LocaleProvider";
+import { LocaleSwitcher } from "@/i18n/LocaleSwitcher";
 import type { LocalUser } from "@/lib/auth";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+
 
 type SidebarNavItem = {
   title: string;
@@ -154,6 +157,7 @@ const NAV_SECTIONS: SidebarNavSection[] = [
 ];
 
 export function AppSidebar() {
+    const copy = useCopy();
   const pathname = usePathname();
   const router = useRouter();
   const { state, isMobile, setOpenMobile } = useSidebar();
@@ -187,22 +191,23 @@ export function AppSidebar() {
   };
 
   const SidebarLink = ({ item }: { item: SidebarNavItem }) => {
+    const copy = useCopy();
     const isItemActive = isActive(item.url);
     const Icon = item.icon;
     const showWarningDot = item.showsTelephonyWarning && hasTelephonyWarning;
     const tooltip = {
       children: (
         <div className="notranslate" translate="no">
-          <p>{item.title}</p>
+          <p>{copy(item.title)}</p>
           {showWarningDot && (
-            <p className="text-amber-600 dark:text-amber-400">{TELEPHONY_WARNING_COPY}</p>
+            <p className="text-amber-600 dark:text-amber-400">{copy(TELEPHONY_WARNING_COPY)}</p>
           )}
         </div>
       ),
     };
     const warningIndicator = (
       <AlertTriangle
-        aria-label="Action required on a telephony configuration"
+        aria-label={copy("Action required on a telephony configuration")}
         className={cn(
           "text-amber-500",
           isCollapsed ? "absolute -right-0.5 -top-0.5 h-3 w-3" : "ml-auto h-3.5 w-3.5"
@@ -242,7 +247,7 @@ export function AppSidebar() {
             className={cn("notranslate min-w-0 flex-1 truncate", isCollapsed && "sr-only")}
             translate="no"
           >
-            {item.title}
+            {copy(item.title)}
           </span>
           {showWarningDot && (
             isCollapsed ? (
@@ -253,7 +258,7 @@ export function AppSidebar() {
                   {warningIndicator}
                 </TooltipTrigger>
                 <TooltipContent side="right">
-                  <p>{TELEPHONY_WARNING_COPY}</p>
+                  <p>{copy(TELEPHONY_WARNING_COPY)}</p>
                 </TooltipContent>
               </Tooltip>
             )
@@ -297,13 +302,13 @@ export function AppSidebar() {
           size="icon"
           className="h-7 w-7 rounded-full"
           onClick={() => openHireExpert("sidebar")}
-          aria-label="Hire an Expert"
+          aria-label={copy("Hire an Expert")}
         >
           <UserRound className="h-3.5 w-3.5" />
         </Button>
       </TooltipTrigger>
       <TooltipContent side="right">
-        <p>Hire an Expert</p>
+        <p>{copy("Hire an Expert")}</p>
       </TooltipContent>
     </Tooltip>
   ) : (
@@ -312,9 +317,7 @@ export function AppSidebar() {
       className="h-7 gap-1.5 rounded-full px-3 text-xs"
       onClick={() => openHireExpert("sidebar")}
     >
-      <UserRound className="h-3.5 w-3.5" />
-      Hire an Expert
-    </Button>
+      <UserRound className="h-3.5 w-3.5" />{copy("Hire an Expert")}</Button>
   );
 
   return (
@@ -346,24 +349,20 @@ export function AppSidebar() {
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 rounded-md border bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium leading-none text-amber-900 transition-opacity hover:opacity-80 dark:bg-amber-950 dark:text-amber-200"
                   >
-                    <ArrowUpCircle className="h-3 w-3" />
-                    Update
-                  </a>
+                    <ArrowUpCircle className="h-3 w-3" />{copy("Update")}</a>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
-                  <p>Latest: {latestRelease} - click to see the update guide</p>
+                  <p>{copy("Latest: ")}{latestRelease}{copy(" - click to see the update guide")}</p>
                 </TooltipContent>
               </Tooltip>
             )}
             {isLatest && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="inline-flex items-center rounded-md border bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium leading-none text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
-                    Latest
-                  </span>
+                  <span className="inline-flex items-center rounded-md border bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium leading-none text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">{copy("Latest")}</span>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
-                  <p>You&apos;re running the latest release</p>
+                  <p>{copy("You're running the latest release")}</p>
                 </TooltipContent>
               </Tooltip>
             )}
@@ -399,12 +398,12 @@ export function AppSidebar() {
                 )}
                 translate="no"
               >
-                {section.label}
+                {copy(section.label)}
               </SidebarGroupLabel>
             )}
             <SidebarMenu>
               {section.items.map((item) => (
-                <SidebarMenuItem key={item.title}>
+                <SidebarMenuItem key={copy(item.title)}>
                   <SidebarLink item={item} />
                 </SidebarMenuItem>
               ))}
@@ -439,13 +438,9 @@ export function AppSidebar() {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => router.push("/settings")} className="cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Platform Settings
-                  </DropdownMenuItem>
+                    <Settings className="mr-2 h-4 w-4" />{copy("Platform Settings")}</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => logout()} className="cursor-pointer">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sign out
-                  </DropdownMenuItem>
+                    <LogOut className="mr-2 h-4 w-4" />{copy("Sign out")}</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
               {hireExpertButton}
@@ -476,23 +471,18 @@ export function AppSidebar() {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => router.push("/handler/account-settings")} className="cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Account settings
-                  </DropdownMenuItem>
+                    <Settings className="mr-2 h-4 w-4" />{copy("Account settings")}</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => router.push("/settings")} className="cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Platform Settings
-                  </DropdownMenuItem>
+                    <Settings className="mr-2 h-4 w-4" />{copy("Platform Settings")}</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => logout()} className="cursor-pointer">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sign out
-                  </DropdownMenuItem>
+                    <LogOut className="mr-2 h-4 w-4" />{copy("Sign out")}</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
               {hireExpertButton}
             </div>
           )}
 
+          <div className="flex justify-center"><LocaleSwitcher compact={isCollapsed} /></div>
           <div className="mt-1 flex justify-center">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -504,7 +494,7 @@ export function AppSidebar() {
                 </div>
               </TooltipTrigger>
               <TooltipContent side={isCollapsed ? "right" : "top"}>
-                <p>Toggle theme</p>
+                <p>{copy("Toggle theme")}</p>
               </TooltipContent>
             </Tooltip>
           </div>

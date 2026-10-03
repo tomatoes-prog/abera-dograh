@@ -12,6 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useCopy } from "@/i18n/LocaleProvider";
+
 
 /**
  * Per-provider pieces of the trunk editor.
@@ -59,6 +61,7 @@ function CloudonixTrunkFields({
   onChange,
   disabled,
 }: TrunkSettingsFieldsProps) {
+    const copy = useCopy();
   const regions = regionsOf(configuration);
   const region = typeof settings.region === "string" ? settings.region : "";
   const sipDomain = typeof settings.sip_domain === "string" ? settings.sip_domain : "";
@@ -68,28 +71,25 @@ function CloudonixTrunkFields({
   return (
     <>
       <div className="space-y-2">
-        <Label htmlFor="trunk-sip-domain">SIP domain</Label>
+        <Label htmlFor="trunk-sip-domain">{copy("SIP domain")}</Label>
         <Input
           id="trunk-sip-domain"
           value={sipDomain}
           onChange={(event) => onChange({ sip_domain: event.target.value })}
-          placeholder="sip.example.com"
+          placeholder={copy("sip.example.com")}
           disabled={disabled}
         />
-        <p className="text-xs text-muted-foreground">
-          Your carrier or PBX. Used for both the SIP To header and the
-          Request-URI.
-        </p>
+        <p className="text-xs text-muted-foreground">{copy("Your carrier or PBX. Used for both the SIP To header and the Request-URI.")}</p>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="trunk-region">Region</Label>
+        <Label htmlFor="trunk-region">{copy("Region")}</Label>
         <Select
           value={region}
           onValueChange={(next) => onChange({ region: next })}
           disabled={disabled}
         >
-          <SelectTrigger id="trunk-region" aria-label="Trunk region">
-            <SelectValue placeholder="Select a region" />
+          <SelectTrigger id="trunk-region" aria-label={copy("Trunk region")}>
+            <SelectValue placeholder={copy("Select a region")} />
           </SelectTrigger>
           <SelectContent>
             {regions.map((candidate) => (
@@ -99,10 +99,8 @@ function CloudonixTrunkFields({
             ))}
           </SelectContent>
         </Select>
-        <p className="text-xs text-muted-foreground">
-          Sets the remote peer Dograh dials for this trunk.
-          {originIp
-            ? ` Calls leave from ${originIp} — allow it on your side.`
+        <p className="text-xs text-muted-foreground">{copy("Sets the remote peer Dograh dials for this trunk.")}{originIp
+            ? copy(" Calls leave from {value0} — allow it on your side.", {value0: originIp})
             : ""}
         </p>
       </div>

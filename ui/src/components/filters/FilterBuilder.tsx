@@ -1,3 +1,5 @@
+"use client";
+
 import { AlertCircle, Calendar, CheckSquare, Hash, ListFilter, Radio, RefreshCw, Tag, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -27,8 +29,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { formatDateRange, formatNumberRange, getDefaultValue, resolveFilterAttributes, validateFilter } from "@/lib/filters";
 import { ActiveFilter, DateRangeValue, FilterAttribute, FilterTemplate, filterTemplates, FilterValue, MultiSelectValue, NumberRangeValue, NumberValue, RadioValue, TextValue } from "@/types/filters";
+
 
 interface FilterBuilderProps {
   availableAttributes: FilterAttribute[];
@@ -53,6 +57,7 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
   onAutoRefreshChange,
   hasAppliedFilters = false,
 }) => {
+    const copy = useCopy();
   const [selectedAttribute, setSelectedAttribute] = useState<string>("");
   const [expandedFilters, setExpandedFilters] = useState<Set<number>>(new Set());
   const resolvedActiveFilters = useMemo(
@@ -295,7 +300,7 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
             onChange={(value) => updateFilter(index, value)}
             error={error}
             options={filter.attribute.config.radioOptions || []}
-            label={`Select ${filter.attribute.label}`}
+            label={copy("Select {value0}", {value0: filter.attribute.label})}
           />
         );
       case "tags":
@@ -329,20 +334,16 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Filter Workflow Runs</CardTitle>
-            <CardDescription>
-              Build custom filters to find specific workflow runs
-            </CardDescription>
+            <CardTitle>{copy("Filter Workflow Runs")}</CardTitle>
+            <CardDescription>{copy("Build custom filters to find specific workflow runs")}</CardDescription>
           </div>
           <div className="flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  Templates
-                </Button>
+                <Button variant="outline" size="sm">{copy("Templates")}</Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-[250px]">
-                <DropdownMenuLabel>Filter Templates</DropdownMenuLabel>
+                <DropdownMenuLabel>{copy("Filter Templates")}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {filterTemplates.map((template) => (
                   <DropdownMenuItem
@@ -370,14 +371,14 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
               addFilter(value);
             }}>
               <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Select attribute to filter by" />
+                <SelectValue placeholder={copy("Select attribute to filter by")} />
               </SelectTrigger>
               <SelectContent>
                 {availableAttributesForAdding.map((attr) => (
                   <SelectItem key={attr.id} value={attr.id}>
                     <div className="flex items-center gap-2">
                       {getFilterIcon(attr.type)}
-                      <span>{attr.label}</span>
+                      <span>{copy(attr.label)}</span>
                     </div>
                   </SelectItem>
                 ))}
@@ -389,15 +390,13 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
           {resolvedActiveFilters.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-medium">Active Filters</h4>
+                <h4 className="text-sm font-medium">{copy("Active Filters")}</h4>
                 {resolvedActiveFilters.length > 1 && (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={clearAllFilters}
-                  >
-                    Clear All
-                  </Button>
+                  >{copy("Clear All")}</Button>
                 )}
               </div>
 
@@ -410,7 +409,7 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
                     >
                       <div className="flex items-center gap-2">
                         {getFilterIcon(filter.attribute.type)}
-                        <span className="font-medium">{filter.attribute.label}</span>
+                        <span className="font-medium">{copy(filter.attribute.label)}</span>
                         {!filter.isValid && (
                           <AlertCircle className="h-4 w-4 text-red-500" />
                         )}
@@ -456,9 +455,7 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
                     onCheckedChange={onAutoRefreshChange}
                     id="auto-refresh"
                   />
-                  <label htmlFor="auto-refresh" className="text-sm font-medium cursor-pointer">
-                    Auto-refresh every 5s
-                  </label>
+                  <label htmlFor="auto-refresh" className="text-sm font-medium cursor-pointer">{copy("Auto-refresh every 5s")}</label>
                   {autoRefresh && (
                     <RefreshCw className="h-4 w-4 text-gray-500 animate-spin" />
                   )}
@@ -470,15 +467,13 @@ export const FilterBuilder: React.FC<FilterBuilderProps> = ({
                 <Button
                   variant="outline"
                   onClick={clearAllFilters}
-                >
-                  Clear All
-                </Button>
+                >{copy("Clear All")}</Button>
                 <Button
                   onClick={onApplyFilters}
                   disabled={(resolvedActiveFilters.length > 0 && !allFiltersValid) || isExecuting}
-                  title={"Apply filters"}
+                  title={copy("Apply filters")}
                 >
-                  {isExecuting ? "Applying..." : `Apply (${navigator.userAgent.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl'}+Enter)`}
+                  {isExecuting ? copy("Applying...") : copy("Apply ({value0}+Enter)", {value0: navigator.userAgent.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl'})}
                 </Button>
               </div>
             </div>

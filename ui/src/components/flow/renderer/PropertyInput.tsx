@@ -1,3 +1,5 @@
+"use client";
+
 import { PlusIcon, Trash2Icon } from "lucide-react";
 
 import type {
@@ -16,12 +18,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { useCopy } from "@/i18n/LocaleProvider";
+import { localizeProperty } from "@/i18n/schema";
 
 import { evaluateDisplayOptions } from "./displayOptions";
 import {
     getPropertyColumnSpan,
     isFractionalNumberInput,
 } from "./propertyRendererOptions";
+
 
 export interface RendererContext {
     tools: ToolResponse[];
@@ -50,7 +55,9 @@ export interface PropertyInputProps {
  * always renders. NodeEditForm filters out hidden properties before
  * mounting them.
  */
-export function PropertyInput({ spec, value, onChange, context }: PropertyInputProps) {
+export function PropertyInput({ spec: rawSpec, value, onChange, context }: PropertyInputProps) {
+    const copy = useCopy();
+    const spec = localizeProperty(rawSpec, copy);
     switch (spec.type) {
         case "string":
             return <StringWidget spec={spec} value={value} onChange={onChange} />;
@@ -120,8 +127,7 @@ export function PropertyInput({ spec, value, onChange, context }: PropertyInputP
         default: {
             const exhaustiveCheck: never = spec.type;
             return (
-                <div className="text-xs text-destructive">
-                    Unknown property type: {String(exhaustiveCheck)}
+                <div className="text-xs text-destructive">{copy("Unknown property type: ")}{String(exhaustiveCheck)}
                 </div>
             );
         }
@@ -284,6 +290,7 @@ function FixedCollectionWidget({
     onChange,
     context,
 }: WidgetProps & { context: RendererContext }) {
+    const copy = useCopy();
     const rows = (value as Array<Record<string, unknown>> | undefined) ?? [];
     const subProps = spec.properties ?? [];
 
@@ -332,7 +339,7 @@ function FixedCollectionWidget({
                                 variant="outline"
                                 size="icon"
                                 onClick={() => handleRemove(idx)}
-                                aria-label={`Remove row ${idx + 1}`}
+                                aria-label={copy("Remove row {value0}", {value0: idx + 1})}
                             >
                                 <Trash2Icon className="w-4 h-4" />
                             </Button>
@@ -340,8 +347,7 @@ function FixedCollectionWidget({
                     </div>
                 ))}
                 <Button variant="outline" size="sm" className="w-fit" onClick={handleAdd}>
-                    <PlusIcon className="w-4 h-4 mr-1" /> Add
-                </Button>
+                    <PlusIcon className="w-4 h-4 mr-1" />{copy(" Add")}</Button>
             </div>
         </div>
     );

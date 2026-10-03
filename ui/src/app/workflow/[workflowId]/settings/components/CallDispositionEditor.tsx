@@ -16,8 +16,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { useCopy } from "@/i18n/LocaleProvider";
+import { useUiLocale } from "@/i18n/LocaleProvider";
 import { createUuid } from "@/lib/uuid";
 import type { CallDispositionOption } from "@/types/workflow-configurations";
+
 
 export const MAX_CALL_DISPOSITIONS = 50;
 export const MAX_CALL_DISPOSITION_CODE_LENGTH = 64;
@@ -128,6 +131,7 @@ export function CallDispositionEditor({
     onChange: (rows: CallDispositionRow[]) => void;
     defaultDispositions?: CallDispositionOption[];
 }) {
+    const copy = useCopy();
     const enabled = rows.length > 0;
     const rememberedRows = useRef<CallDispositionRow[]>(rows);
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -172,13 +176,11 @@ export function CallDispositionEditor({
         <div className="space-y-3">
             <div className="flex items-center justify-between gap-6">
                 <div className="space-y-1">
-                    <Label htmlFor="call-disposition-extraction-enabled" className="text-sm font-medium">
-                        Extract call disposition at the end of the call
-                    </Label>
+                    <Label htmlFor="call-disposition-extraction-enabled" className="text-sm font-medium">{copy("Extract call disposition at the end of the call")}</Label>
                     <p className="text-xs text-muted-foreground">
                         {enabled
-                            ? `${rows.length} outcome${rows.length === 1 ? "" : "s"} configured. Dograh will classify the completed conversation into one of them.`
-                            : "Disabled. Dograh will keep the disposition recorded by the call-ending event."}
+                            ? copy("{value0} outcome{value1} configured. Dograh will classify the completed conversation into one of them.", {value0: rows.length, value1: rows.length === 1 ? "" : "s"})
+                            : copy("Disabled. Dograh will keep the disposition recorded by the call-ending event.")}
                     </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
@@ -188,9 +190,7 @@ export function CallDispositionEditor({
                             variant="outline"
                             size="sm"
                             onClick={() => openEditor(rows)}
-                        >
-                            Configure options
-                        </Button>
+                        >{copy("Configure options")}</Button>
                     )}
                     <Switch
                         id="call-disposition-extraction-enabled"
@@ -203,10 +203,8 @@ export function CallDispositionEditor({
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogContent className="max-h-[90vh] grid-rows-[auto_minmax(0,1fr)_auto] sm:max-w-2xl">
                     <DialogHeader>
-                        <DialogTitle>Call disposition extraction</DialogTitle>
-                        <DialogDescription>
-                            Configure the code and description pairs the model can choose from. Codes are recorded before organization-level disposition mapping is applied.
-                        </DialogDescription>
+                        <DialogTitle>{copy("Call disposition extraction")}</DialogTitle>
+                        <DialogDescription>{copy("Configure the code and description pairs the model can choose from. Codes are recorded before organization-level disposition mapping is applied.")}</DialogDescription>
                     </DialogHeader>
 
                     <div className="min-h-0 overflow-y-auto pr-1">
@@ -222,15 +220,13 @@ export function CallDispositionEditor({
                             type="button"
                             variant="outline"
                             onClick={() => setDialogOpen(false)}
-                        >
-                            Cancel
-                        </Button>
+                        >{copy("Cancel")}</Button>
                         <Button
                             type="button"
                             disabled={draftRows.length === 0 || !draftValidation.isValid}
                             onClick={handleApply}
                         >
-                            {enabled ? "Save options" : "Enable extraction"}
+                            {enabled ? copy("Save options") : copy("Enable extraction")}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -248,6 +244,8 @@ function CallDispositionRowsEditor({
     onChange: (rows: CallDispositionRow[]) => void;
     validation: CallDispositionValidation;
 }) {
+    const { locale } = useUiLocale();
+    const copy = useCopy();
 
     const updateRow = (
         rowId: string,
@@ -259,7 +257,7 @@ function CallDispositionRowsEditor({
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between gap-4">
-                <Label className="text-sm">Disposition options</Label>
+                <Label className="text-sm">{copy("Disposition options")}</Label>
                 <Button
                     type="button"
                     variant="outline"
@@ -270,8 +268,7 @@ function CallDispositionRowsEditor({
                         { id: createUuid(), code: "", description: "" },
                     ])}
                 >
-                    <Plus className="mr-1 h-4 w-4" /> Add custom disposition
-                </Button>
+                    <Plus className="mr-1 h-4 w-4" />{copy(" Add custom disposition")}</Button>
             </div>
 
             <div className="space-y-2">
@@ -286,13 +283,10 @@ function CallDispositionRowsEditor({
                         >
                             <div className="flex items-start gap-3">
                                 <div className="min-w-0 flex-1 space-y-3">
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                        Disposition {index + 1}
+                                    <p className="text-xs font-medium text-muted-foreground">{copy("Disposition ")}{index + 1}
                                     </p>
                                     <div className="space-y-1.5">
-                                        <Label htmlFor={codeId} className="text-xs">
-                                            Disposition Code
-                                        </Label>
+                                        <Label htmlFor={codeId} className="text-xs">{copy("Disposition Code")}</Label>
                                         <Input
                                             id={codeId}
                                             value={row.code}
@@ -300,7 +294,7 @@ function CallDispositionRowsEditor({
                                             aria-invalid={Boolean(errors?.code)}
                                             aria-describedby={errors?.code ? `${codeId}-error` : undefined}
                                             onChange={(event) => updateRow(row.id, { code: event.target.value })}
-                                            placeholder="qualified"
+                                            placeholder={copy("qualified")}
                                         />
                                         {errors?.code && (
                                             <p id={`${codeId}-error`} className="text-xs text-destructive">
@@ -309,9 +303,7 @@ function CallDispositionRowsEditor({
                                         )}
                                     </div>
                                     <div className="space-y-1.5">
-                                        <Label htmlFor={descriptionId} className="text-xs">
-                                            Description
-                                        </Label>
+                                        <Label htmlFor={descriptionId} className="text-xs">{copy("Description")}</Label>
                                         <Textarea
                                             id={descriptionId}
                                             value={row.description}
@@ -320,7 +312,7 @@ function CallDispositionRowsEditor({
                                             aria-invalid={Boolean(errors?.description)}
                                             aria-describedby={errors?.description ? `${descriptionId}-error` : undefined}
                                             onChange={(event) => updateRow(row.id, { description: event.target.value })}
-                                            placeholder="Use when the customer meets the qualification criteria and wants to proceed."
+                                            placeholder={copy("Use when the customer meets the qualification criteria and wants to proceed.")}
                                         />
                                         {errors?.description && (
                                             <p id={`${descriptionId}-error`} className="text-xs text-destructive">
@@ -333,7 +325,7 @@ function CallDispositionRowsEditor({
                                     type="button"
                                     variant="ghost"
                                     size="icon"
-                                    aria-label={`Remove disposition ${index + 1}`}
+                                    aria-label={copy("Remove disposition {value0}", {value0: index + 1})}
                                     onClick={() => onChange(rows.filter((item) => item.id !== row.id))}
                                 >
                                     <Trash2 className="h-4 w-4" />
@@ -345,17 +337,14 @@ function CallDispositionRowsEditor({
 
                 {rows.length === 0 && (
                     <div className="rounded-md border border-dashed p-4 text-center">
-                        <p className="text-sm font-medium">Add at least one disposition</p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                            Extraction needs a closed list of outcomes to choose from.
-                        </p>
+                        <p className="text-sm font-medium">{copy("Add at least one disposition")}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{copy("Extraction needs a closed list of outcomes to choose from.")}</p>
                     </div>
                 )}
 
                 <div className="flex justify-end text-xs text-muted-foreground">
                     <p className={validation.totalError ? "text-destructive" : undefined}>
-                        {validation.totalDescriptionLength.toLocaleString()} / {MAX_CALL_DISPOSITION_DESCRIPTIONS_TOTAL_LENGTH.toLocaleString()} description characters
-                    </p>
+                        {validation.totalDescriptionLength.toLocaleString(locale)} / {MAX_CALL_DISPOSITION_DESCRIPTIONS_TOTAL_LENGTH.toLocaleString(locale)}{copy(" description characters")}</p>
                 </div>
                 {validation.totalError && (
                     <p className="text-xs text-destructive">{validation.totalError}</p>

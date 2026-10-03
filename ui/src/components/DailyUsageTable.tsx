@@ -1,3 +1,5 @@
+"use client";
+
 import type { DailyUsageBreakdownResponse } from '@/client/types.gen';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -9,7 +11,10 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useCopy } from "@/i18n/LocaleProvider";
+import { useUiLocale } from "@/i18n/LocaleProvider";
 import { formatCalendarDate } from '@/lib/dateTime';
+
 
 interface DailyUsageTableProps {
     data: DailyUsageBreakdownResponse | null;
@@ -17,12 +22,14 @@ interface DailyUsageTableProps {
 }
 
 export function DailyUsageTable({ data, isLoading }: DailyUsageTableProps) {
+    const { locale } = useUiLocale();
+    const copy = useCopy();
     if (isLoading) {
         return (
             <Card>
                 <CardHeader>
-                    <CardTitle>Daily Usage Breakdown</CardTitle>
-                    <CardDescription>Last 7 days of usage</CardDescription>
+                    <CardTitle>{copy("Daily Usage Breakdown")}</CardTitle>
+                    <CardDescription>{copy("Last 7 days of usage")}</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="animate-pulse space-y-3">
@@ -39,11 +46,11 @@ export function DailyUsageTable({ data, isLoading }: DailyUsageTableProps) {
         return (
             <Card>
                 <CardHeader>
-                    <CardTitle>Daily Usage Breakdown</CardTitle>
-                    <CardDescription>Last 7 days of usage</CardDescription>
+                    <CardTitle>{copy("Daily Usage Breakdown")}</CardTitle>
+                    <CardDescription>{copy("Last 7 days of usage")}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-center py-8 text-gray-500">No usage data available</p>
+                    <p className="text-center py-8 text-gray-500">{copy("No usage data available")}</p>
                 </CardContent>
             </Card>
         );
@@ -52,25 +59,25 @@ export function DailyUsageTable({ data, isLoading }: DailyUsageTableProps) {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Daily Usage Breakdown</CardTitle>
-                <CardDescription>Last 7 days of usage</CardDescription>
+                <CardTitle>{copy("Daily Usage Breakdown")}</CardTitle>
+                <CardDescription>{copy("Last 7 days of usage")}</CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="bg-white border rounded-lg overflow-hidden shadow-sm">
                     <Table>
                         <TableHeader>
                             <TableRow className="bg-gray-50">
-                                <TableHead className="font-semibold">Date</TableHead>
-                                <TableHead className="font-semibold text-right">Usage (minutes)</TableHead>
-                                <TableHead className="font-semibold text-right">Cost (USD)</TableHead>
-                                <TableHead className="font-semibold text-right">Calls</TableHead>
+                                <TableHead className="font-semibold">{copy("Date")}</TableHead>
+                                <TableHead className="font-semibold text-right">{copy("Usage (minutes)")}</TableHead>
+                                <TableHead className="font-semibold text-right">{copy("Cost (USD)")}</TableHead>
+                                <TableHead className="font-semibold text-right">{copy("Calls")}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {data.breakdown.map((day) => (
                                 <TableRow key={day.date}>
                                     <TableCell className="font-medium">
-                                        {formatCalendarDate(day.date)}
+                                        {formatCalendarDate(day.date, locale)}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         {day.minutes.toFixed(1)}
@@ -86,7 +93,7 @@ export function DailyUsageTable({ data, isLoading }: DailyUsageTableProps) {
                         </TableBody>
                         <TableFooter>
                             <TableRow className="bg-gray-50 font-semibold">
-                                <TableCell>Total</TableCell>
+                                <TableCell>{copy("Total")}</TableCell>
                                 <TableCell className="text-right">
                                     {data.total_minutes.toFixed(1)}
                                 </TableCell>

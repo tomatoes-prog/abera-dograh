@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useCopy } from "@/i18n/LocaleProvider";
+
 
 export interface BuiltinToolConfigProps {
     name: string;
@@ -22,6 +24,7 @@ export function BuiltinToolConfig({
     title,
     subtitle,
 }: BuiltinToolConfigProps) {
+    const copy = useCopy();
     return (
         <Card>
             <CardHeader>
@@ -31,26 +34,24 @@ export function BuiltinToolConfig({
             <CardContent className="space-y-6">
                 {/* Tool Name */}
                 <div className="space-y-2">
-                    <Label htmlFor="tool-name">Tool Name</Label>
+                    <Label htmlFor="tool-name">{copy("Tool Name")}</Label>
                     <Input
                         id="tool-name"
                         value={name}
                         onChange={(e) => onNameChange(e.target.value)}
-                        placeholder="Tool name"
+                        placeholder={copy("Tool name")}
                     />
                 </div>
 
                 {/* Tool Description */}
                 <div className="space-y-2">
-                    <Label htmlFor="tool-description">Description</Label>
-                    <p className="text-xs text-muted-foreground">
-                        Provide a description which makes it easy for LLM to understand what this tool does
-                    </p>
+                    <Label htmlFor="tool-description">{copy("Description")}</Label>
+                    <p className="text-xs text-muted-foreground">{copy("Provide a description which makes it easy for LLM to understand what this tool does")}</p>
                     <Textarea
                         id="tool-description"
                         value={description}
                         onChange={(e) => onDescriptionChange(e.target.value)}
-                        placeholder="Describe what this tool does..."
+                        placeholder={copy("Describe what this tool does...")}
                         rows={3}
                     />
                 </div>

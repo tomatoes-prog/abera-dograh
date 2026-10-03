@@ -5,6 +5,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useWorkflow } from "@/app/workflow/[workflowId]/contexts/WorkflowContext";
 import type { ToolResponse } from "@/client/types.gen";
 import { Badge } from "@/components/ui/badge";
+import { useCopy } from "@/i18n/LocaleProvider";
+
 
 interface ToolBadgesProps {
     toolUuids: string[];
@@ -13,6 +15,7 @@ interface ToolBadgesProps {
 }
 
 export function ToolBadges({ toolUuids, onStaleUuidsDetected, mcpToolFilters }: ToolBadgesProps) {
+    const copy = useCopy();
     const { tools } = useWorkflow();
     const [selectedTools, setSelectedTools] = useState<ToolResponse[]>([]);
 
@@ -42,9 +45,7 @@ export function ToolBadges({ toolUuids, onStaleUuidsDetected, mcpToolFilters }: 
     if (tools === undefined && toolUuids.length > 0) {
         return (
             <div className="flex flex-wrap gap-1">
-                <Badge variant="outline" className="text-xs">
-                    Loading...
-                </Badge>
+                <Badge variant="outline" className="text-xs">{copy("Loading...")}</Badge>
             </div>
         );
     }

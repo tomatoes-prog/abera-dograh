@@ -1,3 +1,5 @@
+"use client";
+
 import { NodeProps, NodeToolbar, Position } from "@xyflow/react";
 import * as LucideIcons from "lucide-react";
 import { Check, Circle, Copy, Edit, type LucideIcon, Trash2Icon } from "lucide-react";
@@ -15,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NODE_DOCUMENTATION_URLS } from "@/constants/documentation";
 import { useAppConfig } from "@/context/AppConfigContext";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 import { createUuid } from "@/lib/uuid";
@@ -23,6 +26,7 @@ import { resolveWebhookBaseUrl } from "@/lib/webhookUrl";
 import { NodeContent } from "./common/NodeContent";
 import { NodeEditDialog } from "./common/NodeEditDialog";
 import { useNodeHandlers } from "./common/useNodeHandlers";
+
 
 // ─── Static per-spec UI maps ──────────────────────────────────────────────
 // Small lookups indexed by spec.name. Keeping these in the renderer (not
@@ -193,6 +197,7 @@ function CanvasPreview({
     onStaleTools: (uuids: string[]) => void;
     onStaleDocuments: (uuids: string[]) => void;
 }) {
+    const copy = useCopy();
     const { config: appConfig } = useAppConfig();
     if (spec.name === "trigger") {
         const endpoint = buildTriggerEndpoints(
@@ -201,7 +206,7 @@ function CanvasPreview({
         ).production;
         return (
             <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">API Endpoint:</p>
+                <p className="text-xs text-muted-foreground">{copy("API Endpoint:")}</p>
                 <div className="flex items-center gap-1">
                     <code className="text-xs break-all bg-muted px-1 py-0.5 rounded flex-1">
                         {endpoint || "Generating..."}
@@ -231,7 +236,7 @@ function CanvasPreview({
         const url = data.endpoint_url || "";
         const enabled = data.enabled !== false;
         const truncated = !url
-            ? "Not configured"
+            ? copy("Not configured")
             : url.length > 30
             ? url.slice(0, 30) + "..."
             : url;
@@ -253,7 +258,7 @@ function CanvasPreview({
     if (spec.name === "qa") {
         const llmSource =
             data.qa_use_workflow_llm !== false
-                ? "Workflow LLM"
+                ? copy("Workflow LLM")
                 : `${data.qa_provider || "openai"}/${data.qa_model || "gpt-4.1"}`;
         const enabled = data.qa_enabled !== false;
         return (
@@ -289,13 +294,13 @@ function CanvasPreview({
     return (
         <>
             <p className="text-sm text-muted-foreground line-clamp-5 leading-relaxed">
-                {data.prompt || "No prompt configured"}
+                {data.prompt || copy("No prompt configured")}
             </p>
             {hasToolRefs && data.tool_uuids && data.tool_uuids.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-border/50">
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
                         <LucideIcons.Wrench className="h-3 w-3" />
-                        <span>Tools:</span>
+                        <span>{copy("Tools:")}</span>
                     </div>
                     <ToolBadges
                         toolUuids={data.tool_uuids}
@@ -308,7 +313,7 @@ function CanvasPreview({
                 <div className="mt-3 pt-3 border-t border-border/50">
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
                         <LucideIcons.FileText className="h-3 w-3" />
-                        <span>Documents:</span>
+                        <span>{copy("Documents:")}</span>
                     </div>
                     <DocumentBadges
                         documentUuids={data.document_uuids}
@@ -321,6 +326,7 @@ function CanvasPreview({
 }
 
 function StatusDot({ enabled }: { enabled: boolean }) {
+    const copy = useCopy();
     return (
         <div className="flex items-center gap-1.5">
             <Circle
@@ -331,7 +337,7 @@ function StatusDot({ enabled }: { enabled: boolean }) {
                 }`}
             />
             <span className="text-xs text-muted-foreground">
-                {enabled ? "Enabled" : "Disabled"}
+                {enabled ? copy("Enabled") : copy("Disabled")}
             </span>
         </div>
     );
@@ -357,6 +363,7 @@ function ClickToCopy({
     className?: string;
     title?: string;
 }) {
+    const copy = useCopy();
     const [copied, setCopied] = useState(false);
     const onCopy = async () => {
         if (!value) return;
@@ -365,14 +372,14 @@ function ClickToCopy({
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         } catch {
-            toast.error("Failed to copy value");
+            toast.error(copy("Failed to copy value"));
         }
     };
     return (
         <button
             type="button"
             onClick={onCopy}
-            title={title ?? "Click to copy"}
+            title={title ?? copy("Click to copy")}
             className={cn(
                 "group relative text-left transition-colors hover:bg-accent/60 cursor-pointer disabled:cursor-default",
                 className,
@@ -386,9 +393,7 @@ function ClickToCopy({
                     "pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded bg-foreground/90 px-1.5 py-0.5 text-[10px] font-medium text-background shadow transition-opacity",
                     copied ? "opacity-100" : "opacity-0",
                 )}
-            >
-                Copied!
-            </span>
+            >{copy("Copied!")}</span>
         </button>
     );
 }
@@ -400,16 +405,15 @@ function UrlPanel({
     endpoint: string;
     helperText: string;
 }) {
+    const copy = useCopy();
     const curl = endpoint ? buildCurl(endpoint) : "";
     return (
         <div className="grid gap-2 pt-2">
             <div className="flex items-center gap-2">
-                <span className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded shrink-0">
-                    POST
-                </span>
+                <span className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded shrink-0">{copy("POST")}</span>
                 <ClickToCopy
                     value={endpoint}
-                    title="Click to copy URL"
+                    title={copy("Click to copy URL")}
                     className="flex-1 bg-muted rounded px-2 py-1"
                 >
                     <code className="text-xs break-all">
@@ -418,10 +422,10 @@ function UrlPanel({
                 </ClickToCopy>
             </div>
             <p className="text-xs text-muted-foreground">{helperText}</p>
-            <p className="text-sm font-medium pt-2">Example Request</p>
+            <p className="text-sm font-medium pt-2">{copy("Example Request")}</p>
             <ClickToCopy
                 value={curl}
-                title="Click to copy curl"
+                title={copy("Click to copy curl")}
                 className="block w-full bg-muted rounded"
             >
                 <pre className="text-xs px-3 py-2 overflow-x-auto whitespace-pre-wrap">
@@ -433,36 +437,32 @@ function UrlPanel({
 }
 
 function TriggerWebhookUrls({ endpoints }: { endpoints: TriggerEndpoints }) {
+    const copy = useCopy();
     return (
         <div className="grid gap-2">
-            <p className="text-sm font-medium">Webhook URLs</p>
-            <p className="text-xs text-muted-foreground">
-                Test mode runs the latest draft so you can verify changes before
-                publishing. Production runs the published agent. Both require an
-                API key in the X-API-Key header.{" "}
+            <p className="text-sm font-medium">{copy("Webhook URLs")}</p>
+            <p className="text-xs text-muted-foreground">{copy("Test mode runs the latest draft so you can verify changes before publishing. Production runs the published agent. Both require an API key in the X-API-Key header.")}{" "}
                 <Link
                     href="/api-keys"
                     target="_blank"
                     className="text-primary underline hover:no-underline"
-                >
-                    Get your API key
-                </Link>
+                >{copy("Get your API key")}</Link>
             </p>
             <Tabs defaultValue="test" className="w-full">
                 <TabsList>
-                    <TabsTrigger value="test">Test URL</TabsTrigger>
-                    <TabsTrigger value="production">Production URL</TabsTrigger>
+                    <TabsTrigger value="test">{copy("Test URL")}</TabsTrigger>
+                    <TabsTrigger value="production">{copy("Production URL")}</TabsTrigger>
                 </TabsList>
                 <TabsContent value="test">
                     <UrlPanel
                         endpoint={endpoints.test}
-                        helperText="Runs the latest draft, falling back to the published agent when no draft exists."
+                        helperText={copy("Runs the latest draft, falling back to the published agent when no draft exists.")}
                     />
                 </TabsContent>
                 <TabsContent value="production">
                     <UrlPanel
                         endpoint={endpoints.production}
-                        helperText="Runs the published agent."
+                        helperText={copy("Runs the published agent.")}
                     />
                 </TabsContent>
             </Tabs>
@@ -478,6 +478,7 @@ interface GenericNodeProps extends NodeProps {
 }
 
 export const GenericNode = memo(({ data, selected, id, type }: GenericNodeProps) => {
+    const copy = useCopy();
     // Per-type metadata that StartCall/EndCall used to set via `additionalData`
     // (is_start / is_end). Pulled from the spec name here.
     const additionalData = useMemo<Record<string, boolean> | undefined>(() => {
@@ -528,9 +529,9 @@ export const GenericNode = memo(({ data, selected, id, type }: GenericNodeProps)
             setTriggerCopied(true);
             setTimeout(() => setTriggerCopied(false), 2000);
         } catch {
-            toast.error("Failed to copy trigger URL");
+            toast.error(copy("Failed to copy trigger URL"));
         }
-    }, [data.trigger_path, webhookBaseUrl]);
+    }, [copy, data.trigger_path, webhookBaseUrl]);
 
     // For trigger nodes without a path yet, generate one and persist.
     useEffect(() => {
@@ -623,8 +624,8 @@ export const GenericNode = memo(({ data, selected, id, type }: GenericNodeProps)
 
     // Edit dialog title: "Edit {display_name}". Webhook keeps the original
     // "Edit Webhook" wording — display_name is "Webhook" so it works out.
-    const dialogTitle = spec ? `Edit ${spec.display_name}` : "Edit Node";
-    const fallbackTitle = spec?.display_name ?? "Node";
+    const dialogTitle = spec ? copy("Edit {value0}", {value0: copy(spec.display_name)}) : copy("Edit Node");
+    const fallbackTitle = copy(spec?.display_name ?? "Node");
 
     return (
         <>
@@ -636,9 +637,9 @@ export const GenericNode = memo(({ data, selected, id, type }: GenericNodeProps)
                 runtimeActive={data.runtime_active}
                 title={data.name || fallbackTitle}
                 icon={<Icon />}
-                badgeLabel={badge.label}
+                badgeLabel={copy(badge.label)}
                 badgeClassName={badge.className}
-                contentLabel={contentLabel}
+                contentLabel={copy(contentLabel)}
                 hasSourceHandle={handles.source}
                 hasTargetHandle={handles.target}
                 onDoubleClick={() => setOpen(true)}

@@ -7,13 +7,16 @@ import { useCallback, useState } from 'react';
 import { createWorkflowApiV1WorkflowCreateDefinitionPost } from '@/client/sdk.gen';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { useAuth } from '@/lib/auth';
 import logger from '@/lib/logger';
 import { getRandomId } from '@/lib/utils';
 
 import { WorkflowData } from '../flow/types';
 
+
 export function UploadWorkflowButton() {
+    const copy = useCopy();
     const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
@@ -48,10 +51,10 @@ export function UploadWorkflowButton() {
                 setIsOpen(false);
             }
         } catch (err) {
-            setError('Failed to upload workflow. Please check if the file is valid.');
+            setError(copy("Failed to upload workflow. Please check if the file is valid."));
             logger.error(`Error uploading workflow: ${err}`);
         }
-    }, [router, user, getAccessToken]);
+    }, [user, getAccessToken, router, copy]);
 
     const handleDrop = useCallback((e: React.DragEvent) => {
         e.preventDefault();
@@ -62,9 +65,9 @@ export function UploadWorkflowButton() {
         if (file && file.type === 'application/json') {
             handleFileUpload(file);
         } else {
-            setError('Please upload a valid JSON file');
+            setError(copy("Please upload a valid JSON file"));
         }
-    }, [handleFileUpload]);
+    }, [copy, handleFileUpload]);
 
     const handleDragOver = useCallback((e: React.DragEvent) => {
         e.preventDefault();
@@ -89,14 +92,12 @@ export function UploadWorkflowButton() {
                 onClick={() => setIsOpen(true)}
                 variant="outline"
             >
-                <Upload className="w-4 h-4 mr-2" />
-                Upload Agent Definition
-            </Button>
+                <Upload className="w-4 h-4 mr-2" />{copy("Upload Agent Definition")}</Button>
 
             <Dialog open={isOpen} onOpenChange={setIsOpen}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Upload Agent Definition</DialogTitle>
+                        <DialogTitle>{copy("Upload Agent Definition")}</DialogTitle>
                     </DialogHeader>
                     <div
                         className={`mt-4 border-2 border-dashed rounded-lg p-8 text-center ${isDragging ? 'border-primary bg-primary/5' : 'border-gray-300'
@@ -106,9 +107,7 @@ export function UploadWorkflowButton() {
                         onDragLeave={handleDragLeave}
                     >
                         <Upload className="w-8 h-8 mx-auto mb-4 text-gray-400" />
-                        <p className="text-sm text-gray-600 mb-4">
-                            Drag and drop your Workflow JSON File here, or Click to Select
-                        </p>
+                        <p className="text-sm text-gray-600 mb-4">{copy("Drag and drop your Workflow JSON File here, or Click to Select")}</p>
                         <input
                             type="file"
                             accept=".json"
@@ -119,9 +118,7 @@ export function UploadWorkflowButton() {
                         <Button
                             variant="outline"
                             onClick={() => document.getElementById('workflow-upload')?.click()}
-                        >
-                            Select File
-                        </Button>
+                        >{copy("Select File")}</Button>
                         {error && (
                             <p className="mt-4 text-sm text-red-600">{error}</p>
                         )}

@@ -15,7 +15,9 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { useAuth } from "@/lib/auth";
+
 
 interface CredentialSelectorProps {
     value: string;
@@ -36,6 +38,7 @@ export function CredentialSelector({
     description = "Select a credential for authentication, or leave empty for no auth.",
     showLabel = true,
 }: CredentialSelectorProps) {
+    const copy = useCopy();
     useAuth();
 
     const [credentials, setCredentials] = useState<CredentialResponse[]>([]);
@@ -93,7 +96,7 @@ export function CredentialSelector({
                         {loading ? (
                             <div className="flex items-center gap-2">
                                 <Loader2 className="h-4 w-4 animate-spin" />
-                                <span>Loading...</span>
+                                <span>{copy("Loading...")}</span>
                             </div>
                         ) : (
                             <SelectValue placeholder={placeholder} />
@@ -112,7 +115,7 @@ export function CredentialSelector({
                     variant="outline"
                     size="icon"
                     onClick={() => setIsAddDialogOpen(true)}
-                    title="Add new credential"
+                    title={copy("Add new credential")}
                     disabled={disabled}
                 >
                     <PlusIcon className="h-4 w-4" />
@@ -121,9 +124,7 @@ export function CredentialSelector({
 
             {credentials.length === 0 && !loading && (
                 <div className="p-3 border rounded-md bg-muted/20">
-                    <p className="text-sm text-muted-foreground">
-                        No credentials found. Click the + button to create one.
-                    </p>
+                    <p className="text-sm text-muted-foreground">{copy("No credentials found. Click the + button to create one.")}</p>
                 </div>
             )}
 

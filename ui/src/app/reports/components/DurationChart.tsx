@@ -12,6 +12,8 @@ import {
 } from 'recharts';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useCopy } from "@/i18n/LocaleProvider";
+
 
 interface DurationData {
   bucket: string;
@@ -35,6 +37,7 @@ const COLORS = {
 };
 
 export function DurationChart({ data }: DurationChartProps) {
+    const copy = useCopy();
   const chartData = data.map((item) => ({
     ...item,
     label: `${item.bucket}s`,
@@ -42,13 +45,14 @@ export function DurationChart({ data }: DurationChartProps) {
   }));
 
   const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: DurationData & { label: string; fill: string } }> }) => {
+    const copy = useCopy();
     if (active && payload && payload[0]) {
       const data = payload[0].payload;
       return (
         <div className="bg-background border rounded-lg shadow-lg p-3">
           <p className="font-semibold">{data.label}</p>
-          <p className="text-sm">Calls: {data.count}</p>
-          <p className="text-sm">{data.percentage}% of total</p>
+          <p className="text-sm">{copy("Calls: ")}{data.count}</p>
+          <p className="text-sm">{data.percentage}{copy("% of total")}</p>
         </div>
       );
     }
@@ -58,13 +62,11 @@ export function DurationChart({ data }: DurationChartProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Call Duration Distribution</CardTitle>
+        <CardTitle>{copy("Call Duration Distribution")}</CardTitle>
       </CardHeader>
       <CardContent>
         {data.length === 0 ? (
-          <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-            No duration data available
-          </div>
+          <div className="h-[300px] flex items-center justify-center text-muted-foreground">{copy("No duration data available")}</div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
             <BarChart

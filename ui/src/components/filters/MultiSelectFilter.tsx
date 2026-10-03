@@ -1,3 +1,5 @@
+"use client";
+
 import { ChevronDown, Search } from "lucide-react";
 import { useState } from "react";
 
@@ -6,8 +8,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { cn } from "@/lib/utils";
 import { MultiSelectValue } from "@/types/filters";
+
 
 interface MultiSelectFilterProps {
   options: string[];
@@ -26,6 +30,7 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
   showSelectAll = true,
   searchable = true,
 }) => {
+    const copy = useCopy();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -58,7 +63,7 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
 
   return (
     <div className="space-y-2">
-      <Label>Select Options</Label>
+      <Label>{copy("Select Options")}</Label>
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -80,7 +85,7 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search options..."
+                  placeholder={copy("Search options...")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-8"
@@ -95,25 +100,19 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
                   size="sm"
                   onClick={handleSelectAll}
                   className="flex-1"
-                >
-                  Select All
-                </Button>
+                >{copy("Select All")}</Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleSelectNone}
                   className="flex-1"
-                >
-                  Select None
-                </Button>
+                >{copy("Select None")}</Button>
               </div>
             )}
 
             <div className="max-h-[200px] overflow-auto space-y-1">
               {filteredOptions.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-2">
-                  No options found
-                </p>
+                <p className="text-sm text-muted-foreground text-center py-2">{copy("No options found")}</p>
               ) : (
                 filteredOptions.map((option) => (
                   <div
@@ -139,8 +138,7 @@ export const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
 
             <div className="pt-2 border-t">
               <p className="text-xs text-muted-foreground">
-                {value.codes.length} selected
-              </p>
+                {value.codes.length}{copy(" selected")}</p>
             </div>
           </div>
         </PopoverContent>
