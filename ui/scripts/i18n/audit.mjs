@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
+
 import ts from "typescript";
 
 const ui = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
