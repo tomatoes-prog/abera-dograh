@@ -49,9 +49,9 @@ class Noveum(TypedNode):
     Environment label stamped on exported traces (e.g. production, staging).
     """
 
-    noveum_record_audio: bool = True
+    noveum_record_audio: bool = False
     """
-    Capture per-segment STT/TTS audio and the full-conversation recording
-    for audio evaluation on Noveum.
+    When enabled, send per-segment STT/TTS audio and the full-conversation
+    recording to Noveum.
     """
 

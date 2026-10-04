@@ -86,7 +86,9 @@ async def test_managed_abera_does_not_bypass_its_billing(monkeypatch):
         managed_service_version=1, llm=None, tts=None, stt=None, embeddings=None,
     )))
     from api.services.abera import bedrock
-    monkeypatch.setattr(bedrock, "managed_nova_enabled", lambda: True)
+    monkeypatch.setattr(bedrock, "uses_managed_voice", lambda config: True)
+    from api.services.abera import voice_minutes
+    monkeypatch.setattr(voice_minutes, "managed_balance_available", AsyncMock(return_value=False))
     result = await quota_service.authorize_workflow_run_start(workflow_id=7, organization_id=42)
     assert result.has_quota is False and result.error_code == "metering_unavailable"
 

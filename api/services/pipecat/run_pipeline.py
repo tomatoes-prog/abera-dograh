@@ -1339,6 +1339,14 @@ async def _run_pipeline_impl(
     if not user_provider_id:
         user_obj = await db_client.get_user_by_id(user_id)
         user_provider_id = str(user_obj.provider_id) if user_obj else None
+    from api.services.abera.bedrock import uses_managed_voice
+    from api.services.abera.voice_minutes import ManagedVoiceSession
+    voice_meter = None
+    if uses_managed_voice(user_config):
+        async def stop_managed_voice():
+            from pipecat.utils.enums import EndTaskReason
+            await engine.end_call_with_reason(EndTaskReason.PIPELINE_ERROR.value, abort_immediately=True)
+        voice_meter = ManagedVoiceSession(workflow_run_id, stop_managed_voice)
     in_memory_audio_buffer = register_event_handlers(
         task,
         transport,
@@ -1356,6 +1364,7 @@ async def _run_pipeline_impl(
         integration_runtime_sessions=integration_runtime_sessions,
         call_events_session=call_events_session,
         include_transcript_end_timestamps=include_transcript_end_timestamps,
+        voice_meter=voice_meter,
     )
 
     register_audio_data_handler(audio_buffer, workflow_run_id, in_memory_audio_buffer)
@@ -1367,6 +1376,8 @@ async def _run_pipeline_impl(
     except asyncio.CancelledError:
         logger.warning("Received CancelledError in _run_pipeline")
     finally:
+        if voice_meter is not None:
+            await voice_meter.finish()
         if history_compactor is not None:
             await history_compactor.close()
         # Close MCP sessions here, not in engine.cleanup(). The anyio cancel

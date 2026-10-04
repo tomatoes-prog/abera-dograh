@@ -787,11 +787,12 @@ async def authorize_workflow_run_start(
                     error_code="unsupported_provider",
                     error_message="Configure proveedores propios en Abera Dograh",
                 )
-            from api.services.abera.bedrock import managed_nova_enabled
+            from api.services.abera.bedrock import uses_managed_voice
 
-            if managed_nova_enabled():
-                # The billing reservation path must be connected before Pro
-                # can admit calls. Never fall through to MPS or fail open.
+            if uses_managed_voice(user_config):
+                from api.services.abera.voice_minutes import managed_balance_available
+                if await managed_balance_available():
+                    return QuotaCheckResult(has_quota=True)
                 return QuotaCheckResult(
                     has_quota=False,
                     error_code="metering_unavailable",

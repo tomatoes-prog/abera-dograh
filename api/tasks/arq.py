@@ -69,6 +69,7 @@ from api.tasks.text_chat_inactivity import (
 )
 from api.tasks.webhook_delivery import deliver_webhook, sweep_webhook_deliveries
 from api.tasks.workflow_completion import process_workflow_completion
+from api.services.abera.voice_minutes import retry_voice_receipts
 
 
 class WorkerSettings:
@@ -82,6 +83,7 @@ class WorkerSettings:
         complete_inactive_text_chat_session,
     ]
     cron_jobs = [
+        cron(retry_voice_receipts, minute=set(range(60)), second=15, run_at_startup=True),
         # Safety net for webhook deliveries whose ARQ job was lost (worker
         # restart / Redis flush): re-enqueue any pending delivery that is overdue.
         cron(

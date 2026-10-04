@@ -95,6 +95,7 @@ def register_event_handlers(
     call_events_session=None,
     include_transcript_end_timestamps: bool = False,
     answer_supervisor=None,
+    voice_meter=None,
 ):
     """Register all event handlers for transport and task events.
 
@@ -192,6 +193,13 @@ def register_event_handlers(
             if engine.is_call_disposed():
                 return
 
+            if voice_meter is not None:
+                try:
+                    await voice_meter.authorize()
+                except Exception:
+                    logger.warning("Managed voice authorization denied for run {}", workflow_run_id)
+                    await engine.end_call_with_reason(EndTaskReason.PIPELINE_ERROR.value, abort_immediately=True)
+                    return
             started = await engine.start_initial_agent()
 
             # Hangup during startup must skip both opening and failure handling.
@@ -205,6 +213,9 @@ def register_event_handlers(
                 )
                 await engine.end_call_with_reason(EndTaskReason.PIPELINE_ERROR.value)
                 return
+
+            if voice_meter is not None:
+                voice_meter.started()
 
             # Set the start node now (after pre-call fetch data is merged)
             # so that render_template() has the complete _call_context_vars.
@@ -231,6 +242,8 @@ def register_event_handlers(
 
     @transport.event_handler("on_client_disconnected")
     async def on_client_disconnected(_transport, _participant):
+        if voice_meter is not None:
+            voice_meter.stopped()
         call_disposed = engine.is_call_disposed()
 
         logger.info(
@@ -326,6 +339,8 @@ def register_event_handlers(
         _frame: Frame,
     ):
         logger.debug("In on_pipeline_finished callback handler")
+        if voice_meter is not None:
+            await voice_meter.finish()
 
         # Count the final call outcome once, including agent-worker failures
         # that bypassed the funnel. Observer or persistence errors below must

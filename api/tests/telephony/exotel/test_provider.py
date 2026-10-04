@@ -225,7 +225,9 @@ async def test_start_inbound_stream_contains_ws_url():
 
 
 @pytest.mark.asyncio
-async def test_initiate_call_posts_connect_with_stream_url():
+async def test_initiate_call_posts_connect_with_stream_url(monkeypatch):
+    from api import constants
+    monkeypatch.setattr(constants, "TELEPHONY_WS_TOKEN_SECRET", "test-only-exotel-secret")
     provider = _provider()
 
     response = MagicMock()

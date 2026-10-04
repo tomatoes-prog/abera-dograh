@@ -619,7 +619,9 @@ async def test_inbound_run_rejects_when_concurrency_limit_reached():
 
 
 @pytest.mark.asyncio
-async def test_smallwebrtc_run_reaching_telephony_websocket_closes_without_running():
+async def test_smallwebrtc_run_reaching_telephony_websocket_closes_without_running(monkeypatch):
+    from api import constants
+    monkeypatch.setattr(constants, "TELEPHONY_WS_TOKEN_SECRET", "test-only-media-secret")
     websocket = AsyncMock()
     workflow_run = SimpleNamespace(
         id=501,

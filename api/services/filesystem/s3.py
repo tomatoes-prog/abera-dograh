@@ -1,4 +1,5 @@
 import os
+from urllib.parse import urlencode
 import aiofiles
 from contextlib import asynccontextmanager
 
@@ -43,6 +44,12 @@ class S3FileSystem(BaseFileSystem):
         self.storage_limit_bytes = storage_limit_bytes
         self.bucket_name = bucket_name
         self.key_prefix = key_prefix.strip("/")
+        self._upload_args = {}
+        if self.key_prefix.startswith("subscriptions/"):
+            self._upload_args["Tagging"] = urlencode({
+                "abera:product-id": "abera-dograh",
+                "abera:subscription-id": self.key_prefix.split("/")[1],
+            })
         self.region_name = region_name
         self.endpoint_url = endpoint_url
         self.session = aioboto3.Session()
@@ -101,7 +108,7 @@ class S3FileSystem(BaseFileSystem):
                 data = await content.read()
                 async with self._write_budget(s3_client, file_path, len(data)):
                     await s3_client.put_object(
-                        Bucket=self.bucket_name, Key=self._key(file_path), Body=data
+                        Bucket=self.bucket_name, Key=self._key(file_path), Body=data, **self._upload_args
                     )
             return True
         except ClientError:
@@ -112,7 +119,7 @@ class S3FileSystem(BaseFileSystem):
             async with self.session.client("s3", **self._client_kwargs()) as s3_client:
                 async with self._write_budget(s3_client, destination_path, os.path.getsize(local_path)):
                     await s3_client.upload_file(
-                        local_path, self.bucket_name, self._key(destination_path)
+                        local_path, self.bucket_name, self._key(destination_path), ExtraArgs=self._upload_args
                     )
             return True
         except ClientError:

@@ -22,6 +22,9 @@ browser request:
   `ABERA_MAX_AGENTS`, `ABERA_MAX_CONCURRENT_CALLS`,
   `ABERA_STORAGE_LIMIT_BYTES` (decimal GB × 1,000,000,000),
   `ABERA_MANAGED_NOVA_ENABLED`.
+- `ABERA_BILLING_API_URL` (the verified API Gateway URL ending in `/live`)
+  and `ABERA_BILLING_REGION=us-east-2`. The instance role signs requests;
+  no billing API key is supplied to the browser or the containers.
 - `PUBLIC_HOST`, `PUBLIC_BASE_URL`, `FORWARDED_ALLOW_IPS`.
 - `S3_BUCKET`, `S3_REGION`, `REDIS_PASSWORD`,
   `ABERA_RUNTIME_ENV`, `ABERA_PROVISION_ENV`.
@@ -59,5 +62,33 @@ API. Temporary files are removed after upload, including failed uploads.
 The completion job waits for the upload because QA and webhooks inspect the
 recording metadata. This does not require Lambda or a shared filesystem.
 
-This profile does not itself schedule backups or grant minutes. Pro voice
-calls fail closed until Billing's reservation endpoint is connected.
+## Billing and recovery
+
+Basic uses customer providers, five agents and 15 GB, without managed minutes
+or recording storage. Pro provides twenty agents, 100 GB and managed Nova
+voice. Commercial concurrency remains unvalidated: the internal DEV admission
+limits are protective settings, not a capacity promise.
+
+Managed voice reserves 30-second blocks through Billing before the AI starts.
+The server measures session time, excludes ringing and settles the final
+duration. A failed extension closes the call before its lease expires. Final
+receipts persist in Redis and are retried by ARQ, including after a downgrade.
+Billing independently reconciles calls whose worker disappeared.
+
+Automations schedules weekly backups and performs subscription lifecycle
+operations. A restored runtime clears stale call leases before workers start,
+while preserving queued jobs and final receipts. Only Billing grants or
+deducts seconds; restoring a Dograh backup cannot recreate consumed minutes.
+
+Nova handles realtime voice; extraction and summaries still use the separate
+text-model configuration. That provider must be configured before enabling
+Pro. There is no implicit model charge or fallback to upstream MPS.
+
+## Release verification
+
+Build API and UI from this exact Git revision, then publish immutable ECR
+digests through Automations. BuildKit must fetch the Pipecat submodule too.
+The API, UI and administrative image have been built locally. Local tests
+exercise billing failures, a restricted database restore with a neighbouring
+tenant and the storage quota. AWS deployment, TURN from external networks,
+voice capacity and paid end-to-end checkout remain DEV acceptance gates.

@@ -63,6 +63,12 @@ DATABASE_URL = os.environ["DATABASE_URL"]
 REDIS_URL = os.environ["REDIS_URL"]
 
 DEPLOYMENT_MODE = os.getenv("DEPLOYMENT_MODE", "oss")
+ABERA_SUBSCRIPTION_ID = os.getenv("ABERA_SUBSCRIPTION_ID", "")
+ABERA_BILLING_API_URL = os.getenv("ABERA_BILLING_API_URL", "")
+ABERA_BILLING_REGION = os.getenv("ABERA_BILLING_REGION", "us-east-2")
+ABERA_DB_POOL_SIZE = int(os.getenv("ABERA_DB_POOL_SIZE", "2"))
+if DEPLOYMENT_MODE == "abera" and not 1 <= ABERA_DB_POOL_SIZE <= 2:
+    raise ValueError("ABERA_DB_POOL_SIZE must be 1 or 2 for the ten-connection tenant budget")
 CORS_ALLOWED_ORIGINS = [
     o.strip() for o in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if o.strip()
 ]

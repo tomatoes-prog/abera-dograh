@@ -16,6 +16,13 @@ def managed_nova_enabled() -> bool:
     )
 
 
+def uses_managed_voice(config) -> bool:
+    realtime = getattr(config, "realtime", None)
+    return bool(managed_nova_enabled() and getattr(config, "is_realtime", False)
+                and realtime is not None and realtime.provider == "aws_nova_sonic"
+                and not realtime.aws_access_key and not realtime.aws_secret_key)
+
+
 def validate_managed_nova(model: str, region: str) -> None:
     if not managed_nova_enabled():
         raise ValueError("Managed Nova Sonic is unavailable for this subscription")

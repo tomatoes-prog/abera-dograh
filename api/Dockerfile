@@ -2,7 +2,7 @@
 # Multi-stage Dockerfile
 # Stage 1: Builder - Install Python dependencies into a venv via uv
 # (mirrors .devcontainer/Dockerfile's venv-builder stage).
-FROM python:3.13-slim AS builder
+FROM python:3.13-slim@sha256:9d2e5553305c7c7b0097999bb17187c69b921ccd6bc9d40e4bb5ebe652c00285 AS builder
 
 WORKDIR /app
 
@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # uv (https://github.com/astral-sh/uv) for ~5-10x faster installs than pip.
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+COPY --from=ghcr.io/astral-sh/uv@sha256:61d393e44e249f2e4b526b6c7ddcecce245946826e608e11c93ad4f5bba55b21 /uv /uvx /usr/local/bin/
 
 # Build the venv at the path it will live at in the final image, so shebangs
 # and console-scripts inside the venv reference the correct runtime location
@@ -46,7 +46,7 @@ RUN find /opt/venv -type f -name '*.pyc' -delete && \
 
 # Stage 2: Node deps for ts_validator (built with full node:22-slim, only
 # node_modules is copied into the runner).
-FROM node:22-slim AS ts-deps
+FROM node:22-slim@sha256:43ac6c60b8f89723f746e8a92ce91abd5017e627ce1ddfe4238355d3a30b772c AS ts-deps
 WORKDIR /ts_validator
 COPY api/mcp_server/ts_validator/package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
@@ -56,7 +56,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends binutils \
 
 # Build an audio-only FFmpeg; compilers and source never enter the runner.
 # Source archive is pinned by SHA256; both runtime architectures use the same source.
-FROM debian:trixie-slim AS ffmpeg-static
+FROM debian:trixie-slim@sha256:a99cfc517144bc59b1978475ec53b46ecabec7e43635402ee5b77cc54cd1b20a AS ffmpeg-static
 ARG FFMPEG_VERSION=8.0.2
 ARG FFMPEG_SHA256=5d16962332603c427b3d0887fc12b9166d6ee2cb1108b1865dd2d5eb06a09505
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -83,14 +83,14 @@ RUN set -eu; \
     mkdir -p /out/licenses; cp COPYING.LGPLv2.1 COPYING.LGPLv3 LICENSE.md /out/licenses/
 
 # Prepare application files without tests or developer artifacts in the image.
-FROM python:3.13-slim AS source
+FROM python:3.13-slim@sha256:9d2e5553305c7c7b0097999bb17187c69b921ccd6bc9d40e4bb5ebe652c00285 AS source
 WORKDIR /source
 COPY api ./api
 RUN find api -type d \( -name tests -o -name __pycache__ -o -name .pytest_cache \) -prune -exec rm -rf {} + \
  && rm -rf api/load_tests api/conftest.py api/pytest.ini api/requirements.dev.txt
 
 # Stage 4: Runtime - Minimal image with only runtime dependencies
-FROM python:3.13-slim AS runner
+FROM python:3.13-slim@sha256:9d2e5553305c7c7b0097999bb17187c69b921ccd6bc9d40e4bb5ebe652c00285 AS runner
 
 WORKDIR /app
 
