@@ -2,6 +2,7 @@ import random
 from collections.abc import Iterable
 from enum import Enum, auto
 from typing import Annotated, Dict, Literal, Type, TypeVar, Union
+from urllib.parse import urlparse
 
 from pydantic import (
     BaseModel,
@@ -81,7 +82,9 @@ class ServiceType(Enum):
 
 class ServiceProviders(str, Enum):
     OPENAI = "openai"
+    OPENAI_COMPATIBLE = "openai_compatible"
     ATLASCLOUD = "atlascloud"
+    HOPPER = "hopper"
     DEEPGRAM = "deepgram"
     GROQ = "groq"
     OPENROUTER = "openrouter"
@@ -121,7 +124,9 @@ class ServiceProviders(str, Enum):
 class BaseServiceConfiguration(BaseModel):
     provider: Literal[
         ServiceProviders.OPENAI,
+        ServiceProviders.OPENAI_COMPATIBLE,
         ServiceProviders.ATLASCLOUD,
+        ServiceProviders.HOPPER,
         ServiceProviders.DEEPGRAM,
         ServiceProviders.GROQ,
         ServiceProviders.OPENROUTER,
@@ -317,6 +322,10 @@ ATLASCLOUD_PROVIDER_MODEL_CONFIG = provider_model_config(
     "Atlas Cloud",
     description="Atlas Cloud OpenAI-compatible LLM API.",
 )
+HOPPER_PROVIDER_MODEL_CONFIG = provider_model_config(
+    "Hopper",
+    provider_docs_url="https://docs.withhopper.com",
+)
 GOOGLE_PROVIDER_MODEL_CONFIG = provider_model_config("Google")
 GROQ_PROVIDER_MODEL_CONFIG = provider_model_config("Groq")
 OPENROUTER_PROVIDER_MODEL_CONFIG = provider_model_config("Open Router")
@@ -401,9 +410,15 @@ OPENAI_MODELS = [
     "gpt-3.5-turbo",
 ]
 
+ATLASCLOUD_API_BASE_URL = "https://api.atlascloud.ai/v1"
 ATLASCLOUD_MODELS = [
     "qwen/qwen3.5-flash",
     "deepseek-ai/deepseek-v4-pro",
+]
+
+HOPPER_API_BASE_URL = "https://api.withhopper.com/v1"
+HOPPER_MODELS = [
+    "gemma-4-31b",
 ]
 
 GROQ_MODELS = [
@@ -454,8 +469,26 @@ class AtlasCloudLLMService(BaseLLMConfiguration):
         json_schema_extra={"examples": ATLASCLOUD_MODELS, "allow_custom_input": True},
     )
     base_url: str = Field(
-        default="https://api.atlascloud.ai/v1",
+        default=ATLASCLOUD_API_BASE_URL,
         description="Atlas Cloud OpenAI-compatible API endpoint.",
+    )
+
+
+@register_llm
+class HopperLLMConfiguration(BaseLLMConfiguration):
+    model_config = HOPPER_PROVIDER_MODEL_CONFIG
+    provider: Literal[ServiceProviders.HOPPER] = ServiceProviders.HOPPER
+    api_key: str | list[str] = Field(
+        description="API key from your Hopper console.",
+        json_schema_extra={
+            "docs_url": "https://withhopper.com/console/keys",
+            "docs_label": "Create a key",
+        },
+    )
+    model: str = Field(
+        default="gemma-4-31b",
+        description="Hopper chat model.",
+        json_schema_extra={"examples": HOPPER_MODELS, "allow_custom_input": True},
     )
 
 
@@ -689,9 +722,13 @@ class SarvamLLMConfiguration(BaseLLMConfiguration):
     model_config = SARVAM_PROVIDER_MODEL_CONFIG
     provider: Literal[ServiceProviders.SARVAM] = ServiceProviders.SARVAM
     model: str = Field(
-        default="sarvam-105b",
+        default="sarvam-105b-conversations",
         description="Sarvam chat model.",
         json_schema_extra={"examples": SARVAM_LLM_MODELS, "allow_custom_input": True},
+    )
+    base_url: str = Field(
+        default="https://api.sarvam.ai/v1",
+        description="Sarvam API base URL.",
     )
     temperature: float = Field(
         default=0.5,
@@ -965,7 +1002,7 @@ class GoogleRealtimeLLMConfiguration(BaseLLMConfiguration):
         ServiceProviders.GOOGLE_REALTIME
     )
     model: str = Field(
-        default="gemini-3.1-flash-live-preview",
+        default="gemini-3.8-live",
         description="Gemini Live model on Google AI Studio (not Vertex).",
         json_schema_extra={
             "examples": GOOGLE_REALTIME_MODELS,
@@ -1102,6 +1139,7 @@ LLMConfig = Annotated[
     Union[
         OpenAILLMService,
         AtlasCloudLLMService,
+        HopperLLMConfiguration,
         GoogleVertexLLMConfiguration,
         GroqLLMService,
         OpenRouterLLMConfiguration,
@@ -2256,6 +2294,47 @@ class OpenAIEmbeddingsConfiguration(BaseEmbeddingsConfiguration):
     )
 
 
+@register_embeddings
+class OpenAICompatibleEmbeddingsConfiguration(BaseEmbeddingsConfiguration):
+    model_config = provider_model_config(
+        "OpenAI-compatible",
+        description="Use your provider URL, API key and embedding model. The model must return 1536-dimensional vectors.",
+    )
+    provider: Literal[ServiceProviders.OPENAI_COMPATIBLE] = ServiceProviders.OPENAI_COMPATIBLE
+    model: str = Field(
+        min_length=1, max_length=200,
+        description="Embedding model name supplied by your provider.",
+    )
+    base_url: str = Field(
+        min_length=1, max_length=2000,
+        description="Provider API base URL, including its version path, for example https://provider.example/v1. Do not include /embeddings or an API key.",
+    )
+
+    @field_validator("model")
+    @classmethod
+    def validate_model_name(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Indica el nombre del modelo de embeddings.")
+        return value
+
+    @field_validator("base_url")
+    @classmethod
+    def validate_base_url(cls, value: str) -> str:
+        value = value.strip().rstrip("/")
+        parsed = urlparse(value)
+        if (
+            parsed.scheme not in {"http", "https"} or not parsed.hostname
+            or parsed.username or parsed.password or parsed.query or parsed.fragment
+            or parsed.path.rstrip("/").endswith("/embeddings")
+        ):
+            raise ValueError("Indica la URL base del proveedor, sin /embeddings, credenciales ni parámetros.")
+        # Validate malformed ports before they can reach a network client.
+        if parsed.port is not None and not 0 < parsed.port < 65536:
+            raise ValueError("El puerto de la URL no es válido.")
+        return value
+
+
 OPENROUTER_EMBEDDING_MODELS = ["openai/text-embedding-3-small"]
 
 
@@ -2316,6 +2395,7 @@ class DograhEmbeddingsConfiguration(BaseEmbeddingsConfiguration):
 EmbeddingsConfig = Annotated[
     Union[
         OpenAIEmbeddingsConfiguration,
+        OpenAICompatibleEmbeddingsConfiguration,
         OpenRouterEmbeddingsConfiguration,
         AzureOpenAIEmbeddingsConfiguration,
         DograhEmbeddingsConfiguration,

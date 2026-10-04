@@ -1,11 +1,11 @@
 """API routes for workflow recording operations."""
 
+import re
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from loguru import logger
 
-from api.constants import DEPLOYMENT_MODE
 from api.db import db_client
 from api.db.workflow_recording_client import generate_short_id
 from api.enums import StorageBackend
@@ -21,10 +21,18 @@ from api.schemas.workflow_recording import (
 )
 from api.sdk_expose import sdk_expose
 from api.services.auth.depends import get_user
-from api.services.mps_service_key_client import mps_service_key_client
+from api.services.model_services.transcription import transcribe_uploaded_audio
 from api.services.storage import storage_fs
 
 router = APIRouter(prefix="/workflow-recordings", tags=["workflow-recordings"])
+
+
+def _validate_audio_filename(filename: str) -> None:
+    if (
+        not filename or len(filename) > 500 or "/" in filename or "\\" in filename
+        or any(ord(character) < 32 for character in filename)
+    ):
+        raise HTTPException(422, "Usa un nombre de archivo de audio sin rutas.")
 
 
 async def _generate_unique_recording_id(organization_id: int) -> str:
@@ -68,6 +76,11 @@ async def get_upload_urls(
     user=Depends(get_user),
 ):
     """Generate presigned PUT URLs for uploading one or more audio recordings."""
+    if not user.selected_organization_id:
+        raise HTTPException(400, "Selecciona una organización.")
+    # Validate the whole batch before issuing any upload grants.
+    for descriptor in request.files:
+        _validate_audio_filename(descriptor.filename)
     try:
         items = []
         for fd in request.files:
@@ -81,12 +94,17 @@ async def get_upload_urls(
                 f"/{fd.filename}"
             )
 
-            upload_url = await storage_fs.aget_presigned_put_url(
-                file_path=storage_key,
-                expiration=1800,
-                content_type=fd.mime_type,
-                max_size=5_242_880,
-            )
+            from api.constants import DEPLOYMENT_MODE
+
+            if DEPLOYMENT_MODE == "abera":
+                from api.services.abera.storage_upload import create_upload_url
+
+                upload_url = await create_upload_url(storage_key, fd.file_size, fd.mime_type)
+            else:
+                upload_url = await storage_fs.aget_presigned_put_url(
+                    file_path=storage_key, expiration=1800,
+                    content_type=fd.mime_type, max_size=fd.file_size,
+                )
 
             if not upload_url:
                 raise HTTPException(
@@ -128,6 +146,15 @@ async def create_recordings(
     user=Depends(get_user),
 ):
     """Create one or more recording records after audio files have been uploaded."""
+    if not user.selected_organization_id:
+        raise HTTPException(400, "Selecciona una organización.")
+    # A recording must never reference an object in another tenant's prefix.
+    for rec_req in request.recordings:
+        filename = rec_req.storage_key.split("/")[-1]
+        _validate_audio_filename(filename)
+        expected_key = f"recordings/{user.selected_organization_id}/{rec_req.recording_id}/{filename}"
+        if not re.fullmatch(r"[a-zA-Z0-9_-]{1,64}", rec_req.recording_id) or rec_req.storage_key != expected_key:
+            raise HTTPException(403, "El audio no pertenece a esta organización.")
     try:
         backend = StorageBackend.get_current_backend()
         results = []
@@ -315,34 +342,21 @@ async def update_recording(
 )
 async def transcribe_audio(
     file: UploadFile = File(...),
-    language: str = Form("en"),
+    language: str = Form("es"),
     user=Depends(get_user),
 ):
-    """Transcribe an uploaded audio file using MPS STT."""
+    """Transcribe a file directly with the organization's configured provider."""
     try:
-        audio_data = await file.read()
-
-        if DEPLOYMENT_MODE == "oss":
-            result = await mps_service_key_client.transcribe_audio(
-                audio_data=audio_data,
-                filename=file.filename or "audio.wav",
-                content_type=file.content_type or "audio/wav",
-                language=language,
-                created_by=str(user.provider_id),
-            )
-        else:
-            result = await mps_service_key_client.transcribe_audio(
-                audio_data=audio_data,
-                filename=file.filename or "audio.wav",
-                content_type=file.content_type or "audio/wav",
-                language=language,
-                organization_id=user.selected_organization_id,
-            )
-
-        return result
-
+        if not user.selected_organization_id:
+            raise HTTPException(400, "Selecciona una organización.")
+        return await transcribe_uploaded_audio(
+            file=file, language=language,
+            organization_id=user.selected_organization_id,
+        )
+    except HTTPException:
+        raise
     except Exception as exc:
-        logger.error(f"Error transcribing audio: {exc}")
+        logger.error("Failed to transcribe audio: {}", type(exc).__name__)
         raise HTTPException(
-            status_code=500, detail="Failed to transcribe audio"
+            status_code=502, detail="El proveedor no pudo transcribir el audio. Inténtalo de nuevo."
         ) from exc

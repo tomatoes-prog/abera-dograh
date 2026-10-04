@@ -6,8 +6,10 @@ import { useState } from 'react';
 
 import { duplicateWorkflowTemplateApiV1WorkflowTemplatesDuplicatePost } from '@/client/sdk.gen';
 import { Button } from "@/components/ui/button";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { useAuth } from '@/lib/auth';
 import logger from '@/lib/logger';
+
 
 interface DuplicateWorkflowTemplateProps {
     id: number;
@@ -17,6 +19,7 @@ interface DuplicateWorkflowTemplateProps {
 }
 
 export function DuplicateWorkflowTemplate({ id, title, description, serverAccessToken }: DuplicateWorkflowTemplateProps) {
+    const copy = useCopy();
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
     const { user, getAccessToken } = useAuth();
@@ -74,7 +77,7 @@ export function DuplicateWorkflowTemplate({ id, title, description, serverAccess
                     disabled={isLoading}
                 >
                     <Copy className="w-4 h-4 mr-2" />
-                    {isLoading ? 'Creating...' : 'Duplicate Workflow Template'}
+                    {isLoading ? copy("Creating...") : copy("Duplicate Workflow Template")}
                 </Button>
             </div>
         </div>

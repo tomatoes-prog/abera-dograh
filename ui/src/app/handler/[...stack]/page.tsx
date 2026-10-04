@@ -1,11 +1,12 @@
 import { StackHandler, StackTheme } from "@stackframe/stack";
 
-import { AuthEnterpriseCTA } from "@/components/auth/AuthEnterpriseCTA";
 import { AuthShell } from "@/components/auth/AuthShell";
+import { CopyText } from "@/i18n/LocaleProvider";
 import { getAuthProvider } from "@/lib/auth/config";
 
 import { BackButton } from "./BackButton";
 import { stackAuthDarkTheme } from "./stack-theme";
+
 
 // Stack Auth serves every auth page from this one catch-all. We give the brand
 // split-screen shell to the user-facing FORM routes and render only the wide /
@@ -28,12 +29,10 @@ export default async function Handler(props: unknown) {
 
   if (authProvider === "local") {
     return (
-      <AuthShell enterpriseSlot={<AuthEnterpriseCTA />}>
+      <AuthShell>
         <div className="space-y-2 text-center text-zinc-200">
-          <h1 className="text-xl font-semibold">Local Auth Mode</h1>
-          <p className="text-sm text-muted-foreground">
-            Stack Auth handler is disabled when using local authentication.
-          </p>
+          <h1 className="text-xl font-semibold"><CopyText text="Local Auth Mode" /></h1>
+          <p className="text-sm text-muted-foreground"><CopyText text="Stack Auth handler is disabled when using local authentication." /></p>
         </div>
       </AuthShell>
     );
@@ -65,7 +64,7 @@ export default async function Handler(props: unknown) {
 
   if (isAuthForm) {
     return (
-      <AuthShell enterpriseSlot={<AuthEnterpriseCTA />}>
+      <AuthShell>
         {showBackButton && <BackButton />}
         {handler}
       </AuthShell>

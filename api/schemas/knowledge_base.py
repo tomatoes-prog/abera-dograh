@@ -1,7 +1,7 @@
 """Pydantic schemas for knowledge base operations."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -10,6 +10,7 @@ class DocumentUploadRequestSchema(BaseModel):
     """Request schema for initiating document upload."""
 
     filename: str = Field(..., description="Name of the file to upload")
+    file_size_bytes: int | None = Field(default=None, gt=0, le=5 * 1024 * 1024)
     mime_type: str = Field(..., description="MIME type of the file")
     custom_metadata: Optional[Dict[str, Any]] = Field(
         default=None, description="Optional custom metadata"
@@ -29,7 +30,7 @@ class ProcessDocumentRequestSchema(BaseModel):
 
     document_uuid: str = Field(..., description="Document UUID to process")
     s3_key: str = Field(..., description="S3 key of the uploaded file")
-    retrieval_mode: str = Field(
+    retrieval_mode: Literal["chunked", "full_document"] = Field(
         default="chunked",
         description="Retrieval mode: 'chunked' for vector search or 'full_document' for full text retrieval",
     )

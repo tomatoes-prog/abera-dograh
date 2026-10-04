@@ -3,6 +3,7 @@ import "./globals.css";
 import { GoogleTagManager } from "@next/third-parties/google";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { getLocale } from "next-intl/server";
 import { Suspense } from "react";
 
 import ChatwootWidget from "@/components/ChatwootWidget";
@@ -17,6 +18,8 @@ import { AppConfigProvider } from "@/context/AppConfigContext";
 import { OnboardingProvider } from "@/context/OnboardingContext";
 import { OrgConfigProvider } from "@/context/OrgConfigContext";
 import { TelephonyConfigWarningsProvider } from "@/context/TelephonyConfigWarningsContext";
+import type { UiLocale } from "@/i18n/config";
+import { LocaleProvider } from "@/i18n/LocaleProvider";
 import { AuthProvider } from "@/lib/auth";
 
 
@@ -32,14 +35,15 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Dograh",
-  description: "Open Source Voice Assistant Workflow Builder",
+  description: "Crea y administra agentes de voz con IA",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children
 }: {
   children: React.ReactNode
 }) {
+  const locale = await getLocale() as UiLocale;
   const telemetryEnabled = process.env.ENABLE_TELEMETRY === "true";
   const gtmId = telemetryEnabled ? process.env.NEXT_PUBLIC_GTM_ID?.trim() : "";
   const metaPixelId = telemetryEnabled ? process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim() : "";
@@ -48,7 +52,7 @@ export default function RootLayout({
   const showEventBanner = process.env.NEXT_PUBLIC_EVENT_BANNER?.trim() === "1";
 
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang={locale} className="dark" suppressHydrationWarning>
       <head>
         {/* Inline script to prevent flash of light theme - runs before React hydrates.
             Dark is the locked default: only an explicit stored 'light' opts out. */}
@@ -75,6 +79,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {gtmId ? <GoogleTagManager gtmId={gtmId} /> : null}
         {metaPixelId ? <MetaPixel pixelId={metaPixelId} /> : null}
+        <LocaleProvider initialLocale={locale}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
           <SentryErrorBoundary>
             {/* Above the app chrome on every route (auth pages included). It
@@ -100,6 +105,7 @@ export default function RootLayout({
             </AuthProvider>
           </SentryErrorBoundary>
         </ThemeProvider>
+        </LocaleProvider>
       </body>
     </html>
   );

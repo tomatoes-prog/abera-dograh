@@ -47,6 +47,9 @@ class DograhEmbeddingService(OpenAIEmbeddingService):
                 billing v2 protocol is forwarded with each request. When None,
                 requests are sent without the protocol (valid for v1 orgs).
         """
+        from api.services.model_services.policy import require_mps_enabled
+
+        require_mps_enabled()
         super().__init__(
             db_client=db_client,
             api_key=api_key,

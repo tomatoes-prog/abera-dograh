@@ -23,16 +23,22 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAppConfig } from '@/context/AppConfigContext';
 import { useOrganizationTimezone } from '@/hooks/useOrganizationTimezone';
+import { useCopy } from "@/i18n/LocaleProvider";
+import { useUiLocale } from "@/i18n/LocaleProvider";
 import { useAuth } from '@/lib/auth';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { formatDateTime } from '@/lib/dateTime';
 import logger from '@/lib/logger';
 
+
 export default function APIKeysPage() {
+    const { locale } = useUiLocale();
+    const copy = useCopy();
     const { user, getAccessToken, redirectToLogin, loading } = useAuth();
     const { config } = useAppConfig();
     const organizationTimezone = useOrganizationTimezone();
     const isOSS = config?.deploymentMode === 'oss';
+    const vendorServicesEnabled = config?.dograhMpsEnabled === true;
 
     logger.debug('[APIKeysPage] Component render', {
         loading,
@@ -99,12 +105,12 @@ export default function APIKeysPage() {
                 setApiKeys(response.data);
             }
         } catch (err) {
-            setError('Failed to fetch API keys');
+            setError(copy("Failed to fetch API keys"));
             console.error('Error fetching API keys:', err);
         } finally {
             setIsLoading(false);
         }
-    }, [loading, user, getAccessToken, showArchived]);
+    }, [loading, user, getAccessToken, showArchived, copy]);
 
     const fetchServiceKeys = useCallback(async () => {
         logger.debug('[APIKeysPage] fetchServiceKeys called', {
@@ -113,9 +119,8 @@ export default function APIKeysPage() {
             userId: user?.id
         });
 
-        // Follow the pattern from UserConfigContext - check both loading and user
-        if (loading || !user) {
-            logger.debug('[APIKeysPage] fetchServiceKeys - skipping due to loading or no user');
+        if (loading || !user || !vendorServicesEnabled) {
+            setIsServiceKeysLoading(false);
             return;
         }
 
@@ -139,12 +144,12 @@ export default function APIKeysPage() {
                 setServiceKeys(response.data);
             }
         } catch (err) {
-            setError('Failed to fetch service keys');
+            setError(copy("Failed to fetch service keys"));
             console.error('Error fetching service keys:', err);
         } finally {
             setIsServiceKeysLoading(false);
         }
-    }, [loading, user, getAccessToken, showServiceArchived]);
+    }, [loading, user, getAccessToken, showServiceArchived, vendorServicesEnabled, copy]);
 
     useEffect(() => {
         logger.debug('[APIKeysPage] useEffect for fetchApiKeys triggered');
@@ -158,7 +163,7 @@ export default function APIKeysPage() {
 
     const handleCreateKey = async () => {
         if (!newKeyName.trim()) {
-            setError('Please enter a name for the API key');
+            setError(copy("Please enter a name for the API key"));
             return;
         }
 
@@ -183,14 +188,14 @@ export default function APIKeysPage() {
                 fetchApiKeys();
             }
         } catch (err) {
-            setError('Failed to create API key');
+            setError(copy("Failed to create API key"));
             console.error('Error creating API key:', err);
         }
     };
 
     const handleCreateServiceKey = async () => {
         if (!newServiceKeyName.trim()) {
-            setError('Please enter a name for the service key');
+            setError(copy("Please enter a name for the service key"));
             return;
         }
 
@@ -216,7 +221,7 @@ export default function APIKeysPage() {
                 fetchServiceKeys();
             }
         } catch (err) {
-            setError('Failed to create service key');
+            setError(copy("Failed to create service key"));
             console.error('Error creating service key:', err);
         }
     };
@@ -237,7 +242,7 @@ export default function APIKeysPage() {
 
             fetchApiKeys();
         } catch (err) {
-            setError('Failed to archive API key');
+            setError(copy("Failed to archive API key"));
             console.error('Error archiving API key:', err);
         }
     };
@@ -258,7 +263,7 @@ export default function APIKeysPage() {
 
             fetchServiceKeys();
         } catch (err) {
-            setError('Failed to archive service key');
+            setError(copy("Failed to archive service key"));
             console.error('Error archiving service key:', err);
         }
     };
@@ -281,7 +286,7 @@ export default function APIKeysPage() {
 
             fetchApiKeys();
         } catch (err) {
-            setError('Failed to reactivate API key');
+            setError(copy("Failed to reactivate API key"));
             console.error('Error reactivating API key:', err);
         }
     };
@@ -290,16 +295,16 @@ export default function APIKeysPage() {
     const copyToClipboard = async (text: string) => {
         try {
             await copyTextToClipboard(text);
-            toast.success('Key copied to clipboard');
+            toast.success(copy("Key copied to clipboard"));
         } catch (err) {
             console.error('Failed to copy to clipboard:', err);
-            toast.error('Failed to copy key');
+            toast.error(copy("Failed to copy key"));
         }
     };
 
     const formatDate = (dateString: string | null) => {
-        if (!dateString) return 'Never';
-        return formatDateTime(dateString, organizationTimezone);
+        if (!dateString) return copy('Never');
+        return formatDateTime(dateString, organizationTimezone, locale);
     };
 
     // Don't render content until auth is loaded
@@ -324,8 +329,8 @@ export default function APIKeysPage() {
             <div className="container mx-auto px-4 py-8">
                 <div className="max-w-6xl mx-auto">
                     <div className="mb-8">
-                        <h1 className="text-3xl font-bold mb-2">Developer Portal</h1>
-                        <p className="text-muted-foreground">Manage your API keys to access Dograh services programmatically</p>
+                        <h1 className="text-3xl font-bold mb-2">{copy("Developer Portal")}</h1>
+                        <p className="text-muted-foreground">{copy("Manage your API keys to access Dograh services programmatically")}</p>
                     </div>
 
                     {error && (
@@ -338,10 +343,8 @@ export default function APIKeysPage() {
                         <CardHeader>
                             <div className="flex justify-between items-center">
                                 <div>
-                                    <CardTitle>API Keys</CardTitle>
-                                    <CardDescription>
-                                        Create and manage API keys for your organization
-                                    </CardDescription>
+                                    <CardTitle>{copy("API Keys")}</CardTitle>
+                                    <CardDescription>{copy("Create and manage API keys for your organization")}</CardDescription>
                                 </div>
                                 <div className="flex gap-2">
                                     <Button
@@ -350,15 +353,12 @@ export default function APIKeysPage() {
                                         onClick={() => setShowArchived(!showArchived)}
                                     >
                                         {showArchived ? <Eye className="w-4 h-4 mr-2" /> : <EyeOff className="w-4 h-4 mr-2" />}
-                                        {showArchived ? 'Hide' : 'Show'} Archived
-                                    </Button>
+                                        {showArchived ? copy("Hide") : copy("Show")}{copy(" Archived")}</Button>
                                     <Button
                                         onClick={() => setIsCreateDialogOpen(true)}
                                         size="sm"
                                     >
-                                        <Plus className="w-4 h-4 mr-2" />
-                                        Create New Key
-                                    </Button>
+                                        <Plus className="w-4 h-4 mr-2" />{copy("Create New Key")}</Button>
                                 </div>
                             </div>
                         </CardHeader>
@@ -378,10 +378,8 @@ export default function APIKeysPage() {
                             ) : apiKeys.length === 0 ? (
                                 <div className="text-center py-12">
                                     <Key className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                                    <p className="text-muted-foreground mb-4">No API keys found</p>
-                                    <Button onClick={() => setIsCreateDialogOpen(true)}>
-                                        Create Your First API Key
-                                    </Button>
+                                    <p className="text-muted-foreground mb-4">{copy("No API keys found")}</p>
+                                    <Button onClick={() => setIsCreateDialogOpen(true)}>{copy("Create Your First API Key")}</Button>
                                 </div>
                             ) : (
                                 <div className="space-y-4">
@@ -396,22 +394,18 @@ export default function APIKeysPage() {
                                                 <div className="flex items-center gap-2 mb-1">
                                                     <span className="font-medium">{key.name}</span>
                                                     {key.archived_at ? (
-                                                        <Badge variant="secondary">Archived</Badge>
+                                                        <Badge variant="secondary">{copy("Archived")}</Badge>
                                                     ) : key.is_active ? (
-                                                        <Badge variant="default">Active</Badge>
+                                                        <Badge variant="default">{copy("Active")}</Badge>
                                                     ) : (
-                                                        <Badge variant="destructive">Inactive</Badge>
+                                                        <Badge variant="destructive">{copy("Inactive")}</Badge>
                                                     )}
                                                 </div>
                                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                                     <span className="font-mono bg-muted px-2 py-1 rounded">{key.key_prefix}...</span>
-                                                    <span className="text-xs text-muted-foreground/70">
-                                                        (Full key hidden for security)
-                                                    </span>
+                                                    <span className="text-xs text-muted-foreground/70">{copy("(Full key hidden for security)")}</span>
                                                 </div>
-                                                <div className="mt-2 text-xs text-muted-foreground">
-                                                    Created: {formatDate(key.created_at)} •
-                                                    Last used: {formatDate(key.last_used_at ?? null)}
+                                                <div className="mt-2 text-xs text-muted-foreground">{copy("Created: ")}{formatDate(key.created_at)}{copy(" • Last used: ")}{formatDate(key.last_used_at ?? null)}
                                                 </div>
                                             </div>
                                             <div className="flex gap-2">
@@ -421,9 +415,7 @@ export default function APIKeysPage() {
                                                         size="sm"
                                                         onClick={() => handleReactivateKey(key.id)}
                                                     >
-                                                        <RefreshCw className="w-4 h-4 mr-1" />
-                                                        Reactivate
-                                                    </Button>
+                                                        <RefreshCw className="w-4 h-4 mr-1" />{copy("Reactivate")}</Button>
                                                 ) : (
                                                     <Button
                                                         variant="ghost"
@@ -443,14 +435,12 @@ export default function APIKeysPage() {
                     </Card>
 
                     {/* Dograh Service Keys Section */}
-                    <Card className="mb-6">
+                    {vendorServicesEnabled && <Card className="mb-6">
                         <CardHeader>
                             <div className="flex justify-between items-center">
                                 <div>
-                                    <CardTitle>Dograh Service Keys</CardTitle>
-                                    <CardDescription>
-                                        Manage service keys for accessing Dograh AI services (LLM, TTS, STT)
-                                    </CardDescription>
+                                    <CardTitle>{copy("Dograh Service Keys")}</CardTitle>
+                                    <CardDescription>{copy("Manage service keys for accessing Dograh AI services (LLM, TTS, STT)")}</CardDescription>
                                 </div>
                                 <div className="flex gap-2">
                                     {showServiceKeyArchiveControls && (
@@ -460,20 +450,16 @@ export default function APIKeysPage() {
                                             onClick={() => setShowServiceArchived(!showServiceArchived)}
                                         >
                                             {showServiceArchived ? <Eye className="w-4 h-4 mr-2" /> : <EyeOff className="w-4 h-4 mr-2" />}
-                                            {showServiceArchived ? 'Hide' : 'Show'} Archived
-                                        </Button>
+                                            {showServiceArchived ? copy("Hide") : copy("Show")}{copy(" Archived")}</Button>
                                     )}
                                     {canCreateServiceKey ? (
                                         <Button
                                             onClick={() => setIsCreateServiceDialogOpen(true)}
                                             size="sm"
                                         >
-                                            <Plus className="w-4 h-4 mr-2" />
-                                            Create Service Key
-                                        </Button>
+                                            <Plus className="w-4 h-4 mr-2" />{copy("Create Service Key")}</Button>
                                     ) : (
-                                        <span className="text">
-                                            To generate additional service keys, <a href="https://app.dograh.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Sign up on app.dograh.com</a>
+                                        <span className="text">{copy("To generate additional service keys, ")}<a href="https://app.dograh.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{copy("Sign up on app.dograh.com")}</a>
                                         </span>
                                     )}
                                 </div>
@@ -495,11 +481,9 @@ export default function APIKeysPage() {
                             ) : serviceKeys.length === 0 ? (
                                 <div className="text-center py-12">
                                     <Key className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                                    <p className="text-muted-foreground mb-4">No service keys found</p>
+                                    <p className="text-muted-foreground mb-4">{copy("No service keys found")}</p>
                                     {canCreateServiceKey && (
-                                        <Button onClick={() => setIsCreateServiceDialogOpen(true)}>
-                                            Create Your First Service Key
-                                        </Button>
+                                        <Button onClick={() => setIsCreateServiceDialogOpen(true)}>{copy("Create Your First Service Key")}</Button>
                                     )}
                                 </div>
                             ) : (
@@ -515,27 +499,22 @@ export default function APIKeysPage() {
                                                 <div className="flex items-center gap-2 mb-1">
                                                     <span className="font-medium">{key.name}</span>
                                                     {key.archived_at ? (
-                                                        <Badge variant="secondary">Archived</Badge>
+                                                        <Badge variant="secondary">{copy("Archived")}</Badge>
                                                     ) : key.is_active ? (
-                                                        <Badge variant="default">Active</Badge>
+                                                        <Badge variant="default">{copy("Active")}</Badge>
                                                     ) : (
-                                                        <Badge variant="destructive">Inactive</Badge>
+                                                        <Badge variant="destructive">{copy("Inactive")}</Badge>
                                                     )}
                                                     {key.expires_at && new Date(key.expires_at) > new Date() && (
-                                                        <Badge variant="outline">
-                                                            Expires: {formatDate(key.expires_at)}
+                                                        <Badge variant="outline">{copy("Expires: ")}{formatDate(key.expires_at)}
                                                         </Badge>
                                                     )}
                                                 </div>
                                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                                     <span className="font-mono bg-muted px-2 py-1 rounded">{key.key_prefix}...</span>
-                                                    <span className="text-xs text-muted-foreground/70">
-                                                        (Full key hidden for security)
-                                                    </span>
+                                                    <span className="text-xs text-muted-foreground/70">{copy("(Full key hidden for security)")}</span>
                                                 </div>
-                                                <div className="mt-2 text-xs text-muted-foreground">
-                                                    Created: {formatDate(key.created_at)} •
-                                                    Last used: {formatDate(key.last_used_at ?? null)}
+                                                <div className="mt-2 text-xs text-muted-foreground">{copy("Created: ")}{formatDate(key.created_at)}{copy(" • Last used: ")}{formatDate(key.last_used_at ?? null)}
                                                 </div>
                                             </div>
                                             <div className="flex gap-2">
@@ -555,13 +534,11 @@ export default function APIKeysPage() {
                                 </div>
                             )}
                         </CardContent>
-                    </Card>
+                    </Card>}
 
                     <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
                         <p className="text-sm text-yellow-600 dark:text-yellow-500">
-                            <strong>Important:</strong> Keep your API keys secure. Never share them publicly or commit them to version control.
-                            API keys provide full access to your organization&apos;s resources.
-                        </p>
+                            <strong>{copy("Important:")}</strong>{copy(" Keep your API keys secure. Never share them publicly or commit them to version control. API keys provide full access to your organization's resources.")}</p>
                     </div>
                 </div>
             </div>
@@ -570,29 +547,23 @@ export default function APIKeysPage() {
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Create New API Key</DialogTitle>
-                        <DialogDescription>
-                            Enter a descriptive name for your API key to help you identify it later.
-                        </DialogDescription>
+                        <DialogTitle>{copy("Create New API Key")}</DialogTitle>
+                        <DialogDescription>{copy("Enter a descriptive name for your API key to help you identify it later.")}</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="name">Key Name</Label>
+                            <Label htmlFor="name">{copy("Key Name")}</Label>
                             <Input
                                 id="name"
                                 value={newKeyName}
                                 onChange={(e) => setNewKeyName(e.target.value)}
-                                placeholder="e.g., Production Server, Development Environment"
+                                placeholder={copy("e.g., Production Server, Development Environment")}
                             />
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                            Cancel
-                        </Button>
-                        <Button onClick={handleCreateKey}>
-                            Create Key
-                        </Button>
+                        <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>{copy("Cancel")}</Button>
+                        <Button onClick={handleCreateKey}>{copy("Create Key")}</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -601,15 +572,13 @@ export default function APIKeysPage() {
             <Dialog open={showCreatedKeyDialog} onOpenChange={setShowCreatedKeyDialog}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>API Key Created Successfully</DialogTitle>
-                        <DialogDescription>
-                            Make sure to copy your API key now. You won&apos;t be able to see it again!
-                        </DialogDescription>
+                        <DialogTitle>{copy("API Key Created Successfully")}</DialogTitle>
+                        <DialogDescription>{copy("Make sure to copy your API key now. You won't be able to see it again!")}</DialogDescription>
                     </DialogHeader>
                     {createdKey && (
                         <div className="space-y-4">
                             <div className="p-4 bg-muted rounded-lg">
-                                <p className="text-sm text-muted-foreground mb-2">Your API Key:</p>
+                                <p className="text-sm text-muted-foreground mb-2">{copy("Your API Key:")}</p>
                                 <div className="flex items-center gap-2">
                                     <code className="flex-1 p-2 bg-background rounded text-sm font-mono break-all">
                                         {createdKey.api_key}
@@ -624,9 +593,7 @@ export default function APIKeysPage() {
                                 </div>
                             </div>
                             <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                                <p className="text-sm text-yellow-600 dark:text-yellow-500">
-                                    Store this key securely. It will only be shown once and cannot be retrieved later.
-                                </p>
+                                <p className="text-sm text-yellow-600 dark:text-yellow-500">{copy("Store this key securely. It will only be shown once and cannot be retrieved later.")}</p>
                             </div>
                         </div>
                     )}
@@ -634,9 +601,7 @@ export default function APIKeysPage() {
                         <Button onClick={() => {
                             setShowCreatedKeyDialog(false);
                             setCreatedKey(null);
-                        }}>
-                            Done
-                        </Button>
+                        }}>{copy("Done")}</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -645,29 +610,23 @@ export default function APIKeysPage() {
             <Dialog open={isCreateServiceDialogOpen} onOpenChange={setIsCreateServiceDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Create New Service Key</DialogTitle>
-                        <DialogDescription>
-                            Create a service key to access Dograh AI services (LLM, TTS, STT)
-                        </DialogDescription>
+                        <DialogTitle>{copy("Create New Service Key")}</DialogTitle>
+                        <DialogDescription>{copy("Create a service key to access Dograh AI services (LLM, TTS, STT)")}</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="service-name">Service Key Name</Label>
+                            <Label htmlFor="service-name">{copy("Service Key Name")}</Label>
                             <Input
                                 id="service-name"
                                 value={newServiceKeyName}
                                 onChange={(e) => setNewServiceKeyName(e.target.value)}
-                                placeholder="e.g., Production AI Services, Development LLM Access"
+                                placeholder={copy("e.g., Production AI Services, Development LLM Access")}
                             />
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsCreateServiceDialogOpen(false)}>
-                            Cancel
-                        </Button>
-                        <Button onClick={handleCreateServiceKey}>
-                            Create Service Key
-                        </Button>
+                        <Button variant="outline" onClick={() => setIsCreateServiceDialogOpen(false)}>{copy("Cancel")}</Button>
+                        <Button onClick={handleCreateServiceKey}>{copy("Create Service Key")}</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -676,15 +635,13 @@ export default function APIKeysPage() {
             <Dialog open={showCreatedServiceKeyDialog} onOpenChange={setShowCreatedServiceKeyDialog}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Service Key Created Successfully</DialogTitle>
-                        <DialogDescription>
-                            Make sure to copy your service key now. You won&apos;t be able to see it again!
-                        </DialogDescription>
+                        <DialogTitle>{copy("Service Key Created Successfully")}</DialogTitle>
+                        <DialogDescription>{copy("Make sure to copy your service key now. You won't be able to see it again!")}</DialogDescription>
                     </DialogHeader>
                     {createdServiceKey && (
                         <div className="space-y-4">
                             <div className="p-4 bg-muted rounded-lg">
-                                <p className="text-sm text-muted-foreground mb-2">Your Service Key:</p>
+                                <p className="text-sm text-muted-foreground mb-2">{copy("Your Service Key:")}</p>
                                 <div className="flex items-center gap-2">
                                     <code className="flex-1 p-2 bg-background rounded text-sm font-mono break-all">
                                         {createdServiceKey.service_key}
@@ -699,19 +656,14 @@ export default function APIKeysPage() {
                                 </div>
                             </div>
                             <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                                <p className="text-sm text-blue-600 dark:text-blue-500">
-                                    This key provides access to Dograh AI services including LLM, Text-to-Speech, and Speech-to-Text.
-                                    {createdServiceKey.expires_at && (
-                                        <span className="block mt-1">
-                                            Expires on: {formatDate(createdServiceKey.expires_at)}
+                                <p className="text-sm text-blue-600 dark:text-blue-500">{copy("This key provides access to Dograh AI services including LLM, Text-to-Speech, and Speech-to-Text.")}{createdServiceKey.expires_at && (
+                                        <span className="block mt-1">{copy("Expires on: ")}{formatDate(createdServiceKey.expires_at)}
                                         </span>
                                     )}
                                 </p>
                             </div>
                             <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                                <p className="text-sm text-yellow-600 dark:text-yellow-500">
-                                    Store this key securely. It will only be shown once and cannot be retrieved later.
-                                </p>
+                                <p className="text-sm text-yellow-600 dark:text-yellow-500">{copy("Store this key securely. It will only be shown once and cannot be retrieved later.")}</p>
                             </div>
                         </div>
                     )}
@@ -719,9 +671,7 @@ export default function APIKeysPage() {
                         <Button onClick={() => {
                             setShowCreatedServiceKeyDialog(false);
                             setCreatedServiceKey(null);
-                        }}>
-                            Done
-                        </Button>
+                        }}>{copy("Done")}</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

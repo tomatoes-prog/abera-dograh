@@ -3,9 +3,11 @@
 import { MessageSquare, Mic, MicOff } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { useCopy } from "@/i18n/LocaleProvider";
 import { cn } from "@/lib/utils";
 
 import type { ConversationStatus } from "./types";
+
 
 interface ConversationContainerProps {
     title: string;
@@ -38,6 +40,7 @@ export function ConversationContainer({
     children,
     messageCount,
 }: ConversationContainerProps) {
+    const copy = useCopy();
     const statusConfig = STATUS_CONFIG[status];
     const StatusIcon = statusConfig.icon;
 
@@ -51,7 +54,7 @@ export function ConversationContainer({
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                         {messageCount !== undefined && messageCount > 0 ? (
-                            <span className="text-xs text-muted-foreground">{messageCount} messages</span>
+                            <span className="text-xs text-muted-foreground">{messageCount}{copy(" messages")}</span>
                         ) : null}
                         <div
                             className={cn(
@@ -60,7 +63,7 @@ export function ConversationContainer({
                             )}
                         >
                             <StatusIcon className="h-3 w-3" />
-                            <span>{statusConfig.label}</span>
+                            <span>{copy(statusConfig.label)}</span>
                         </div>
                     </div>
                 </div>

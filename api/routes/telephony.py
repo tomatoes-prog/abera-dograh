@@ -509,6 +509,11 @@ async def _create_inbound_workflow_run(
         },
         gathered_context={
             "call_id": call_id,
+            **(
+                {"sip_call_id": normalized_data.sip_call_id}
+                if normalized_data.sip_call_id
+                else {}
+            ),
         },
         logs={
             "inbound_webhook": {
@@ -517,6 +522,11 @@ async def _create_inbound_workflow_run(
                 "to_country": normalized_data.to_country,
                 "from_phone_number_id": from_phone_number_id,
                 "raw_webhook_data": normalized_data.raw_data,
+                **(
+                    {"sip_headers": normalized_data.sip_headers}
+                    if normalized_data.sip_headers
+                    else {}
+                ),
             },
         },
         organization_id=organization_id,
@@ -650,6 +660,9 @@ async def _handle_telephony_websocket(
         # guessable bearer capability (see the TODO above and ws_auth.py). This
         # is a no-op until an operator sets TELEPHONY_WS_TOKEN_SECRET; once set,
         # invalid tokens are logged, and rejected only when enforcement is on.
+        if ws_auth.enforcement_enabled() and not ws_auth.token_configured():
+            await websocket.close(code=4401, reason="Media authentication unavailable")
+            return
         if ws_auth.token_configured():
             # Carriers deliver the token as a path segment (query strings do not
             # survive Twilio and are unpromised elsewhere); ARI delivers it as a
@@ -767,9 +780,9 @@ async def _handle_telephony_websocket(
             return
 
         # Set workflow run state to 'running' before starting the pipeline
-        await db_client.update_workflow_run(
-            run_id=workflow_run_id, state=WorkflowRunState.RUNNING.value
-        )
+        if not await db_client.claim_telephony_media(workflow_run_id, workflow_id, organization_id):
+            await websocket.close(code=4409, reason="Media connection already claimed")
+            return
 
         logger.info(
             f"[run {workflow_run_id}] Set workflow run state to 'running' for {provider_type} provider"

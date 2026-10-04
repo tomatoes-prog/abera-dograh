@@ -2,7 +2,9 @@
 
 import { Brain } from "lucide-react";
 
+import { useCopy } from "@/i18n/LocaleProvider";
 import { cn } from "@/lib/utils";
+
 
 interface MessageBubbleProps {
     role: "user" | "assistant";
@@ -21,6 +23,7 @@ export function MessageBubble({
     reasoningDurationMs,
     containerClassName,
 }: MessageBubbleProps) {
+    const copy = useCopy();
     const isUser = role === "user";
     const isMuted = tone === "muted";
 
@@ -30,8 +33,8 @@ export function MessageBubble({
                 {!isUser && reasoningDurationMs !== undefined ? (
                     <div className="flex items-center gap-1.5 px-1 text-xs text-muted-foreground">
                         <Brain className="h-3 w-3" />
-                        <span className="font-medium">Reasoning Delay:</span>
-                        <span>{Math.round(reasoningDurationMs)}ms</span>
+                        <span className="font-medium">{copy("Reasoning Delay:")}</span>
+                        <span>{Math.round(reasoningDurationMs)}{copy("ms")}</span>
                     </div>
                 ) : null}
                 <div
@@ -52,9 +55,7 @@ export function MessageBubble({
                                 "mt-1 text-[10px] italic",
                                 isUser ? "text-primary-foreground/70" : "text-muted-foreground",
                             )}
-                        >
-                            speaking...
-                        </div>
+                        >{copy("speaking...")}</div>
                     ) : null}
                 </div>
             </div>

@@ -14,6 +14,7 @@ interface AppConfig {
     authProvider: string;
     turnEnabled: boolean;
     forceTurnRelay: boolean;
+    dograhMpsEnabled: boolean;
     // Public URL when the deployment is reached through a Cloudflare tunnel
     // (host has no public IP); null for a directly-reachable deployment.
     tunnelUrl: string | null;
@@ -40,6 +41,7 @@ const defaultConfig: AppConfig = {
     authProvider: 'local',
     turnEnabled: false,
     forceTurnRelay: false,
+    dograhMpsEnabled: false,
     tunnelUrl: null,
     backendApiEndpoint: null,
     backendStatus: 'unreachable',
@@ -92,6 +94,7 @@ export function AppConfigProvider({ children }: { children: ReactNode }) {
                 authProvider: data.authProvider || 'local',
                 turnEnabled: Boolean(data.turnEnabled),
                 forceTurnRelay: Boolean(data.forceTurnRelay),
+                dograhMpsEnabled: data.dograhMpsEnabled === true,
                 tunnelUrl: typeof data.tunnelUrl === 'string' ? data.tunnelUrl : null,
                 backendApiEndpoint,
                 backendStatus,

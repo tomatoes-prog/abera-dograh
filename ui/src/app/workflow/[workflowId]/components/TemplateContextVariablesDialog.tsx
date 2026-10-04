@@ -1,3 +1,5 @@
+"use client";
+
 import { Trash2Icon } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -5,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useCopy } from "@/i18n/LocaleProvider";
+
 
 interface TemplateContextVariablesDialogProps {
     open: boolean;
@@ -19,6 +23,7 @@ export const TemplateContextVariablesDialog = ({
     templateContextVariables,
     onSave
 }: TemplateContextVariablesDialogProps) => {
+    const copy = useCopy();
     const [contextVars, setContextVars] = useState<Record<string, string>>(templateContextVariables);
     const [newKey, setNewKey] = useState("");
     const [newValue, setNewValue] = useState("");
@@ -71,17 +76,15 @@ export const TemplateContextVariablesDialog = ({
         <Dialog open={open} onOpenChange={handleDialogOpenChange}>
             <DialogContent className="max-w-lg">
                 <DialogHeader>
-                    <DialogTitle>Template Context Variables</DialogTitle>
-                    <DialogDescription>
-                        Add or remove template context variables that will be available to your workflow. You can use
-                        these variables within your workflow nodes within double curly braces. Example: {`{{variable_name}}`}.
+                    <DialogTitle>{copy("Template Context Variables")}</DialogTitle>
+                    <DialogDescription>{copy("Add or remove template context variables that will be available to your workflow. You can use these variables within your workflow nodes within double curly braces. Example: ")}{copy("{{variable_name}}")}.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                     {/* Existing Variables */}
                     {Object.entries(contextVars).length > 0 && (
                         <div className="space-y-2">
-                            <Label className="text-sm font-medium">Current Variables</Label>
+                            <Label className="text-sm font-medium">{copy("Current Variables")}</Label>
                             {Object.entries(contextVars).map(([key, value]) => (
                                 <div key={key} className="flex items-center gap-2 p-2 border rounded-md">
                                     <div className="flex-1">
@@ -102,23 +105,23 @@ export const TemplateContextVariablesDialog = ({
 
                     {/* Add New Variable */}
                     <div className="space-y-3">
-                        <Label className="text-sm font-medium">Add New Variable</Label>
+                        <Label className="text-sm font-medium">{copy("Add New Variable")}</Label>
                         <div className="space-y-2">
                             <div className="flex gap-2">
                                 <div className="flex-1">
-                                    <Label htmlFor="key" className="text-xs">Key</Label>
+                                    <Label htmlFor="key" className="text-xs">{copy("Key")}</Label>
                                     <Input
                                         id="key"
-                                        placeholder="Enter variable key"
+                                        placeholder={copy("Enter variable key")}
                                         value={newKey}
                                         onChange={(e) => setNewKey(e.target.value)}
                                     />
                                 </div>
                                 <div className="flex-1">
-                                    <Label htmlFor="value" className="text-xs">Value</Label>
+                                    <Label htmlFor="value" className="text-xs">{copy("Value")}</Label>
                                     <Input
                                         id="value"
-                                        placeholder="Enter variable value"
+                                        placeholder={copy("Enter variable value")}
                                         value={newValue}
                                         onChange={(e) => setNewValue(e.target.value)}
                                     />
@@ -128,20 +131,14 @@ export const TemplateContextVariablesDialog = ({
                                 size="sm"
                                 onClick={handleAddContextVar}
                                 disabled={!newKey || !newValue}
-                            >
-                                Add Variable
-                            </Button>
+                            >{copy("Add Variable")}</Button>
                         </div>
                     </div>
                 </div>
                 <DialogFooter>
                     <div className="flex items-center gap-2">
-                        <Button variant="outline" onClick={() => onOpenChange(false)}>
-                            Cancel
-                        </Button>
-                        <Button onClick={handleSave}>
-                            Save Variables
-                        </Button>
+                        <Button variant="outline" onClick={() => onOpenChange(false)}>{copy("Cancel")}</Button>
+                        <Button onClick={handleSave}>{copy("Save Variables")}</Button>
                     </div>
                 </DialogFooter>
             </DialogContent>

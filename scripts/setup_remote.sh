@@ -328,8 +328,6 @@ echo -e "${BLUE}[4/$TOTAL] Creating environment file...${NC}"
 OSS_JWT_SECRET=$(openssl rand -hex 32)
 POSTGRES_PASSWORD=$(openssl rand -hex 32)
 REDIS_PASSWORD=$(openssl rand -hex 32)
-MINIO_ROOT_USER="dograh$(openssl rand -hex 6)"
-MINIO_ROOT_PASSWORD=$(openssl rand -hex 32)
 
 cat > .env << ENV_EOF
 # Remote deployments run with production signaling and HTTPS defaults
@@ -338,7 +336,7 @@ ENVIRONMENT=production
 # Canonical public host/base URL for this install. SERVER_IP stays the raw IP
 # (coturn external-ip and validation need it); PUBLIC_HOST is the sslip.io
 # hostname when using a trusted cert, otherwise the IP. BACKEND_API_ENDPOINT,
-# MINIO_PUBLIC_ENDPOINT and TURN_HOST are derived from these by the API
+# TURN_HOST are derived from these by the API
 # (see api/constants.py) — set them here only to override for a split deployment.
 SERVER_IP=$SERVER_IP
 PUBLIC_HOST=$PUBLIC_HOST_VALUE
@@ -363,10 +361,9 @@ POSTGRES_PASSWORD=$POSTGRES_PASSWORD
 # rotated by updating .env and recreating the redis container.
 REDIS_PASSWORD=$REDIS_PASSWORD
 
-# MinIO root credentials. Used by the MinIO container and the API's
-# MINIO_ACCESS_KEY / MINIO_SECRET_KEY.
-MINIO_ROOT_USER=$MINIO_ROOT_USER
-MINIO_ROOT_PASSWORD=$MINIO_ROOT_PASSWORD
+# Existing private S3 bucket. Supply AWS credentials or a workload IAM role.
+S3_BUCKET=${S3_BUCKET:-}
+S3_REGION=${S3_REGION:-us-east-2}
 
 # Telemetry (set to false to disable)
 ENABLE_TELEMETRY=$ENABLE_TELEMETRY

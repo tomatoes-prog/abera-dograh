@@ -1,10 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
-from api.constants import ENABLE_SIGNUP
+from api.constants import DEPLOYMENT_MODE, ENABLE_SIGNUP
 from api.db import db_client
 from api.db.models import UserModel
 from api.enums import PostHogEvent
-from api.schemas.auth import AuthResponse, LoginRequest, SignupRequest, UserResponse
+from api.schemas.auth import (
+    AuthResponse,
+    ChangePasswordRequest,
+    LoginRequest,
+    SignupRequest,
+    UserResponse,
+)
 from api.services.auth.depends import get_user, require_local_auth
 from api.services.organization_bootstrap import ensure_organization_bootstrapped
 from api.services.posthog_client import capture_event
@@ -22,7 +28,7 @@ router = APIRouter(
     dependencies=[Depends(require_local_auth)],
 )
 async def signup(request: SignupRequest):
-    if not ENABLE_SIGNUP:
+    if DEPLOYMENT_MODE == "abera" or not ENABLE_SIGNUP:
         raise HTTPException(status_code=403, detail="Signup is disabled")
 
     # Check if email is already taken
@@ -87,7 +93,9 @@ async def signup(request: SignupRequest):
     response_model=AuthResponse,
     dependencies=[Depends(require_local_auth)],
 )
-async def login(request: LoginRequest):
+async def login(request: LoginRequest, http_request: Request):
+    from api.services.auth.security import throttle_login
+    await throttle_login(http_request, request.email)
     # Look up user by email
     user = await db_client.get_user_by_email(request.email)
     if not user or not user.password_hash:
@@ -128,3 +136,20 @@ async def get_current_user(user: UserModel = Depends(get_user)):
         organization_id=user.selected_organization_id,
         provider_id=user.provider_id,
     )
+
+
+@router.post("/password/change", dependencies=[Depends(require_local_auth)])
+async def change_password(
+    request: ChangePasswordRequest, user: UserModel = Depends(get_user)
+):
+    if not user.password_hash or not verify_password(
+        request.current_password, user.password_hash
+    ):
+        raise HTTPException(status_code=401, detail="Invalid current password")
+    try:
+        await db_client.update_user_password_hash(
+            user.id, hash_password(request.new_password), user.password_hash
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"changed": True}

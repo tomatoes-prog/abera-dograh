@@ -25,6 +25,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { useCopy } from "@/i18n/LocaleProvider";
 import { detailFromError } from '@/lib/apiError';
 import { useAuth } from '@/lib/auth';
 
@@ -32,7 +33,9 @@ import CampaignAdvancedSettings, { getTimezoneValue, type TimeSlot } from '../Ca
 import CsvUploadSelector from '../CsvUploadSelector';
 import TrafficSplitEditor, { trafficSplitError } from '../TrafficSplitEditor';
 
+
 export default function NewCampaignPage() {
+    const copy = useCopy();
     const { user, getAccessToken, redirectToLogin, loading } = useAuth();
     const router = useRouter();
 
@@ -109,11 +112,11 @@ export default function NewCampaignPage() {
             }
         } catch (error) {
             console.error('Failed to fetch telephony configurations:', error);
-            toast.error('Failed to load telephony configurations');
+            toast.error(copy("Failed to load telephony configurations"));
         } finally {
             setIsLoadingTelephonyConfigs(false);
         }
-    }, [user, getAccessToken]);
+    }, [user, getAccessToken, copy]);
 
     // Fetch campaign limits
     const fetchCampaignDefaults = useCallback(async () => {
@@ -211,7 +214,7 @@ export default function NewCampaignPage() {
         setCreateError(null);
 
         if (!campaignName || !!trafficSplitError(variants) || !sourceId || !selectedTelephonyConfigId) {
-            toast.error('Please fill in all fields');
+            toast.error(copy("Please fill in all fields"));
             return;
         }
 
@@ -219,12 +222,12 @@ export default function NewCampaignPage() {
         if (maxConcurrencyValue !== null && (
             !Number.isInteger(maxConcurrencyValue) || maxConcurrencyValue < 1 || maxConcurrencyValue > effectiveLimit
         )) {
-            toast.error(`Max concurrent calls must be between 1 and your organization limit (${effectiveLimit})`);
+            toast.error(copy("Max concurrent calls must be between 1 and your organization limit ({value0})", {value0: effectiveLimit}));
             return;
         }
         const dialRate = Number(rateLimitPerSecond);
         if (!Number.isInteger(dialRate) || dialRate < 1 || dialRate > orgConcurrentLimit) {
-            toast.error(`Calls started per second must be between 1 and ${orgConcurrentLimit}`);
+            toast.error(copy("Calls started per second must be between 1 and {value0}", {value0: orgConcurrentLimit}));
             return;
         }
 
@@ -281,14 +284,14 @@ export default function NewCampaignPage() {
 
             if (response.error) {
                 // Extract error message from API response
-                const errorMessage = detailFromError(response.error, 'Failed to create campaign');
+                const errorMessage = copy(detailFromError(response.error, 'Failed to create campaign'));
                 setCreateError(errorMessage);
                 toast.error(errorMessage);
                 return;
             }
 
             if (response.data) {
-                toast.success('Campaign created successfully');
+                toast.success(copy("Campaign created successfully"));
                 router.push(`/campaigns/${response.data.id}`);
             }
         } catch (error: unknown) {
@@ -321,52 +324,41 @@ export default function NewCampaignPage() {
                     onClick={handleBack}
                     className="mb-4"
                 >
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Campaigns
-                </Button>
-                <h1 className="text-3xl font-bold mb-2">Create New Campaign</h1>
-                <p className="text-muted-foreground">Set up a new campaign to execute workflows at scale</p>
+                    <ArrowLeft className="h-4 w-4 mr-2" />{copy("Back to Campaigns")}</Button>
+                <h1 className="text-3xl font-bold mb-2">{copy("Create New Campaign")}</h1>
+                <p className="text-muted-foreground">{copy("Set up a new campaign to execute workflows at scale")}</p>
             </div>
 
             <Card>
                     <CardHeader>
-                        <CardTitle>Campaign Details</CardTitle>
-                        <CardDescription>
-                            Configure your campaign settings
-                        </CardDescription>
+                        <CardTitle>{copy("Campaign Details")}</CardTitle>
+                        <CardDescription>{copy("Configure your campaign settings")}</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div className="space-y-2">
-                                <Label htmlFor="campaign-name">Campaign Name</Label>
+                                <Label htmlFor="campaign-name">{copy("Campaign Name")}</Label>
                                 <Input
                                     id="campaign-name"
-                                    placeholder="Enter campaign name"
+                                    placeholder={copy("Enter campaign name")}
                                     value={campaignName}
                                     onChange={(e) => setCampaignName(e.target.value)}
                                     maxLength={255}
                                     required
                                 />
-                                <p className="text-sm text-muted-foreground">
-                                    Choose a descriptive name for your campaign
-                                </p>
+                                <p className="text-sm text-muted-foreground">{copy("Choose a descriptive name for your campaign")}</p>
                             </div>
 
                             <TrafficSplitEditor value={variants} onChange={setVariants} disabled={isSubmitting} />
 
                             <div className="space-y-2">
-                                <Label htmlFor="telephony-config">Telephony Configuration</Label>
+                                <Label htmlFor="telephony-config">{copy("Telephony Configuration")}</Label>
                                 {!isLoadingTelephonyConfigs && telephonyConfigs.length === 0 ? (
-                                    <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-                                        No telephony configurations yet.{' '}
+                                    <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">{copy("No telephony configurations yet.")}{' '}
                                         <Link
                                             href="/telephony-configurations"
                                             className="underline text-foreground"
-                                        >
-                                            Add one
-                                        </Link>{' '}
-                                        to create a campaign.
-                                    </div>
+                                        >{copy("Add one")}</Link>{' '}{copy("to create a campaign.")}</div>
                                 ) : (
                                     <Select
                                         value={selectedTelephonyConfigId}
@@ -374,13 +366,11 @@ export default function NewCampaignPage() {
                                         required
                                     >
                                         <SelectTrigger id="telephony-config">
-                                            <SelectValue placeholder="Select a telephony configuration" />
+                                            <SelectValue placeholder={copy("Select a telephony configuration")} />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {isLoadingTelephonyConfigs ? (
-                                                <SelectItem value="loading" disabled>
-                                                    Loading configurations...
-                                                </SelectItem>
+                                                <SelectItem value="loading" disabled>{copy("Loading configurations...")}</SelectItem>
                                             ) : (
                                                 telephonyConfigs.map((config) => (
                                                     <SelectItem
@@ -388,20 +378,18 @@ export default function NewCampaignPage() {
                                                         value={config.id.toString()}
                                                     >
                                                         {config.name} ({config.provider})
-                                                        {config.is_default_outbound ? ' - default' : ''}
+                                                        {config.is_default_outbound ? copy(" - default") : ''}
                                                     </SelectItem>
                                                 ))
                                             )}
                                         </SelectContent>
                                     </Select>
                                 )}
-                                <p className="text-sm text-muted-foreground">
-                                    Outbound calls for this campaign will use this configuration&apos;s caller IDs
-                                </p>
+                                <p className="text-sm text-muted-foreground">{copy("Outbound calls for this campaign will use this configuration's caller IDs")}</p>
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="source-type">Data Source Type</Label>
+                                <Label htmlFor="source-type">{copy("Data Source Type")}</Label>
                                 <Select
                                     value={sourceType}
                                     onValueChange={(value) => {
@@ -412,15 +400,13 @@ export default function NewCampaignPage() {
                                     required
                                 >
                                     <SelectTrigger id="source-type">
-                                        <SelectValue placeholder="Select source type" />
+                                        <SelectValue placeholder={copy("Select source type")} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="csv">CSV File</SelectItem>
+                                        <SelectItem value="csv">{copy("CSV File")}</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <p className="text-sm text-muted-foreground">
-                                    Choose where your contact data is stored
-                                </p>
+                                <p className="text-sm text-muted-foreground">{copy("Choose where your contact data is stored")}</p>
                             </div>
 
                             <CsvUploadSelector
@@ -435,7 +421,7 @@ export default function NewCampaignPage() {
                                 className="border rounded-lg"
                             >
                                 <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 transition-colors">
-                                    <span className="font-medium">Advanced Settings</span>
+                                    <span className="font-medium">{copy("Advanced Settings")}</span>
                                     {showAdvancedSettings ? (
                                         <ChevronDown className="h-4 w-4" />
                                     ) : (
@@ -493,16 +479,14 @@ export default function NewCampaignPage() {
                                     type="submit"
                                     disabled={isSubmitting || !campaignName || !!trafficSplitError(variants) || !sourceId || !selectedTelephonyConfigId}
                                 >
-                                    {isSubmitting ? 'Creating...' : 'Create Campaign'}
+                                    {isSubmitting ? copy("Creating...") : copy("Create Campaign")}
                                 </Button>
                                 <Button
                                     type="button"
                                     variant="outline"
                                     onClick={handleBack}
                                     disabled={isSubmitting}
-                                >
-                                    Cancel
-                                </Button>
+                                >{copy("Cancel")}</Button>
                             </div>
                         </form>
                     </CardContent>

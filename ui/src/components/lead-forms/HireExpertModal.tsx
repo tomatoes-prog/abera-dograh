@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppConfig } from "@/context/AppConfigContext";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { useAuth } from "@/lib/auth";
 
 import { CaptchaChallenge } from "./CaptchaChallenge";
@@ -26,6 +27,7 @@ import { LeadModalShell } from "./LeadModalShell";
 import { PhoneField } from "./PhoneField";
 import { submitLead } from "./submitLead";
 
+
 interface HireExpertModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -34,6 +36,7 @@ interface HireExpertModalProps {
 }
 
 export function HireExpertModal({ open, onOpenChange, source, onOpenEnterprise }: HireExpertModalProps) {
+    const copy = useCopy();
   const { user } = useAuth();  // logged-in identity (prefills the email field)
   const { config } = useAppConfig();
   // Deployment provenance (analytics only): cloud → cloud_app, else oss_app. OSS submits the
@@ -81,7 +84,7 @@ export function HireExpertModal({ open, onOpenChange, source, onOpenEnterprise }
   // Validate, then pop the anti-spam check on top of the modal.
   const handleSubmit = () => {
     if (!baseValid) {
-      toast.error("Please fill in all required fields");
+      toast.error(copy("Please fill in all required fields"));
       return;
     }
     setCaptchaActive(true);
@@ -104,12 +107,12 @@ export function HireExpertModal({ open, onOpenChange, source, onOpenEnterprise }
         setSubmitting(false);
         setCalLink(result.cal_link);
       } else {
-        toast.success("Check your inbox - we just emailed you the next steps (give it a minute).");
+        toast.success(copy("Check your inbox - we just emailed you the next steps (give it a minute)."));
         reset();
         onOpenChange(false);
       }
     } catch {
-      toast.error("Something went wrong. Please try again.");
+      toast.error(copy("Something went wrong. Please try again."));
       setSubmitting(false);
     }
   };
@@ -122,8 +125,8 @@ export function HireExpertModal({ open, onOpenChange, source, onOpenEnterprise }
         onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }}
         icon={Sparkles}
         eyebrow="Done-for-you"
-        title="Grab a time with our team"
-        description="Pick a time that works for you."
+        title={copy("Grab a time with our team")}
+        description={copy("Pick a time that works for you.")}
         primary={{ label: "Done", onClick: () => { reset(); onOpenChange(false); } }}
       >
         {/* Compact, zoomed-out calendar: render it larger, scale to 0.8, and clip the layout box left behind. */}
@@ -144,8 +147,8 @@ export function HireExpertModal({ open, onOpenChange, source, onOpenEnterprise }
       onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }}
       icon={Sparkles}
       eyebrow="Done-for-you"
-      title="Let us build your voice agent"
-      description="Building good voice agents is nuanced. Tell us what you need and we'll take it end-to-end."
+      title={copy("Let us build your voice agent")}
+      description={copy("Building good voice agents is nuanced. Tell us what you need and we'll take it end-to-end.")}
       primary={{ label: "Submit", onClick: handleSubmit, disabled: !canSubmit, loading: submitting }}
       secondary={{ label: "Cancel", onClick: () => onOpenChange(false), disabled: submitting }}
       helper={
@@ -153,9 +156,7 @@ export function HireExpertModal({ open, onOpenChange, source, onOpenEnterprise }
           type="button"
           onClick={onOpenEnterprise}
           className="underline decoration-dashed underline-offset-4 hover:text-foreground"
-        >
-          Need enterprise deployment? (SSO, on-prem, data residency)
-        </button>
+        >{copy("Need enterprise deployment? (SSO, on-prem, data residency)")}</button>
       }
       trustLine={<FormTrustLine />}
       overlay={captchaActive ? <CaptchaChallenge onVerified={doSubmit} onCancel={() => setCaptchaActive(false)} /> : undefined}
@@ -163,48 +164,48 @@ export function HireExpertModal({ open, onOpenChange, source, onOpenEnterprise }
       <div className="grid gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor="hire-name">Name</Label>
-            <Input id="hire-name" placeholder="Your full name" value={name} onChange={(e) => setName(e.target.value)} />
+            <Label htmlFor="hire-name">{copy("Name")}</Label>
+            <Input id="hire-name" placeholder={copy("Your full name")} value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="hire-company">Company name</Label>
-            <Input id="hire-company" placeholder="Acme Inc." value={company} onChange={(e) => setCompany(e.target.value)} />
+            <Label htmlFor="hire-company">{copy("Company name")}</Label>
+            <Input id="hire-company" placeholder={copy("Acme Inc.")} value={company} onChange={(e) => setCompany(e.target.value)} />
           </div>
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="hire-email">Email</Label>
-          <Input id="hire-email" type="email" placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Label htmlFor="hire-email">{copy("Email")}</Label>
+          <Input id="hire-email" type="email" placeholder={copy("you@company.com")} value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="hire-title">Job title</Label>
-          <Input id="hire-title" placeholder="VP Operations" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
+          <Label htmlFor="hire-title">{copy("Job title")}</Label>
+          <Input id="hire-title" placeholder={copy("VP Operations")} value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="hire-goal">What do you want the voice agent to do?</Label>
+          <Label htmlFor="hire-goal">{copy("What do you want the voice agent to do?")}</Label>
           <Textarea
             id="hire-goal"
             value={agentGoal}
             onChange={(e) => setAgentGoal(e.target.value)}
-            placeholder="Use case, target outcomes, any remarks…"
+            placeholder={copy("Use case, target outcomes, any remarks…")}
             rows={3}
           />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor="hire-phone">Phone</Label>
+            <Label htmlFor="hire-phone">{copy("Phone")}</Label>
             <PhoneField id="hire-phone" value={phone} onChange={setPhone} required />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="hire-volume">Expected monthly call volume</Label>
+            <Label htmlFor="hire-volume">{copy("Expected monthly call volume")}</Label>
             <Select value={volume} onValueChange={setVolume}>
-              <SelectTrigger id="hire-volume"><SelectValue placeholder="Select" /></SelectTrigger>
+              <SelectTrigger id="hire-volume"><SelectValue placeholder={copy("Select")} /></SelectTrigger>
               <SelectContent>
                 {HIRE_VOLUME_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  <SelectItem key={o.value} value={o.value}>{copy(o.label)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

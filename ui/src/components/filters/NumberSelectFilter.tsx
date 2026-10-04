@@ -1,3 +1,5 @@
+"use client";
+
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -6,7 +8,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useCopy } from "@/i18n/LocaleProvider";
 import type { NumberFilterOption, NumberValue } from "@/types/filters";
+
 
 interface NumberSelectFilterProps {
   value: NumberValue;
@@ -27,6 +31,7 @@ export const NumberSelectFilter: React.FC<NumberSelectFilterProps> = ({
   options,
   isLoading = false,
 }) => {
+    const copy = useCopy();
   const selectedOptionExists = options.some(option => option.value === value.value);
   const unavailableSelection =
     value.value !== null && !selectedOptionExists
@@ -46,7 +51,7 @@ export const NumberSelectFilter: React.FC<NumberSelectFilterProps> = ({
           disabled={isLoading || options.length === 0}
         >
           <SelectTrigger className={error ? "border-red-500" : ""}>
-            <SelectValue placeholder={isLoading ? "Loading options..." : placeholder} />
+            <SelectValue placeholder={isLoading ? copy("Loading options...") : placeholder} />
           </SelectTrigger>
           <SelectContent>
             {unavailableSelection && (
@@ -55,9 +60,7 @@ export const NumberSelectFilter: React.FC<NumberSelectFilterProps> = ({
               </SelectItem>
             )}
             {options.length === 0 ? (
-              <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                No options found
-              </div>
+              <div className="px-2 py-1.5 text-sm text-muted-foreground">{copy("No options found")}</div>
             ) : (
               options.map((option) => (
                 <SelectItem key={option.value} value={option.value.toString()}>

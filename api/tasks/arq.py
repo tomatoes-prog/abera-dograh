@@ -12,7 +12,7 @@ from api.tasks.function_names import FunctionNames
 setup_logging()
 
 # Now import ARQ and task dependencies
-from arq import create_pool, cron
+from arq import create_pool, cron, func
 from arq.connections import ArqRedis, RedisSettings
 from redis.asyncio.retry import Retry
 from redis.backoff import ExponentialBackoff
@@ -77,7 +77,7 @@ class WorkerSettings:
         process_workflow_completion,
         sync_campaign_source,
         process_campaign_batch,
-        process_knowledge_base_document,
+        func(process_knowledge_base_document, max_tries=180, timeout=300),
         deliver_webhook,
         complete_inactive_text_chat_session,
     ]

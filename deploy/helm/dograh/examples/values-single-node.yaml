@@ -5,8 +5,6 @@ database:
   mode: internal
 redis:
   mode: internal
-storage:
-  mode: internalMinio
 exposure:
   mode: ingress
   ingress:
@@ -56,6 +54,9 @@ postgresql:
 redisinternal:
   persistence:
     size: 1Gi
-minio:
-  persistence:
-    size: 5Gi
+# Supply a private S3 bucket and workload IAM role (or AWS credentials).
+storage:
+  mode: s3
+  s3:
+    bucket: your-private-dograh-bucket
+    region: us-east-2

@@ -6,7 +6,9 @@ import { toast } from 'sonner';
 import { getPresignedUploadUrlApiV1S3PresignedUploadUrlPost } from '@/client/sdk.gen';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { useCopy } from "@/i18n/LocaleProvider";
 import logger from '@/lib/logger';
+
 
 interface CsvUploadSelectorProps {
   onFileUploaded: (fileKey: string, fileName: string) => void;
@@ -16,6 +18,7 @@ interface CsvUploadSelectorProps {
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export default function CsvUploadSelector({ onFileUploaded, selectedFileName }: CsvUploadSelectorProps) {
+    const copy = useCopy();
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -26,13 +29,13 @@ export default function CsvUploadSelector({ onFileUploaded, selectedFileName }: 
 
     // Validate file type
     if (!file.name.endsWith('.csv')) {
-      toast.error('Please select a CSV file');
+      toast.error(copy("Please select a CSV file"));
       return;
     }
 
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
-      toast.error('File size must be less than 10MB');
+      toast.error(copy("File size must be less than 10MB"));
       return;
     }
 
@@ -74,10 +77,10 @@ export default function CsvUploadSelector({ onFileUploaded, selectedFileName }: 
 
       // Step 3: Notify parent with file_key
       onFileUploaded(presignedData.file_key, file.name);
-      toast.success(`File uploaded: ${file.name}`);
+      toast.success(copy("File uploaded: {value0}", {value0: file.name}));
     } catch (error) {
       logger.error('Error uploading CSV:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to upload CSV file');
+      toast.error(error instanceof Error ? error.message : copy("Failed to upload CSV file"));
     } finally {
       setUploading(false);
       setUploadProgress(0);
@@ -94,7 +97,7 @@ export default function CsvUploadSelector({ onFileUploaded, selectedFileName }: 
 
   return (
     <div className="space-y-2">
-      <Label>CSV File</Label>
+      <Label>{copy("CSV File")}</Label>
       <div className="flex items-center gap-4">
         <input
           ref={fileInputRef}
@@ -109,20 +112,16 @@ export default function CsvUploadSelector({ onFileUploaded, selectedFileName }: 
           onClick={handleButtonClick}
           disabled={uploading}
         >
-          {uploading ? `Uploading... ${uploadProgress}%` : 'Upload CSV File'}
+          {uploading ? copy("Uploading... {value0}%", {value0: uploadProgress}) : copy("Upload CSV File")}
         </Button>
         {selectedFileName && !uploading && (
           <div className="flex-1 text-sm">
-            <span className="text-muted-foreground">Selected: </span>
+            <span className="text-muted-foreground">{copy("Selected: ")}</span>
             <span className="text-primary">{selectedFileName}</span>
           </div>
         )}
       </div>
-      <p className="text-sm text-muted-foreground">
-        Upload a CSV file with contact data. Must include phone_number column.
-        The columns can be accessed as initial_context in the workflow nodes. <br/>
-        Max 10MB.
-      </p>
+      <p className="text-sm text-muted-foreground">{copy("Upload a CSV file with contact data. Must include phone_number column. The columns can be accessed as initial_context in the workflow nodes. ")}<br/>{copy("Max 10MB.")}</p>
     </div>
   );
 }

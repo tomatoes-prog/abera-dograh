@@ -6,6 +6,8 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { type TooltipKey, useOnboarding } from '@/context/OnboardingContext';
+import { useCopy } from "@/i18n/LocaleProvider";
+
 
 interface OnboardingTooltipProps {
     /** Onboarding flag this tooltip is keyed to. Visibility ("not seen yet")
@@ -31,6 +33,7 @@ export const OnboardingTooltip = ({
     onNext,
     showNext = true,
 }: OnboardingTooltipProps) => {
+    const copy = useCopy();
     const { hasSeenTooltip, markTooltipSeen } = useOnboarding();
     const arrowRef = useRef<HTMLDivElement>(null);
     const messageId = useId();
@@ -125,7 +128,7 @@ export const OnboardingTooltip = ({
                 <button
                     onClick={dismiss}
                     className="absolute top-2 right-2 p-1 hover:bg-blue-600 rounded-full transition-colors"
-                    aria-label="Close tooltip"
+                    aria-label={copy("Close tooltip")}
                 >
                     <X className="h-4 w-4" />
                 </button>
@@ -143,9 +146,7 @@ export const OnboardingTooltip = ({
                     <button
                         onClick={dismiss}
                         className="bg-white text-blue-500 px-4 py-1.5 rounded font-medium text-sm hover:bg-blue-50 transition-colors cursor-pointer"
-                    >
-                        Close
-                    </button>
+                    >{copy("Close")}</button>
 
                     {showNext && (
                         <button
@@ -154,9 +155,7 @@ export const OnboardingTooltip = ({
                                 dismiss();
                             }}
                             className="bg-white text-blue-500 px-4 py-1.5 rounded font-medium text-sm hover:bg-blue-50 transition-colors"
-                        >
-                            Next
-                        </button>
+                        >{copy("Next")}</button>
                     )}
                 </div>
             </div>

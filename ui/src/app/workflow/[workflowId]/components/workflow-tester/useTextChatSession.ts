@@ -10,6 +10,7 @@ import {
     rewindTextChatSessionApiV1WorkflowWorkflowIdTextChatSessionsRunIdRewindPost,
 } from "@/client/sdk.gen";
 import { conversationItemsFromTextChatTurns } from "@/components/workflow/conversation/adapters/fromTextChatTurns";
+import { useCopy } from "@/i18n/LocaleProvider";
 
 import {
     EMPTY_TEXT_CHAT_TURNS,
@@ -38,6 +39,7 @@ export function useTextChatSession({
     onActiveChange,
     onNodeTransition,
 }: UseTextChatSessionProps) {
+    const copy = useCopy();
     const [session, setSession] = useState<TextChatSession | null>(null);
     const [started, setStarted] = useState(false);
     const [draft, setDraft] = useState("");
@@ -198,13 +200,13 @@ export function useTextChatSession({
             setSession(toTextChatSession(response.data));
             setDraft("");
             setEditingTurnId(null);
-            toast.success("Chat ended");
+            toast.success(copy("Chat ended"));
         } catch (error) {
             toast.error(getErrorMessage(error));
         } finally {
             setEndingSession(false);
         }
-    }, [endingSession, sendingMessage, session, workflowId]);
+    }, [copy, endingSession, sendingMessage, session, workflowId]);
 
     const rewindTurn = useCallback(async (turn: TextChatTurn) => {
         if (!turn.user_message) return;

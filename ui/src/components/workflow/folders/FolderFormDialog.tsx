@@ -12,6 +12,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useCopy } from "@/i18n/LocaleProvider";
+
 
 interface FolderFormDialogProps {
     open: boolean;
@@ -36,6 +38,7 @@ export function FolderFormDialog({
     submitLabel,
     onSubmit,
 }: FolderFormDialogProps) {
+    const copy = useCopy();
     const [name, setName] = useState(initialName);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -67,12 +70,12 @@ export function FolderFormDialog({
                     <DialogTitle>{title}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-2 py-2">
-                    <Label htmlFor="folder-name">Folder name</Label>
+                    <Label htmlFor="folder-name">{copy("Folder name")}</Label>
                     <Input
                         id="folder-name"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        placeholder="e.g. Sales, Support, Onboarding"
+                        placeholder={copy("e.g. Sales, Support, Onboarding")}
                         maxLength={100}
                         autoFocus
                         onKeyDown={(e) => {
@@ -84,11 +87,9 @@ export function FolderFormDialog({
                     />
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>
-                        Cancel
-                    </Button>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>{copy("Cancel")}</Button>
                     <Button onClick={handleSubmit} disabled={!canSubmit}>
-                        {isSubmitting ? 'Saving...' : submitLabel}
+                        {isSubmitting ? copy("Saving...") : submitLabel}
                     </Button>
                 </DialogFooter>
             </DialogContent>

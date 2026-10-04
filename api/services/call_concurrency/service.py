@@ -1,4 +1,5 @@
 import asyncio
+import os
 import time
 from dataclasses import dataclass
 
@@ -57,6 +58,11 @@ class CallConcurrencyService:
 
     async def get_org_concurrent_limit(self, organization_id: int) -> int:
         """Get the concurrent call limit for an organization."""
+        if os.getenv("DEPLOYMENT_MODE") == "abera":
+            limit = int(os.environ["ABERA_MAX_CONCURRENT_CALLS"])
+            if limit < 1:
+                raise ValueError("ABERA_MAX_CONCURRENT_CALLS must be positive")
+            return limit
         try:
             config = await db_client.get_configuration(
                 organization_id,
@@ -291,7 +297,7 @@ class CallConcurrencyService:
         if released:
             logger.info(f"Released concurrent slot for workflow run {workflow_run_id}")
         else:
-            logger.debug(
+            logger.info(
                 f"Concurrent slot mapping for workflow run {workflow_run_id} "
                 "had no live slot; deleted stale mapping"
             )

@@ -4,7 +4,8 @@ A single ``/agent-stream/{provider_name}/{workflow_uuid}`` socket where a
 caller can drive an agent run. The provider is part of the URL path;
 provider-specific call metadata is read from that provider's stream protocol.
 
-Auth: the workflow UUID itself acts as the identifier — no API key.
+Auth: the workflow UUID identifies the candidate workflow. The provider must
+authenticate the inbound session before any run or concurrency slot is created.
 Routing: when ``/{provider_name}`` matches a telephony provider, we
 dispatch to that provider's ``handle_external_websocket``.
 """
@@ -55,6 +56,18 @@ async def agent_stream_websocket(
     if not workflow:
         logger.warning(f"agent-stream workflow {workflow_uuid} not found")
         await websocket.close(code=1008, reason="Workflow not found")
+        return
+
+    provider_instance = spec.provider_cls({})
+    authenticate = getattr(provider_instance, "authenticate_external_websocket", None)
+    if authenticate is None:
+        await websocket.close(code=4401, reason="Provider authentication unavailable")
+        return
+    try:
+        if not await authenticate(websocket, organization_id=workflow.organization_id, workflow_id=workflow.id):
+            return
+    except Exception:
+        await websocket.close(code=4401, reason="Provider authentication failed")
         return
 
     try:
@@ -117,7 +130,6 @@ async def agent_stream_websocket(
             run_id=workflow_run.id, state=WorkflowRunState.RUNNING.value
         )
 
-        provider_instance = spec.provider_cls({})
         try:
             await provider_instance.handle_external_websocket(
                 websocket,

@@ -8,12 +8,15 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useAppConfig } from "@/context/AppConfigContext";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { resolveBrowserBackendUrl } from "@/lib/apiClient";
 import { copyTextToClipboard } from "@/lib/clipboard";
+
 
 const MCP_PATH = "/api/v1/mcp/";
 
 export function MCPSection() {
+    const copy = useCopy();
   const { config } = useAppConfig();
   // Backend URL: the address the deployment runs on (a private IP when the backend
   // sits on one). Tunnel URL, when present: the publicly reachable Cloudflare tunnel
@@ -45,24 +48,20 @@ export function MCPSection() {
         2000,
       );
     } catch {
-      toast.error("Failed to copy MCP endpoint");
+      toast.error(copy("Failed to copy MCP endpoint"));
     }
   };
 
   return (
     <div className="grid gap-6">
       <div className="grid gap-2">
-        <Label>MCP Endpoint</Label>
-        <p className="text-xs text-muted-foreground">
-          Connect an MCP-compatible AI assistant to this URL over Streamable
-          HTTP. Requires an API key in the X-API-Key header.{" "}
+        <Label>{copy("MCP Endpoint")}</Label>
+        <p className="text-xs text-muted-foreground">{copy("Connect an MCP-compatible AI assistant to this URL over Streamable HTTP. Requires an API key in the X-API-Key header.")}{" "}
           <Link
             href="/api-keys"
             target="_blank"
             className="text-primary underline hover:no-underline"
-          >
-            Get your API key
-          </Link>
+          >{copy("Get your API key")}</Link>
         </p>
         <div className="grid gap-3">
           {endpoints.map(({ key, label, url }) => (
@@ -93,24 +92,17 @@ export function MCPSection() {
           ))}
         </div>
         {tunnelUrl && (
-          <p className="text-xs text-muted-foreground">
-            Use the public URL from externally-hosted assistants; the backend URL
-            works from the deployment&apos;s own network.
-          </p>
+          <p className="text-xs text-muted-foreground">{copy("Use the public URL from externally-hosted assistants; the backend URL works from the deployment's own network.")}</p>
         )}
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        For step-by-step setup with Claude Code, Claude Desktop, Cursor, and
-        other clients, see the{" "}
+      <p className="text-xs text-muted-foreground">{copy("For step-by-step setup with Claude Code, Claude Desktop, Cursor, and other clients, see the")}{" "}
         <Link
           href="https://docs.dograh.com/integrations/mcp"
           target="_blank"
           rel="noopener noreferrer"
           className="text-primary underline hover:no-underline"
-        >
-          MCP integration guide
-        </Link>
+        >{copy("MCP integration guide")}</Link>
         .
       </p>
     </div>

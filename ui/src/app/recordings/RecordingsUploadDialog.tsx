@@ -28,6 +28,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { LANGUAGE_DISPLAY_NAMES } from "@/constants/languages";
+import { useCopy } from "@/i18n/LocaleProvider";
+
 interface RecordingsUploadDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -51,6 +53,7 @@ export const RecordingsUploadDialog = ({
     onOpenChange,
     onUploadComplete,
 }: RecordingsUploadDialogProps) => {
+    const copy = useCopy();
     const [uploading, setUploading] = useState(false);
     const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
     const [error, setError] = useState<string | null>(null);
@@ -136,7 +139,7 @@ export const RecordingsUploadDialog = ({
         const valid: PendingFile[] = [];
         for (const file of files) {
             if (file.size > MAX_FILE_SIZE) {
-                setError(`${file.name} (${(file.size / (1024 * 1024)).toFixed(1)}MB) exceeds 5MB limit - skipped.`);
+                setError(copy("{value0} ({value1}MB) exceeds 5MB limit - skipped.", {value0: file.name, value1: (file.size / (1024 * 1024)).toFixed(1)}));
                 continue;
             }
             const id = `pending-${++pendingFileCounter}`;
@@ -178,7 +181,7 @@ export const RecordingsUploadDialog = ({
 
                 const blob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType });
                 if (blob.size > MAX_FILE_SIZE) {
-                    setError(`Recording (${(blob.size / (1024 * 1024)).toFixed(1)}MB) exceeds the maximum allowed size of 5MB.`);
+                    setError(copy("Recording ({value0}MB) exceeds the maximum allowed size of 5MB.", {value0: (blob.size / (1024 * 1024)).toFixed(1)}));
                     resetRecordingState();
                     return;
                 }
@@ -196,7 +199,7 @@ export const RecordingsUploadDialog = ({
                 setRecordingDuration((d) => d + 1);
             }, 1000);
         } catch {
-            setError("Microphone access denied. Please allow microphone permissions.");
+            setError(copy("Microphone access denied. Please allow microphone permissions."));
             resetRecordingState();
         }
     };
@@ -268,7 +271,7 @@ export const RecordingsUploadDialog = ({
             onUploadComplete?.();
             onOpenChange(false);
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to upload recordings");
+            setError(err instanceof Error ? err.message : copy("Failed to upload recordings"));
         } finally {
             setUploading(false);
         }
@@ -283,12 +286,9 @@ export const RecordingsUploadDialog = ({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>Upload Recordings</DialogTitle>
-                    <DialogDescription>
-                        Upload or record audio files. Use{" "}
-                        <code className="text-xs bg-muted px-1 rounded">@</code> in
-                        prompt fields to insert them into your agents.
-                    </DialogDescription>
+                    <DialogTitle>{copy("Upload Recordings")}</DialogTitle>
+                    <DialogDescription>{copy("Upload or record audio files. Use")}{" "}
+                        <code className="text-xs bg-muted px-1 rounded">@</code>{copy(" in prompt fields to insert them into your agents.")}</DialogDescription>
                 </DialogHeader>
 
                 {error && (
@@ -301,7 +301,7 @@ export const RecordingsUploadDialog = ({
                 <div className="space-y-3">
                     {/* Audio source: file picker or record */}
                     <div>
-                        <Label className="text-xs text-muted-foreground">Audio Files</Label>
+                        <Label className="text-xs text-muted-foreground">{copy("Audio Files")}</Label>
                         <div className="flex gap-2">
                             <input
                                 ref={fileInputRef}
@@ -320,7 +320,7 @@ export const RecordingsUploadDialog = ({
                                 disabled={isBusy}
                             >
                                 <Upload className="w-4 h-4 mr-2 shrink-0" />
-                                <span className="text-muted-foreground">Choose audio files (max 5MB each)</span>
+                                <span className="text-muted-foreground">{copy("Choose audio files (max 5MB each)")}</span>
                             </Button>
                             {recordingStep === "idle" && (
                                 <Button
@@ -330,9 +330,7 @@ export const RecordingsUploadDialog = ({
                                     onClick={() => setRecordingStep("naming")}
                                     disabled={uploading || anyTranscribing}
                                 >
-                                    <Mic className="w-4 h-4 mr-1" />
-                                    Record
-                                </Button>
+                                    <Mic className="w-4 h-4 mr-1" />{copy("Record")}</Button>
                             )}
                         </div>
                     </div>
@@ -343,9 +341,9 @@ export const RecordingsUploadDialog = ({
                             {recordingStep === "naming" && (
                                 <>
                                     <div>
-                                        <Label className="text-xs text-muted-foreground">Recording Name</Label>
+                                        <Label className="text-xs text-muted-foreground">{copy("Recording Name")}</Label>
                                         <Input
-                                            placeholder="e.g. greeting, hold-message"
+                                            placeholder={copy("e.g. greeting, hold-message")}
                                             value={recordingFilename}
                                             onChange={(e) => setRecordingFilename(e.target.value)}
                                             autoFocus
@@ -353,12 +351,8 @@ export const RecordingsUploadDialog = ({
                                     </div>
                                     <div className="flex gap-2">
                                         <Button size="sm" onClick={startRecording} disabled={!recordingFilename.trim()}>
-                                            <Mic className="w-4 h-4 mr-1" />
-                                            Start Recording
-                                        </Button>
-                                        <Button size="sm" variant="ghost" onClick={resetRecordingState}>
-                                            Cancel
-                                        </Button>
+                                            <Mic className="w-4 h-4 mr-1" />{copy("Start Recording")}</Button>
+                                        <Button size="sm" variant="ghost" onClick={resetRecordingState}>{copy("Cancel")}</Button>
                                     </div>
                                 </>
                             )}
@@ -378,9 +372,7 @@ export const RecordingsUploadDialog = ({
                                         onClick={() => stopRecording()}
                                         className="ml-auto"
                                     >
-                                        <Square className="w-4 h-4 mr-1" />
-                                        Stop
-                                    </Button>
+                                        <Square className="w-4 h-4 mr-1" />{copy("Stop")}</Button>
                                 </div>
                             )}
                         </div>
@@ -389,8 +381,7 @@ export const RecordingsUploadDialog = ({
                     {/* Pending files list */}
                     {pendingFiles.length > 0 && (
                         <div className="space-y-2">
-                            <Label className="text-xs text-muted-foreground">
-                                Pending ({pendingFiles.length} file{pendingFiles.length !== 1 ? "s" : ""})
+                            <Label className="text-xs text-muted-foreground">{copy("Pending (")}{pendingFiles.length}{copy(" file")}{pendingFiles.length !== 1 ? "s" : ""})
                             </Label>
                             {pendingFiles.map((pf) => (
                                 <div key={pf.id} className="rounded-md border p-2 space-y-1.5 bg-muted/10">
@@ -415,7 +406,7 @@ export const RecordingsUploadDialog = ({
                                         <p className="text-xs text-destructive">{pf.error}</p>
                                     )}
                                     <Textarea
-                                        placeholder={pf.isTranscribing ? "Transcribing..." : "What does this recording say?"}
+                                        placeholder={pf.isTranscribing ? copy("Transcribing...") : copy("What does this recording say?")}
                                         value={pf.transcript}
                                         onChange={(e) => updateTranscript(pf.id, e.target.value)}
                                         disabled={pf.isTranscribing}
@@ -429,7 +420,7 @@ export const RecordingsUploadDialog = ({
 
                     {/* Language */}
                     <div>
-                        <Label className="text-xs text-muted-foreground">Language</Label>
+                        <Label className="text-xs text-muted-foreground">{copy("Language")}</Label>
                         <Select value={language} onValueChange={setLanguage}>
                             <SelectTrigger className="h-9 text-sm">
                                 <SelectValue />
@@ -455,8 +446,8 @@ export const RecordingsUploadDialog = ({
                             <Upload className="w-4 h-4 mr-1" />
                         )}
                         {uploading
-                            ? "Uploading..."
-                            : `Upload ${readyCount} Recording${readyCount !== 1 ? "s" : ""}`}
+                            ? copy("Uploading...")
+                            : copy("Upload {value0} Recording{value1}", {value0: readyCount, value1: readyCount !== 1 ? "s" : ""})}
                     </Button>
                 </div>
             </DialogContent>

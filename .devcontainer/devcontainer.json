@@ -8,8 +8,7 @@
   "runServices": [
     "workspace",
     "postgres",
-    "redis",
-    "minio"
+    "redis"
   ],
   "workspaceFolder": "/workspaces/dograh",
   "shutdownAction": "stopCompose",
@@ -25,9 +24,7 @@
   "postStartCommand": "bash .devcontainer/scripts/post-start.sh",
   "forwardPorts": [
     5432,
-    6379,
-    9000,
-    9001
+    6379
   ],
   "portsAttributes": {
     "3000": {
@@ -43,12 +40,6 @@
     },
     "6379": {
       "label": "Redis"
-    },
-    "9000": {
-      "label": "MinIO API"
-    },
-    "9001": {
-      "label": "MinIO Console"
     }
   },
   "customizations": {

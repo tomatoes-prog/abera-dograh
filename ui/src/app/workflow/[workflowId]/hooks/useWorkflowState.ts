@@ -1,3 +1,5 @@
+"use client";
+
 import {
     applyEdgeChanges,
     applyNodeChanges,
@@ -29,6 +31,7 @@ import { useNodeSpecs } from "@/components/flow/renderer";
 import { FlowEdge, FlowNode, FlowNodeData, NodeType } from "@/components/flow/types";
 import { PostHogEvent } from "@/constants/posthog-events";
 import { captureAnalyticsEvent } from "@/lib/analytics";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { detailFromError } from "@/lib/apiError";
 import logger from '@/lib/logger';
 import { getNextNodeId, getRandomId } from "@/lib/utils";
@@ -37,6 +40,7 @@ import {
     type WorkflowConfigurationDefaults,
     type WorkflowConfigurations,
 } from "@/types/workflow-configurations";
+
 
 // Pull a WorkflowError[] out of any validate-shaped payload — works whether
 // the body is the raw `{ is_valid, errors }` (validate success-with-errors)
@@ -121,6 +125,7 @@ export const useWorkflowState = ({
     initialWorkflowConfigurations,
     user,
 }: UseWorkflowStateProps) => {
+    const copy = useCopy();
     const router = useRouter();
     const rfInstance = useRef<ReactFlowInstance<FlowNode, FlowEdge> | null>(null);
     const [workflowConfigurationDefaults, setWorkflowConfigurationDefaults] =
@@ -401,7 +406,7 @@ export const useWorkflowState = ({
         });
         if (maxInstanceViolation) {
             toast.error(
-                `${maxInstanceViolation.display_name} limit reached. Remove the extra node before saving.`,
+                copy("{value0} limit reached. Remove the extra node before saving.", { value0: copy(maxInstanceViolation.display_name) }),
             );
             return;
         }
@@ -462,17 +467,7 @@ export const useWorkflowState = ({
             await validateWorkflow();
         }
         return result;
-    }, [
-        workflowId,
-        workflowName,
-        setIsDirty,
-        setNodes,
-        setEdges,
-        user,
-        validateWorkflow,
-        applyWorkflowErrors,
-        specs,
-    ]);
+    }, [user?.id, specs, copy, workflowId, workflowName, applyWorkflowErrors, setIsDirty, setNodes, setEdges, validateWorkflow]);
 
     // Set up keyboard shortcut for save (Cmd/Ctrl + S)
     useEffect(() => {
@@ -560,7 +555,7 @@ export const useWorkflowState = ({
             });
             if (response.error) {
                 throw new Error(
-                    detailFromError(response.error, "Failed to save template variables"),
+                    copy(detailFromError(response.error, "Failed to save template variables")),
                 );
             }
             setTemplateContextVariables(variables);
@@ -569,7 +564,7 @@ export const useWorkflowState = ({
             logger.error(`Error saving template context variables: ${error}`);
             throw error;
         }
-    }, [workflowId, workflowName, user, setTemplateContextVariables]);
+    }, [user?.id, workflowId, workflowName, setTemplateContextVariables, copy]);
 
     // Save workflow configurations
     const saveWorkflowConfigurations = useCallback(async (configurations: WorkflowConfigurations, newWorkflowName: string) => {
@@ -639,7 +634,7 @@ export const useWorkflowState = ({
                 },
             });
             if (response.error) {
-                throw new Error(detailFromError(response.error, "Failed to save dictionary"));
+                throw new Error(copy(detailFromError(response.error, "Failed to save dictionary")));
             }
             setDictionary(newDictionary);
             setWorkflowConfigurations(updatedConfigurations);
@@ -647,7 +642,7 @@ export const useWorkflowState = ({
             logger.error(`Error saving dictionary: ${error}`);
             throw error;
         }
-    }, [workflowId, workflowName, user, setDictionary, setWorkflowConfigurations, workflowConfigurationDefaults]);
+    }, [user, workflowConfigurationDefaults, workflowId, workflowName, setDictionary, setWorkflowConfigurations, copy]);
 
     // Update rfInstance when it changes
     useEffect(() => {

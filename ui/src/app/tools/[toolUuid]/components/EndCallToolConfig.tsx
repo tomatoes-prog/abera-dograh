@@ -8,8 +8,10 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { useCopy } from "@/i18n/LocaleProvider";
 
 import { type EndCallMessageType } from "../../config";
+
 
 export interface EndCallToolConfigProps {
     name: string;
@@ -46,36 +48,31 @@ export function EndCallToolConfig({
     endCallReasonDescription,
     onEndCallReasonDescriptionChange,
 }: EndCallToolConfigProps) {
+    const copy = useCopy();
     return (
         <Card>
             <CardHeader>
-                <CardTitle>End Call Configuration</CardTitle>
-                <CardDescription>
-                    Configure the behavior when the call ends
-                </CardDescription>
+                <CardTitle>{copy("End Call Configuration")}</CardTitle>
+                <CardDescription>{copy("Configure the behavior when the call ends")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
                 <div className="grid gap-2">
-                    <Label>Tool Name</Label>
-                    <Label className="text-xs text-muted-foreground">
-                        A descriptive name for this tool
-                    </Label>
+                    <Label>{copy("Tool Name")}</Label>
+                    <Label className="text-xs text-muted-foreground">{copy("A descriptive name for this tool")}</Label>
                     <Input
                         value={name}
                         onChange={(e) => onNameChange(e.target.value)}
-                        placeholder="e.g., End Call"
+                        placeholder={copy("e.g., End Call")}
                     />
                 </div>
 
                 <div className="grid gap-2">
-                    <Label>Description</Label>
-                    <Label className="text-xs text-muted-foreground">
-                        Helps the LLM understand when to use this tool
-                    </Label>
+                    <Label>{copy("Description")}</Label>
+                    <Label className="text-xs text-muted-foreground">{copy("Helps the LLM understand when to use this tool")}</Label>
                     <Textarea
                         value={description}
                         onChange={(e) => onDescriptionChange(e.target.value)}
-                        placeholder="When should the AI end the call?"
+                        placeholder={copy("When should the AI end the call?")}
                         rows={3}
                     />
                 </div>
@@ -87,22 +84,17 @@ export function EndCallToolConfig({
                             checked={endCallReason}
                             onCheckedChange={onEndCallReasonChange}
                         />
-                        <Label htmlFor="end-call-reason">Capture End Call Reason</Label>
+                        <Label htmlFor="end-call-reason">{copy("Capture End Call Reason")}</Label>
                     </div>
-                    <Label className="text-xs text-muted-foreground">
-                        When enabled, the AI will provide a reason for ending the call.
-                        The reason will be set as the call disposition and added to call tags for analytics.
-                    </Label>
+                    <Label className="text-xs text-muted-foreground">{copy("When enabled, the AI will provide a reason for ending the call. The reason will be set as the call disposition and added to call tags for analytics.")}</Label>
                     {endCallReason && (
                         <div className="grid gap-2 pt-2">
-                            <Label>Reason Description</Label>
-                            <Label className="text-xs text-muted-foreground">
-                                Instructions shown to the AI for what kind of reason to provide
-                            </Label>
+                            <Label>{copy("Reason Description")}</Label>
+                            <Label className="text-xs text-muted-foreground">{copy("Instructions shown to the AI for what kind of reason to provide")}</Label>
                             <Textarea
                                 value={endCallReasonDescription}
                                 onChange={(e) => onEndCallReasonDescriptionChange(e.target.value)}
-                                placeholder="e.g., The reason for ending the call (e.g., 'voicemail_detected', 'issue_resolved', 'customer_requested')"
+                                placeholder={copy("e.g., The reason for ending the call (e.g., 'voicemail_detected', 'issue_resolved', 'customer_requested')")}
                                 rows={2}
                             />
                         </div>
@@ -110,10 +102,8 @@ export function EndCallToolConfig({
                 </div>
 
                 <div className="grid gap-4 pt-4 border-t">
-                    <Label>Goodbye Message</Label>
-                    <Label className="text-xs text-muted-foreground">
-                        Choose whether to play a message before disconnecting
-                    </Label>
+                    <Label>{copy("Goodbye Message")}</Label>
+                    <Label className="text-xs text-muted-foreground">{copy("Choose whether to play a message before disconnecting")}</Label>
                     <RadioGroup
                         value={messageType}
                         onValueChange={(v) => onMessageTypeChange(v as EndCallMessageType)}
@@ -125,19 +115,15 @@ export function EndCallToolConfig({
                         >
                             <RadioGroupItem value="none" id="none" />
                             <div className="flex-1">
-                                <span className="font-medium">No Message</span>
-                                <p className="text-xs text-muted-foreground">
-                                    End the call immediately without any message
-                                </p>
+                                <span className="font-medium">{copy("No Message")}</span>
+                                <p className="text-xs text-muted-foreground">{copy("End the call immediately without any message")}</p>
                             </div>
                         </label>
                         <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-muted/50">
                             <RadioGroupItem value="custom" id="custom" className="mt-1" />
                             <label htmlFor="custom" className="flex-1 space-y-2 cursor-pointer">
-                                <span className="font-medium">Custom Message</span>
-                                <p className="text-xs text-muted-foreground">
-                                    Play a custom message before disconnecting
-                                </p>
+                                <span className="font-medium">{copy("Custom Message")}</span>
+                                <p className="text-xs text-muted-foreground">{copy("Play a custom message before disconnecting")}</p>
                             </label>
                         </div>
                         {messageType === "custom" && (
@@ -146,7 +132,7 @@ export function EndCallToolConfig({
                                 <Textarea
                                     value={customMessage}
                                     onChange={(e) => onCustomMessageChange(e.target.value)}
-                                    placeholder="e.g., Thank you for calling. Goodbye!"
+                                    placeholder={copy("e.g., Thank you for calling. Goodbye!")}
                                     rows={2}
                                 />
                             </div>
@@ -154,10 +140,8 @@ export function EndCallToolConfig({
                         <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-muted/50">
                             <RadioGroupItem value="audio" id="audio" className="mt-1" />
                             <label htmlFor="audio" className="flex-1 space-y-2 cursor-pointer">
-                                <span className="font-medium">Pre-recorded Audio</span>
-                                <p className="text-xs text-muted-foreground">
-                                    Play a pre-recorded audio file before disconnecting
-                                </p>
+                                <span className="font-medium">{copy("Pre-recorded Audio")}</span>
+                                <p className="text-xs text-muted-foreground">{copy("Play a pre-recorded audio file before disconnecting")}</p>
                             </label>
                         </div>
                         {messageType === "audio" && (

@@ -5,9 +5,11 @@ import React, { useState } from "react";
 import { toast } from "sonner";
 
 import SpinLoader from "@/components/SpinLoader";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { useAuth } from "@/lib/auth";
 import { reloadApp } from "@/lib/browserReload";
 import logger from "@/lib/logger";
+
 
 // Lazy load Stack's SelectedTeamSwitcher, but own the selected-team write here.
 // The stock component re-applies the selectedTeam prop asynchronously, which
@@ -35,6 +37,7 @@ export function SidebarTeamSwitcher() {
 }
 
 function SidebarTeamSwitcherContent({ user }: { user: CurrentUser }) {
+    const copy = useCopy();
   const [isSwitching, setIsSwitching] = useState(false);
 
   const handleChange = async (team: Team | null) => {
@@ -45,7 +48,7 @@ function SidebarTeamSwitcherContent({ user }: { user: CurrentUser }) {
       reloadApp();
     } catch (error) {
       logger.error("Failed to switch Stack team", error);
-      toast.error("Could not switch teams. Please try again.");
+      toast.error(copy("Could not switch teams. Please try again."));
       setIsSwitching(false);
     }
   };
@@ -70,7 +73,7 @@ function SidebarTeamSwitcherContent({ user }: { user: CurrentUser }) {
           role="status"
           aria-live="polite"
         >
-          <SpinLoader label="Switching teams..." />
+          <SpinLoader label={copy("Switching teams...")} />
         </div>
       )}
     </div>

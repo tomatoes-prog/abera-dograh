@@ -7,10 +7,12 @@ import { getCampaignRunsApiV1CampaignCampaignIdRunsGet } from "@/client/sdk.gen"
 import { WorkflowRunResponseSchema } from "@/client/types.gen";
 import { WorkflowRunsTable } from "@/components/workflow-runs";
 import { useDispositionCodes } from "@/hooks/useDispositionCodes";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { useAuth } from "@/lib/auth";
 import { withDispositionCodeOptions } from "@/lib/filterAttributes";
 import { decodeFiltersFromURL, encodeFiltersToURL } from "@/lib/filters";
 import { ActiveFilter, availableAttributes } from "@/types/filters";
+
 
 interface CampaignRunsProps {
     campaignId: number;
@@ -19,6 +21,7 @@ interface CampaignRunsProps {
 }
 
 export function CampaignRuns({ campaignId, workflowId, searchParams }: CampaignRunsProps) {
+    const copy = useCopy();
     const router = useRouter();
     const { isAuthenticated } = useAuth();
     const { codes: dispositionCodes } = useDispositionCodes();
@@ -106,11 +109,11 @@ export function CampaignRuns({ campaignId, workflowId, searchParams }: CampaignR
             setError(null);
         } catch (err) {
             console.error("Error fetching campaign runs:", err);
-            setError("Failed to load campaign runs");
+            setError(copy("Failed to load campaign runs"));
         } finally {
             setLoading(false);
         }
-    }, [campaignId, isAuthenticated]);
+    }, [campaignId, copy, isAuthenticated]);
 
     const updatePageInUrl = useCallback((page: number, filters?: ActiveFilter[], sortByParam?: string | null, sortOrderParam?: 'asc' | 'desc') => {
         const params = new URLSearchParams();
@@ -209,8 +212,8 @@ export function CampaignRuns({ campaignId, workflowId, searchParams }: CampaignR
             workflowId={workflowId}
             showAgentVersion
             onReload={handleReload}
-            title="Campaign Workflow Runs"
-            emptyMessage="No workflow runs found for this campaign"
+            title={copy("Campaign Workflow Runs")}
+            emptyMessage={copy("No workflow runs found for this campaign")}
         />
     );
 }

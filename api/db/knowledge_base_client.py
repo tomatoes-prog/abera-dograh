@@ -79,6 +79,8 @@ class KnowledgeBaseClient(BaseDBClient):
     async def get_document_by_id(
         self,
         document_id: int,
+        *,
+        organization_id: Optional[int] = None,
     ) -> Optional[KnowledgeBaseDocumentModel]:
         """Get a document by its database ID.
 
@@ -92,6 +94,11 @@ class KnowledgeBaseClient(BaseDBClient):
             query = select(KnowledgeBaseDocumentModel).where(
                 KnowledgeBaseDocumentModel.id == document_id
             )
+            if organization_id is not None:
+                query = query.where(
+                    KnowledgeBaseDocumentModel.organization_id == organization_id,
+                    KnowledgeBaseDocumentModel.is_active == True,
+                )
 
             result = await session.execute(query)
             return result.scalar_one_or_none()

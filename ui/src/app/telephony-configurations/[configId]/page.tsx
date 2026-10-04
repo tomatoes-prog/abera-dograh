@@ -64,15 +64,20 @@ import {
 import { useAppConfig } from "@/context/AppConfigContext";
 import { useOrgConfig } from "@/context/OrgConfigContext";
 import { useOrganizationTimezone } from "@/hooks/useOrganizationTimezone";
+import { useCopy } from "@/i18n/LocaleProvider";
+import { useUiLocale } from "@/i18n/LocaleProvider";
 import { detailFromError } from "@/lib/apiError";
 import { useAuth } from "@/lib/auth";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { formatDateTime } from "@/lib/dateTime";
 import { resolveWebhookBaseUrl } from "@/lib/webhookUrl";
 
+
 const INBOUND_WEBHOOK_PATH = "/api/v1/telephony/inbound/run";
 
 export default function TelephonyConfigurationDetailPage() {
+    const { locale } = useUiLocale();
+    const copy = useCopy();
   const router = useRouter();
   const params = useParams<{ configId: string }>();
   const configId = Number(params.configId);
@@ -129,17 +134,17 @@ export default function TelephonyConfigurationDetailPage() {
         }),
       ]);
 
-      if (cfgRes.error) throw new Error(detailFromError(cfgRes.error));
-      if (numbersRes.error) throw new Error(detailFromError(numbersRes.error));
+      if (cfgRes.error) throw new Error(copy(detailFromError(cfgRes.error)));
+      if (numbersRes.error) throw new Error(copy(detailFromError(numbersRes.error)));
 
       setConfig(cfgRes.data ?? null);
       setPhoneNumbers(numbersRes.data?.phone_numbers ?? []);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to load configuration");
+      toast.error(err instanceof Error ? err.message : copy("Failed to load configuration"));
     } finally {
       setLoading(false);
     }
-  }, [authLoading, user, configId, getAccessToken]);
+  }, [authLoading, user, configId, getAccessToken, copy]);
 
   useEffect(() => {
     fetchAll();
@@ -155,11 +160,11 @@ export default function TelephonyConfigurationDetailPage() {
           path: { config_id: config.id },
         },
       );
-      if (res.error) throw new Error(detailFromError(res.error));
-      toast.success("Set as default outbound");
+      if (res.error) throw new Error(copy(detailFromError(res.error)));
+      toast.success(copy("Set as default outbound"));
       fetchAll();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to set default");
+      toast.error(err instanceof Error ? err.message : copy("Failed to set default"));
     }
   };
 
@@ -173,12 +178,12 @@ export default function TelephonyConfigurationDetailPage() {
           path: { config_id: config.id },
         },
       );
-      if (res.error) throw new Error(detailFromError(res.error));
-      toast.success("Reactivated — reconnecting within a minute");
+      if (res.error) throw new Error(copy(detailFromError(res.error)));
+      toast.success(copy("Reactivated — reconnecting within a minute"));
       fetchAll();
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to reactivate configuration",
+        err instanceof Error ? err.message : copy("Failed to reactivate configuration"),
       );
     }
   };
@@ -192,11 +197,11 @@ export default function TelephonyConfigurationDetailPage() {
           path: { config_id: configId, phone_number_id: n.id },
         },
       );
-      if (res.error) throw new Error(detailFromError(res.error));
-      toast.success(`${n.address} is now the default caller ID`);
+      if (res.error) throw new Error(copy(detailFromError(res.error)));
+      toast.success(copy("{value0} is now the default caller ID", {value0: n.address}));
       fetchAll();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to set default caller");
+      toast.error(err instanceof Error ? err.message : copy("Failed to set default caller"));
     }
   };
 
@@ -213,12 +218,12 @@ export default function TelephonyConfigurationDetailPage() {
           },
         },
       );
-      if (res.error) throw new Error(detailFromError(res.error));
-      toast.success("Phone number deleted");
+      if (res.error) throw new Error(copy(detailFromError(res.error)));
+      toast.success(copy("Phone number deleted"));
       setPhoneDeleteTarget(null);
       fetchAll();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete phone number");
+      toast.error(err instanceof Error ? err.message : copy("Failed to delete phone number"));
     }
   };
 
@@ -236,9 +241,8 @@ export default function TelephonyConfigurationDetailPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <Button variant="ghost" onClick={() => router.push("/telephony-configurations")}>
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back
-        </Button>
-        <p className="mt-4 text-muted-foreground">Configuration not found.</p>
+          <ArrowLeft className="h-4 w-4 mr-2" />{copy(" Back")}</Button>
+        <p className="mt-4 text-muted-foreground">{copy("Configuration not found.")}</p>
       </div>
     );
   }
@@ -250,8 +254,7 @@ export default function TelephonyConfigurationDetailPage() {
           href="/telephony-configurations"
           className="inline-flex items-center text-sm text-muted-foreground hover:underline"
         >
-          <ArrowLeft className="h-4 w-4 mr-1" /> All configurations
-        </Link>
+          <ArrowLeft className="h-4 w-4 mr-1" />{copy(" All configurations")}</Link>
       </div>
 
       <Card>
@@ -262,43 +265,37 @@ export default function TelephonyConfigurationDetailPage() {
               <Badge variant="secondary">{config.provider}</Badge>
               {config.is_default_outbound && (
                 <Badge className="gap-1">
-                  <Star className="h-3 w-3 fill-current" />
-                  Default
-                </Badge>
+                  <Star className="h-3 w-3 fill-current" />{copy("Default")}</Badge>
               )}
-              {config.inactive && <Badge variant="destructive">Inactive</Badge>}
+              {config.inactive && <Badge variant="destructive">{copy("Inactive")}</Badge>}
             </div>
-            <CardDescription>
-              Updated {formatDateTime(config.updated_at, organizationTimezone)}
+            <CardDescription>{copy("Updated ")}{formatDateTime(config.updated_at, organizationTimezone, locale)}
             </CardDescription>
             <button
               type="button"
               onClick={() => {
                 copyTextToClipboard(String(config.id))
-                  .then(() => toast.success("Configuration ID copied"))
-                  .catch(() => toast.error("Failed to copy ID"));
+                  .then(() => toast.success(copy("Configuration ID copied")))
+                  .catch(() => toast.error(copy("Failed to copy ID")));
               }}
-              title="Click to copy"
+              title={copy("Click to copy")}
               className="inline-flex items-center gap-1 self-start rounded font-mono text-xs text-muted-foreground hover:text-foreground"
             >
-              <span className="truncate">Configuration ID: {config.id}</span>
+              <span className="truncate">{copy("Configuration ID: ")}{config.id}</span>
               <Copy className="h-3 w-3 shrink-0" />
             </button>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {config.inactive && (
               <Button variant="outline" size="sm" onClick={onReactivate}>
-                <RotateCcw className="h-4 w-4 mr-2" /> Reactivate
-              </Button>
+                <RotateCcw className="h-4 w-4 mr-2" />{copy(" Reactivate")}</Button>
             )}
             {!config.is_default_outbound && (
               <Button variant="outline" size="sm" onClick={onSetDefaultOutbound}>
-                <Star className="h-4 w-4 mr-2" /> Set as default
-              </Button>
+                <Star className="h-4 w-4 mr-2" />{copy(" Set as default")}</Button>
             )}
             <Button variant="outline" size="sm" onClick={() => setEditConfigOpen(true)}>
-              <Pencil className="h-4 w-4 mr-2" /> Edit credentials
-            </Button>
+              <Pencil className="h-4 w-4 mr-2" />{copy(" Edit credentials")}</Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -307,20 +304,11 @@ export default function TelephonyConfigurationDetailPage() {
               <div className="flex items-start gap-3">
                 <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5 text-destructive" />
                 <div className="space-y-1 text-sm">
-                  <p className="font-medium text-destructive">
-                    This configuration is disabled
-                  </p>
-                  <p className="text-muted-foreground">
-                    Dograh stopped reconnecting after repeated connection
-                    failures
-                    {config.inactive_reason ? `: ${config.inactive_reason}` : ""}.
-                    Calls will not work until it is reconnected. Correct the
-                    settings below, then choose Reactivate to try again.
-                  </p>
+                  <p className="font-medium text-destructive">{copy("This configuration is disabled")}</p>
+                  <p className="text-muted-foreground">{copy("Dograh stopped reconnecting after repeated connection failures")}{config.inactive_reason ? copy(": {value0}", {value0: config.inactive_reason}) : ""}{copy(". Calls will not work until it is reconnected. Correct the settings below, then choose Reactivate to try again.")}</p>
                   {config.inactive_since && (
-                    <p className="text-muted-foreground">
-                      Disabled{" "}
-                      {formatDateTime(config.inactive_since, organizationTimezone)}
+                    <p className="text-muted-foreground">{copy("Disabled")}{" "}
+                      {formatDateTime(config.inactive_since, organizationTimezone, locale)}
                     </p>
                   )}
                 </div>
@@ -335,27 +323,24 @@ export default function TelephonyConfigurationDetailPage() {
                 <div key={k} className="flex justify-between gap-3">
                   <dt className="text-muted-foreground">{k}</dt>
                   <dd className="font-mono text-right truncate max-w-[60%]">
-                    {v && typeof v === "object" ? "Configured" : String(v ?? "")}
+                    {v && typeof v === "object" ? copy("Configured") : String(v ?? "")}
                   </dd>
                 </div>
               ))}
           </dl>
           {stasisAppName && (
             <div className="space-y-1 rounded-md border border-dashed p-3">
-              <p className="text-sm font-medium">Route calls into this Stasis application</p>
-              <p className="text-xs text-muted-foreground">
-                Add this line to your Asterisk <code>extensions.conf</code>, then run{" "}
-                <code>dialplan reload</code>. Until you do, calls reach Asterisk but never
-                arrive at Dograh.
-              </p>
+              <p className="text-sm font-medium">{copy("Route calls into this Stasis application")}</p>
+              <p className="text-xs text-muted-foreground">{copy("Add this line to your Asterisk ")}<code>extensions.conf</code>{copy(", then run")}{" "}
+                <code>dialplan reload</code>{copy(". Until you do, calls reach Asterisk but never arrive at Dograh.")}</p>
               <button
                 type="button"
                 onClick={() => {
                   copyTextToClipboard(stasisDialplanLine)
-                    .then(() => toast.success("Dialplan line copied"))
-                    .catch(() => toast.error("Failed to copy"));
+                    .then(() => toast.success(copy("Dialplan line copied")))
+                    .catch(() => toast.error(copy("Failed to copy")));
                 }}
-                title="Click to copy"
+                title={copy("Click to copy")}
                 className="group mt-1 flex w-full items-center gap-2 rounded-md border bg-muted/20 p-2 text-left font-mono text-xs transition-colors hover:bg-muted/40"
               >
                 <code className="flex-1 truncate">{stasisDialplanLine}</code>
@@ -364,17 +349,17 @@ export default function TelephonyConfigurationDetailPage() {
             </div>
           )}
           <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">Inbound webhook URL</p>
+            <p className="text-xs text-muted-foreground">{copy("Inbound webhook URL")}</p>
             <button
               type="button"
               onClick={() => {
                 const url = inboundWebhookUrl;
                 copyTextToClipboard(url)
-                  .then(() => toast.success("Inbound webhook URL copied"))
-                  .catch(() => toast.error("Failed to copy URL"));
+                  .then(() => toast.success(copy("Inbound webhook URL copied")))
+                  .catch(() => toast.error(copy("Failed to copy URL")));
               }}
-              title="Click to copy inbound webhook URL"
-              aria-label="Copy inbound webhook URL"
+              title={copy("Click to copy inbound webhook URL")}
+              aria-label={copy("Copy inbound webhook URL")}
               className="inline-flex items-center gap-1 self-start rounded font-mono text-xs text-muted-foreground hover:text-foreground"
             >
               <span className="truncate">{inboundWebhookUrl}</span>
@@ -413,44 +398,37 @@ export default function TelephonyConfigurationDetailPage() {
       <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div className="space-y-1">
-            <CardTitle>Phone numbers</CardTitle>
-            <CardDescription>
-              Numbers used as caller ID for outbound and accepted for inbound matching.
-              SIP URIs and extensions are supported alongside PSTN numbers.{" "}
+            <CardTitle>{copy("Phone numbers")}</CardTitle>
+            <CardDescription>{copy("Numbers used as caller ID for outbound and accepted for inbound matching. SIP URIs and extensions are supported alongside PSTN numbers.")}{" "}
               <a
                 href="https://docs.dograh.com/integrations/telephony/inbound"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-0.5 underline"
-              >
-                Inbound docs <ExternalLink className="h-3 w-3" />
+              >{copy("Inbound docs ")}<ExternalLink className="h-3 w-3" />
               </a>
             </CardDescription>
           </div>
           <Button size="sm" onClick={() => openPhoneDialog(null)}>
-            <Plus className="h-4 w-4 mr-2" /> Add phone number
-          </Button>
+            <Plus className="h-4 w-4 mr-2" />{copy(" Add phone number")}</Button>
         </CardHeader>
         <CardContent>
           {phoneNumbers.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No phone numbers yet. Add one to start placing or receiving calls on this
-              configuration.
-            </p>
+            <p className="text-sm text-muted-foreground">{copy("No phone numbers yet. Add one to start placing or receiving calls on this configuration.")}</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Address</TableHead>
-                  <TableHead>Phone number ID</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Label</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Inbound workflow</TableHead>
+                  <TableHead>{copy("Address")}</TableHead>
+                  <TableHead>{copy("Phone number ID")}</TableHead>
+                  <TableHead>{copy("Type")}</TableHead>
+                  <TableHead>{copy("Label")}</TableHead>
+                  <TableHead>{copy("Status")}</TableHead>
+                  <TableHead>{copy("Inbound workflow")}</TableHead>
                   {(config.trunks?.length ?? 0) > 0 && (
-                    <TableHead>Outbound trunk</TableHead>
+                    <TableHead>{copy("Outbound trunk")}</TableHead>
                   )}
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="text-right">{copy("Actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -462,11 +440,11 @@ export default function TelephonyConfigurationDetailPage() {
                         type="button"
                         onClick={() => {
                           copyTextToClipboard(String(n.id))
-                            .then(() => toast.success("Phone number ID copied"))
-                            .catch(() => toast.error("Failed to copy ID"));
+                            .then(() => toast.success(copy("Phone number ID copied")))
+                            .catch(() => toast.error(copy("Failed to copy ID")));
                         }}
-                        title="Click to copy phone number ID"
-                        aria-label={`Copy phone number ID ${n.id}`}
+                        title={copy("Click to copy phone number ID")}
+                        aria-label={copy("Copy phone number ID {value0}", {value0: n.id})}
                         className="group inline-flex items-center gap-1 rounded font-mono text-xs text-muted-foreground hover:text-foreground"
                       >
                         <span>{n.id}</span>
@@ -482,14 +460,13 @@ export default function TelephonyConfigurationDetailPage() {
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
                         {n.is_active ? (
-                          <Badge variant="secondary">Active</Badge>
+                          <Badge variant="secondary">{copy("Active")}</Badge>
                         ) : (
-                          <Badge variant="outline">Inactive</Badge>
+                          <Badge variant="outline">{copy("Inactive")}</Badge>
                         )}
                         {n.is_default_caller_id && (
                           <Badge className="gap-1">
-                            <Star className="h-3 w-3 fill-current" /> Default caller
-                          </Badge>
+                            <Star className="h-3 w-3 fill-current" />{copy(" Default caller")}</Badge>
                         )}
                       </div>
                     </TableCell>
@@ -506,7 +483,7 @@ export default function TelephonyConfigurationDetailPage() {
                               title={n.inbound_workflow_name}
                             >
                               {n.inbound_workflow_name.length > 24
-                                ? `${n.inbound_workflow_name.slice(0, 24)}…`
+                                ? copy("{value0}…", {value0: n.inbound_workflow_name.slice(0, 24)})
                                 : n.inbound_workflow_name}
                             </span>
                           )}
@@ -529,9 +506,7 @@ export default function TelephonyConfigurationDetailPage() {
                                 ? "text-amber-600 dark:text-amber-500"
                                 : undefined
                             }
-                          >
-                            Unassigned
-                          </span>
+                          >{copy("Unassigned")}</span>
                         )}
                       </TableCell>
                     )}
@@ -542,7 +517,7 @@ export default function TelephonyConfigurationDetailPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => onSetDefaultCaller(n)}
-                            title="Set as default caller ID"
+                            title={copy("Set as default caller ID")}
                           >
                             <Star className="h-4 w-4" />
                           </Button>
@@ -551,7 +526,7 @@ export default function TelephonyConfigurationDetailPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => openPhoneDialog(n)}
-                          title="Edit"
+                          title={copy("Edit")}
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -559,7 +534,7 @@ export default function TelephonyConfigurationDetailPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => setPhoneDeleteTarget(n)}
-                          title="Delete"
+                          title={copy("Delete")}
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
@@ -596,15 +571,13 @@ export default function TelephonyConfigurationDetailPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete phone number?</AlertDialogTitle>
+            <AlertDialogTitle>{copy("Delete phone number?")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {phoneDeleteTarget?.address} will no longer accept inbound calls or be
-              available as a caller ID for this configuration.
-            </AlertDialogDescription>
+              {phoneDeleteTarget?.address}{copy(" will no longer accept inbound calls or be available as a caller ID for this configuration.")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={onConfirmDeletePhone}>Delete</AlertDialogAction>
+            <AlertDialogCancel>{copy("Cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={onConfirmDeletePhone}>{copy("Delete")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

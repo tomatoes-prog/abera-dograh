@@ -1,3 +1,9 @@
+import os
+import aiofiles
+from contextlib import asynccontextmanager
+
+from api.services.filesystem.quota import StorageQuotaExceeded, storage_write_lock
+
 from typing import Any, Dict, Optional
 
 import aioboto3
@@ -17,6 +23,8 @@ class S3FileSystem(BaseFileSystem):
         endpoint_url: Optional[str] = None,
         signature_version: Optional[str] = None,
         addressing_style: Optional[str] = None,
+        key_prefix: str = "",
+        storage_limit_bytes: int | None = None,
     ):
         """Initialize S3 filesystem.
 
@@ -30,7 +38,11 @@ class S3FileSystem(BaseFileSystem):
             addressing_style: Optional S3 addressing style (``"path"`` /
                 ``"virtual"`` / ``"auto"``). ``None`` keeps botocore's default.
         """
+        if storage_limit_bytes is not None and (storage_limit_bytes < 1 or not key_prefix):
+            raise ValueError("Managed storage requires a positive limit and tenant prefix")
+        self.storage_limit_bytes = storage_limit_bytes
         self.bucket_name = bucket_name
+        self.key_prefix = key_prefix.strip("/")
         self.region_name = region_name
         self.endpoint_url = endpoint_url
         self.session = aioboto3.Session()
@@ -43,6 +55,11 @@ class S3FileSystem(BaseFileSystem):
         if addressing_style:
             config_kwargs["s3"] = {"addressing_style": addressing_style}
         self._config = Config(**config_kwargs) if config_kwargs else None
+
+    def _key(self, file_path: str) -> str:
+        if not self.key_prefix:
+            return file_path
+        return f"{self.key_prefix}/{file_path.lstrip('/')}"
 
     def _client_kwargs(self) -> Dict[str, Any]:
         """Common kwargs for every ``session.client("s3", ...)`` call.
@@ -57,12 +74,35 @@ class S3FileSystem(BaseFileSystem):
             kwargs["config"] = self._config
         return kwargs
 
+    @asynccontextmanager
+    async def _write_budget(self, client, path: str, size: int):
+        if self.storage_limit_bytes is None:
+            yield
+            return
+        async with storage_write_lock(self.bucket_name, self.key_prefix):
+            used = 0
+            paginator = client.get_paginator("list_objects_v2")
+            async for page in paginator.paginate(Bucket=self.bucket_name, Prefix=self.key_prefix + "/"):
+                used += sum(item["Size"] for item in page.get("Contents", []))
+            previous = 0
+            try:
+                existing = await client.head_object(Bucket=self.bucket_name, Key=self._key(path))
+                previous = existing["ContentLength"]
+            except ClientError as exc:
+                if exc.response["Error"]["Code"] not in {"404", "NoSuchKey", "NotFound"}:
+                    raise
+            if used - previous + size > self.storage_limit_bytes:
+                raise StorageQuotaExceeded("El almacenamiento contratado está agotado")
+            yield
+
     async def acreate_file(self, file_path: str, content: AsyncReadable) -> bool:
         try:
             async with self.session.client("s3", **self._client_kwargs()) as s3_client:
-                await s3_client.put_object(
-                    Bucket=self.bucket_name, Key=file_path, Body=await content.read()
-                )
+                data = await content.read()
+                async with self._write_budget(s3_client, file_path, len(data)):
+                    await s3_client.put_object(
+                        Bucket=self.bucket_name, Key=self._key(file_path), Body=data
+                    )
             return True
         except ClientError:
             return False
@@ -70,9 +110,10 @@ class S3FileSystem(BaseFileSystem):
     async def aupload_file(self, local_path: str, destination_path: str) -> bool:
         try:
             async with self.session.client("s3", **self._client_kwargs()) as s3_client:
-                await s3_client.upload_file(
-                    local_path, self.bucket_name, destination_path
-                )
+                async with self._write_budget(s3_client, destination_path, os.path.getsize(local_path)):
+                    await s3_client.upload_file(
+                        local_path, self.bucket_name, self._key(destination_path)
+                    )
             return True
         except ClientError:
             return False
@@ -93,7 +134,7 @@ class S3FileSystem(BaseFileSystem):
         """
         try:
             async with self.session.client("s3", **self._client_kwargs()) as s3_client:
-                params = {"Bucket": self.bucket_name, "Key": file_path}
+                params = {"Bucket": self.bucket_name, "Key": self._key(file_path)}
 
                 # Make artifacts viewable inline in the browser when requested
                 if force_inline:
@@ -133,7 +174,7 @@ class S3FileSystem(BaseFileSystem):
         try:
             async with self.session.client("s3", **self._client_kwargs()) as s3_client:
                 response = await s3_client.head_object(
-                    Bucket=self.bucket_name, Key=file_path
+                    Bucket=self.bucket_name, Key=self._key(file_path)
                 )
                 return {
                     "size": response.get("ContentLength"),
@@ -153,14 +194,16 @@ class S3FileSystem(BaseFileSystem):
         content_type: str = "text/csv",
         max_size: int = 10_485_760,
     ) -> Optional[str]:
-        """Generate a presigned PUT URL for direct file upload."""
+        """Generate a presigned PUT URL; managed writes use the bounded upload proxy."""
+        if self.storage_limit_bytes is not None:
+            raise ValueError("Managed uploads must use the quota-controlled proxy")
         try:
             async with self.session.client("s3", **self._client_kwargs()) as s3_client:
                 url = await s3_client.generate_presigned_url(
                     "put_object",
                     Params={
                         "Bucket": self.bucket_name,
-                        "Key": file_path,
+                        "Key": self._key(file_path),
                         "ContentType": content_type,
                     },
                     ExpiresIn=expiration,
@@ -169,11 +212,24 @@ class S3FileSystem(BaseFileSystem):
         except ClientError:
             return None
 
-    async def adownload_file(self, source_path: str, local_path: str) -> bool:
+    async def adownload_file(self, source_path: str, local_path: str, *, max_size: int | None = None) -> bool:
         """Download a file from S3 to local path."""
         try:
             async with self.session.client("s3", **self._client_kwargs()) as s3_client:
-                await s3_client.download_file(self.bucket_name, source_path, local_path)
+                if max_size is None:
+                    await s3_client.download_file(self.bucket_name, self._key(source_path), local_path)
+                else:
+                    response = await s3_client.get_object(Bucket=self.bucket_name, Key=self._key(source_path))
+                    async with response["Body"] as body:
+                        if response.get("ContentLength", 0) > max_size:
+                            raise ValueError("El documento supera el límite de 5 MB.")
+                        received = 0
+                        async with aiofiles.open(local_path, "wb") as output:
+                            while chunk := await body.read(64 * 1024):
+                                received += len(chunk)
+                                if received > max_size:
+                                    raise ValueError("El documento supera el tamaño permitido.")
+                                await output.write(chunk)
             return True
         except ClientError:
             return False
@@ -182,11 +238,13 @@ class S3FileSystem(BaseFileSystem):
         """Copy a file within S3 (server-side copy)."""
         try:
             async with self.session.client("s3", **self._client_kwargs()) as s3_client:
-                await s3_client.copy_object(
-                    Bucket=self.bucket_name,
-                    Key=destination_path,
-                    CopySource={"Bucket": self.bucket_name, "Key": source_path},
-                )
+                source = await s3_client.head_object(Bucket=self.bucket_name, Key=self._key(source_path))
+                async with self._write_budget(s3_client, destination_path, source["ContentLength"]):
+                    await s3_client.copy_object(
+                        Bucket=self.bucket_name,
+                        Key=self._key(destination_path),
+                        CopySource={"Bucket": self.bucket_name, "Key": self._key(source_path)},
+                    )
             return True
         except ClientError:
             return False

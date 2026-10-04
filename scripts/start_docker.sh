@@ -26,9 +26,6 @@ generate_secret() {
     fail "Could not generate a secret. Install python3 or openssl, or set secrets manually in .env."
 }
 
-generate_minio_root_user() {
-    printf 'dograh%s\n' "$(generate_secret | cut -c1-12)"
-}
 
 dotenv_value() {
     local key=$1
@@ -170,39 +167,24 @@ else
     echo "REDIS_PASSWORD is already set in $ENV_FILE."
 fi
 
-existing_minio_root_user="$(dotenv_value MINIO_ROOT_USER || true)"
-if [[ -z "$existing_minio_root_user" ]]; then
-    existing_minio_access_key="$(dotenv_value MINIO_ACCESS_KEY || true)"
-    if [[ -n "$existing_minio_access_key" ]]; then
-        set_dotenv_value MINIO_ROOT_USER "$existing_minio_access_key"
-        echo "Created MINIO_ROOT_USER in $ENV_FILE from existing MINIO_ACCESS_KEY."
-    else
-        set_dotenv_value MINIO_ROOT_USER "$(generate_minio_root_user)"
-        echo "Created MINIO_ROOT_USER in $ENV_FILE."
-    fi
+s3_bucket="$(dotenv_value S3_BUCKET || true)"
+[[ -n "$s3_bucket" ]] || s3_bucket="${S3_BUCKET:-}"
+[[ -n "$s3_bucket" ]] || fail "Set S3_BUCKET and AWS credentials (or an IAM role) in .env before starting. See deploy/abera/IMAGE_OPTIMIZATION.md."
+set_dotenv_value S3_BUCKET "$s3_bucket"
+set_dotenv_value S3_REGION "${S3_REGION:-$(dotenv_value S3_REGION || true)}"
+[[ -n "$(dotenv_value S3_REGION || true)" ]] || set_dotenv_value S3_REGION us-east-2
+compose_args=()
+if [[ "$(dotenv_value ENABLE_CLOUDFLARE_TUNNEL || true)" == "true" ]]; then
+ compose_args+=(--profile tunnel)
 else
-    echo "MINIO_ROOT_USER is already set in $ENV_FILE."
-fi
-
-existing_minio_root_password="$(dotenv_value MINIO_ROOT_PASSWORD || true)"
-if [[ -z "$existing_minio_root_password" ]]; then
-    existing_minio_secret_key="$(dotenv_value MINIO_SECRET_KEY || true)"
-    if [[ -n "$existing_minio_secret_key" ]]; then
-        set_dotenv_value MINIO_ROOT_PASSWORD "$existing_minio_secret_key"
-        echo "Created MINIO_ROOT_PASSWORD in $ENV_FILE from existing MINIO_SECRET_KEY."
-    else
-        set_dotenv_value MINIO_ROOT_PASSWORD "$(generate_secret)"
-        echo "Created MINIO_ROOT_PASSWORD in $ENV_FILE."
-    fi
-else
-    echo "MINIO_ROOT_PASSWORD is already set in $ENV_FILE."
+ [[ -n "$(dotenv_value BACKEND_API_ENDPOINT || true)" ]] || set_dotenv_value BACKEND_API_ENDPOINT http://localhost:8000
 fi
 
 echo ""
 echo "Docker registry: $REGISTRY"
 echo ""
 echo "This will run:"
-echo "  REGISTRY=$REGISTRY ENABLE_TELEMETRY=$ENABLE_TELEMETRY docker compose --profile tunnel up --pull always"
+echo "  REGISTRY=$REGISTRY ENABLE_TELEMETRY=$ENABLE_TELEMETRY docker compose ${compose_args[*]} up --pull always"
 echo ""
 
 if [[ ! -t 0 ]]; then
@@ -221,4 +203,4 @@ esac
 postgres_password="$(dotenv_value POSTGRES_PASSWORD || true)"
 sync_postgres_password "$postgres_password"
 
-REGISTRY="$REGISTRY" ENABLE_TELEMETRY="$ENABLE_TELEMETRY" docker compose --profile tunnel up --pull always
+REGISTRY="$REGISTRY" ENABLE_TELEMETRY="$ENABLE_TELEMETRY" docker compose "${compose_args[@]}" up --pull always

@@ -1,3 +1,5 @@
+"use client";
+
 import { Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -8,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useOrgConfig } from "@/context/OrgConfigContext";
+import { useCopy } from "@/i18n/LocaleProvider";
 import {
     AmbientNoiseConfiguration,
     DEFAULT_TURN_START_MIN_WORDS,
@@ -18,6 +21,7 @@ import {
     TurnStopStrategy,
     WorkflowConfigurations,
 } from "@/types/workflow-configurations";
+
 
 interface ConfigurationsDialogProps {
     open: boolean;
@@ -34,6 +38,7 @@ export const ConfigurationsDialog = ({
     workflowName,
     onSave
 }: ConfigurationsDialogProps) => {
+    const copy = useCopy();
     const { externalPbxIntegrationsEnabled } = useOrgConfig();
     const resolvedWorkflowConfigurations = resolveWorkflowConfigurations(workflowConfigurations);
     const [name, setName] = useState<string>(workflowName);
@@ -124,28 +129,24 @@ export const ConfigurationsDialog = ({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>Configurations</DialogTitle>
+                    <DialogTitle>{copy("Configurations")}</DialogTitle>
                 </DialogHeader>
 
                 <div className="space-y-6">
                     {/* Workflow Name Section */}
                     <div className="space-y-4">
                         <div>
-                            <h3 className="text-sm font-semibold mb-1">Agent Name</h3>
-                            <p className="text-xs text-muted-foreground">
-                                The name of your agent
-                            </p>
+                            <h3 className="text-sm font-semibold mb-1">{copy("Agent Name")}</h3>
+                            <p className="text-xs text-muted-foreground">{copy("The name of your agent")}</p>
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="workflow_name" className="text-xs">
-                                Name
-                            </Label>
+                            <Label htmlFor="workflow_name" className="text-xs">{copy("Name")}</Label>
                             <Input
                                 id="workflow_name"
                                 type="text"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                placeholder="Enter Agent name"
+                                placeholder={copy("Enter Agent name")}
                             />
                         </div>
                     </div>
@@ -153,17 +154,13 @@ export const ConfigurationsDialog = ({
                     {/* Ambient Noise Section */}
                     <div className="space-y-4">
                         <div>
-                            <h3 className="text-sm font-semibold mb-1">Ambient Noise</h3>
-                            <p className="text-xs text-muted-foreground">
-                                Add background office ambient noise to make the conversation sound more natural.
-                            </p>
+                            <h3 className="text-sm font-semibold mb-1">{copy("Ambient Noise")}</h3>
+                            <p className="text-xs text-muted-foreground">{copy("Add background office ambient noise to make the conversation sound more natural.")}</p>
                         </div>
 
                         <div className="space-y-4">
                             <div className="flex items-center justify-between">
-                                <Label htmlFor="ambient-noise-enabled" className="text-sm">
-                                    Use Ambient Noise
-                                </Label>
+                                <Label htmlFor="ambient-noise-enabled" className="text-sm">{copy("Use Ambient Noise")}</Label>
                                 <Switch
                                     id="ambient-noise-enabled"
                                     checked={ambientNoiseConfig.enabled}
@@ -175,9 +172,7 @@ export const ConfigurationsDialog = ({
 
                             {ambientNoiseConfig.enabled && (
                                 <div className="space-y-2">
-                                    <Label htmlFor="ambient-volume" className="text-xs">
-                                        Volume
-                                    </Label>
+                                    <Label htmlFor="ambient-volume" className="text-xs">{copy("Volume")}</Label>
                                     <Input
                                         id="ambient-volume"
                                         type="number"
@@ -200,44 +195,34 @@ export const ConfigurationsDialog = ({
                     {/* Turn Detection Section */}
                     <div className="space-y-4">
                         <div>
-                            <h3 className="text-sm font-semibold mb-1">Turn Detection</h3>
-                            <p className="text-xs text-muted-foreground">
-                                Configure how the agent detects when the user has finished speaking.
-                            </p>
+                            <h3 className="text-sm font-semibold mb-1">{copy("Turn Detection")}</h3>
+                            <p className="text-xs text-muted-foreground">{copy("Configure how the agent detects when the user has finished speaking.")}</p>
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="turn_stop_strategy" className="text-xs">
-                                Detection Strategy
-                            </Label>
+                            <Label htmlFor="turn_stop_strategy" className="text-xs">{copy("Detection Strategy")}</Label>
                             <Select
                                 value={turnStopStrategy}
                                 onValueChange={(value: TurnStopStrategy) => setTurnStopStrategy(value)}
                             >
                                 <SelectTrigger id="turn_stop_strategy">
-                                    <SelectValue placeholder="Select strategy" />
+                                    <SelectValue placeholder={copy("Select strategy")} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="transcription">
-                                        Transcription-based
-                                    </SelectItem>
-                                    <SelectItem value="turn_analyzer">
-                                        Smart Turn Analyzer
-                                    </SelectItem>
+                                    <SelectItem value="transcription">{copy("Transcription-based")}</SelectItem>
+                                    <SelectItem value="turn_analyzer">{copy("Smart Turn Analyzer")}</SelectItem>
                                 </SelectContent>
                             </Select>
                             <p className="text-xs text-muted-foreground">
                                 {turnStopStrategy === 'transcription'
-                                    ? "Best for short responses (1-2 word statements). Ends turn when transcription indicates completion."
-                                    : "Best for longer responses with natural pauses. Uses ML model to detect end of turn."}
+                                    ? copy("Best for short responses (1-2 word statements). Ends turn when transcription indicates completion.")
+                                    : copy("Best for longer responses with natural pauses. Uses ML model to detect end of turn.")}
                             </p>
                         </div>
 
                         {turnStopStrategy === 'turn_analyzer' && (
                             <div className="space-y-2">
-                                <Label htmlFor="smart_turn_stop_secs" className="text-xs">
-                                    Incomplete Turn Timeout (seconds)
-                                </Label>
+                                <Label htmlFor="smart_turn_stop_secs" className="text-xs">{copy("Incomplete Turn Timeout (seconds)")}</Label>
                                 <Input
                                     id="smart_turn_stop_secs"
                                     type="number"
@@ -252,9 +237,7 @@ export const ConfigurationsDialog = ({
                                         }
                                     }}
                                 />
-                                <p className="text-xs text-muted-foreground">
-                                    Max silence duration before ending an incomplete turn. Default: 2 seconds
-                                </p>
+                                <p className="text-xs text-muted-foreground">{copy("Max silence duration before ending an incomplete turn. Default: 2 seconds")}</p>
                             </div>
                         )}
                     </div>
@@ -262,27 +245,23 @@ export const ConfigurationsDialog = ({
                     {/* Interruption Section */}
                     <div className="space-y-4">
                         <div>
-                            <h3 className="text-sm font-semibold mb-1">Interruption</h3>
-                            <p className="text-xs text-muted-foreground">
-                                Configure when user speech should interrupt the agent while it is speaking.
-                            </p>
+                            <h3 className="text-sm font-semibold mb-1">{copy("Interruption")}</h3>
+                            <p className="text-xs text-muted-foreground">{copy("Configure when user speech should interrupt the agent while it is speaking.")}</p>
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="turn_start_strategy" className="text-xs">
-                                Interruption Strategy
-                            </Label>
+                            <Label htmlFor="turn_start_strategy" className="text-xs">{copy("Interruption Strategy")}</Label>
                             <Select
                                 value={turnStartStrategy}
                                 onValueChange={(value: TurnStartStrategy) => setTurnStartStrategy(value)}
                             >
                                 <SelectTrigger id="turn_start_strategy">
-                                    <SelectValue placeholder="Select strategy" />
+                                    <SelectValue placeholder={copy("Select strategy")} />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {TURN_START_STRATEGY_OPTIONS.map((option) => (
                                         <SelectItem key={option.value} value={option.value}>
-                                            {option.label}
+                                            {copy(option.label)}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -294,9 +273,7 @@ export const ConfigurationsDialog = ({
 
                         {turnStartStrategy === 'min_words' && (
                             <div className="space-y-2">
-                                <Label htmlFor="turn_start_min_words" className="text-xs">
-                                    Minimum Words Before Interruption
-                                </Label>
+                                <Label htmlFor="turn_start_min_words" className="text-xs">{copy("Minimum Words Before Interruption")}</Label>
                                 <Input
                                     id="turn_start_min_words"
                                     type="number"
@@ -311,8 +288,7 @@ export const ConfigurationsDialog = ({
                                         }
                                     }}
                                 />
-                                <p className="text-xs text-muted-foreground">
-                                    Number of transcribed words needed to interrupt while the bot is speaking. Default: {DEFAULT_TURN_START_MIN_WORDS}
+                                <p className="text-xs text-muted-foreground">{copy("Number of transcribed words needed to interrupt while the bot is speaking. Default: ")}{DEFAULT_TURN_START_MIN_WORDS}
                                 </p>
                             </div>
                         )}
@@ -321,16 +297,12 @@ export const ConfigurationsDialog = ({
                     {/* Context Management Section */}
                     <div className="space-y-4">
                         <div>
-                            <h3 className="text-sm font-semibold mb-1">Context Compaction</h3>
-                            <p className="text-xs text-muted-foreground">
-                                Automatically summarize conversation context when transitioning between nodes. Removes stale tool calls and keeps the context clean for the new node.
-                            </p>
+                            <h3 className="text-sm font-semibold mb-1">{copy("Context Compaction")}</h3>
+                            <p className="text-xs text-muted-foreground">{copy("Automatically summarize conversation context when transitioning between nodes. Removes stale tool calls and keeps the context clean for the new node.")}</p>
                         </div>
 
                         <div className="flex items-center justify-between">
-                            <Label htmlFor="context-compaction-enabled" className="text-sm">
-                                Enable Context Compaction
-                            </Label>
+                            <Label htmlFor="context-compaction-enabled" className="text-sm">{copy("Enable Context Compaction")}</Label>
                             <Switch
                                 id="context-compaction-enabled"
                                 checked={contextCompactionEnabled}
@@ -341,16 +313,11 @@ export const ConfigurationsDialog = ({
 
                     <div className="space-y-4">
                         <div>
-                            <h3 className="text-sm font-semibold mb-1">Speech Caching</h3>
-                            <p className="text-xs text-muted-foreground">
-                                Reuse generated audio for repeated phrases to reduce response time and speech generation costs.
-                                Cached audio expires after 24 hours. Currently available with MiniMax TTS.
-                            </p>
+                            <h3 className="text-sm font-semibold mb-1">{copy("Speech Caching")}</h3>
+                            <p className="text-xs text-muted-foreground">{copy("Reuse generated audio for repeated phrases to reduce response time and speech generation costs. Cached audio expires after 24 hours. Currently available with MiniMax TTS.")}</p>
                         </div>
                         <div className="flex items-center justify-between">
-                            <Label htmlFor="tts-cache-enabled" className="text-sm">
-                                Enable Speech Caching
-                            </Label>
+                            <Label htmlFor="tts-cache-enabled" className="text-sm">{copy("Enable Speech Caching")}</Label>
                             <Switch
                                 id="tts-cache-enabled"
                                 checked={ttsCacheEnabled}
@@ -362,17 +329,13 @@ export const ConfigurationsDialog = ({
                     {/* Call Management Section */}
                     <div className="space-y-4">
                         <div>
-                            <h3 className="text-sm font-semibold mb-1">Call Management</h3>
-                            <p className="text-xs text-muted-foreground">
-                                Configure call duration limits and idle timeout settings.
-                            </p>
+                            <h3 className="text-sm font-semibold mb-1">{copy("Call Management")}</h3>
+                            <p className="text-xs text-muted-foreground">{copy("Configure call duration limits and idle timeout settings.")}</p>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="max_call_duration" className="text-xs">
-                                    Max Call Duration (seconds)
-                                </Label>
+                                <Label htmlFor="max_call_duration" className="text-xs">{copy("Max Call Duration (seconds)")}</Label>
                                 <Input
                                     id="max_call_duration"
                                     type="number"
@@ -386,13 +349,11 @@ export const ConfigurationsDialog = ({
                                         }
                                     }}
                                 />
-                                <p className="text-xs text-muted-foreground">Default: 600 (10 minutes)</p>
+                                <p className="text-xs text-muted-foreground">{copy("Default: 600 (10 minutes)")}</p>
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="max_user_idle_timeout" className="text-xs">
-                                    Max User Idle Timeout (seconds)
-                                </Label>
+                                <Label htmlFor="max_user_idle_timeout" className="text-xs">{copy("Max User Idle Timeout (seconds)")}</Label>
                                 <Input
                                     id="max_user_idle_timeout"
                                     type="number"
@@ -406,7 +367,7 @@ export const ConfigurationsDialog = ({
                                         }
                                     }}
                                 />
-                                <p className="text-xs text-muted-foreground">Default: 10 seconds</p>
+                                <p className="text-xs text-muted-foreground">{copy("Default: 10 seconds")}</p>
                             </div>
                         </div>
                     </div>
@@ -414,13 +375,11 @@ export const ConfigurationsDialog = ({
                     {externalPbxIntegrationsEnabled && (
                         <div className="space-y-4 border-t pt-4">
                             <div>
-                                <h3 className="text-sm font-semibold mb-1">External PBX Field Updates</h3>
-                                <p className="text-xs text-muted-foreground">
-                                    Optionally copy final gathered-context values into provider-native fields before transfer or hangup.
-                                </p>
+                                <h3 className="text-sm font-semibold mb-1">{copy("External PBX Field Updates")}</h3>
+                                <p className="text-xs text-muted-foreground">{copy("Optionally copy final gathered-context values into provider-native fields before transfer or hangup.")}</p>
                             </div>
                             <div className="flex items-center justify-between">
-                                <Label className="text-sm">Field Mappings</Label>
+                                <Label className="text-sm">{copy("Field Mappings")}</Label>
                                 <Button
                                     type="button"
                                     variant="outline"
@@ -430,14 +389,13 @@ export const ConfigurationsDialog = ({
                                         { context_path: "", destination_field: "" },
                                     ])}
                                 >
-                                    <Plus className="mr-1 h-4 w-4" /> Add mapping
-                                </Button>
+                                    <Plus className="mr-1 h-4 w-4" />{copy(" Add mapping")}</Button>
                             </div>
                             <div className="space-y-2">
                                 {externalPbxFieldMappings.map((mapping, index) => (
                                     <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2">
                                         <Input
-                                            aria-label={`Gathered context field ${index + 1}`}
+                                            aria-label={copy("Gathered context field {value0}", {value0: index + 1})}
                                             value={mapping.context_path}
                                             onChange={(event) => setExternalPbxFieldMappings((current) =>
                                                 current.map((item, itemIndex) =>
@@ -446,10 +404,10 @@ export const ConfigurationsDialog = ({
                                                         : item
                                                 )
                                             )}
-                                            placeholder="qualified"
+                                            placeholder={copy("qualified")}
                                         />
                                         <Input
-                                            aria-label={`External PBX destination field ${index + 1}`}
+                                            aria-label={copy("External PBX destination field {value0}", {value0: index + 1})}
                                             value={mapping.destination_field}
                                             onChange={(event) => setExternalPbxFieldMappings((current) =>
                                                 current.map((item, itemIndex) =>
@@ -458,13 +416,13 @@ export const ConfigurationsDialog = ({
                                                         : item
                                                 )
                                             )}
-                                            placeholder="address3"
+                                            placeholder={copy("address3")}
                                         />
                                         <Button
                                             type="button"
                                             variant="ghost"
                                             size="icon"
-                                            aria-label={`Remove external PBX field mapping ${index + 1}`}
+                                            aria-label={copy("Remove external PBX field mapping {value0}", {value0: index + 1})}
                                             onClick={() => setExternalPbxFieldMappings((current) =>
                                                 current.filter((_, itemIndex) => itemIndex !== index)
                                             )}
@@ -474,14 +432,10 @@ export const ConfigurationsDialog = ({
                                     </div>
                                 ))}
                                 {externalPbxFieldMappings.length === 0 && (
-                                    <p className="text-xs text-muted-foreground">
-                                        No external fields will be updated. Context names may be direct extracted-variable names or paths such as extracted_variables.qualified.
-                                    </p>
+                                    <p className="text-xs text-muted-foreground">{copy("No external fields will be updated. Context names may be direct extracted-variable names or paths such as extracted_variables.qualified.")}</p>
                                 )}
                                 {!externalPbxFieldMappingsValid && (
-                                    <p className="text-xs text-destructive">
-                                        Each mapping needs a context field and a destination field containing only letters, numbers, and underscores.
-                                    </p>
+                                    <p className="text-xs text-destructive">{copy("Each mapping needs a context field and a destination field containing only letters, numbers, and underscores.")}</p>
                                 )}
                             </div>
                         </div>
@@ -489,14 +443,12 @@ export const ConfigurationsDialog = ({
                 </div>
 
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>
-                        Cancel
-                    </Button>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>{copy("Cancel")}</Button>
                     <Button
                         onClick={handleSave}
                         disabled={isSaving || (externalPbxIntegrationsEnabled && !externalPbxFieldMappingsValid)}
                     >
-                        {isSaving ? "Saving..." : "Save"}
+                        {isSaving ? copy("Saving...") : copy("Save")}
                     </Button>
                 </DialogFooter>
             </DialogContent>

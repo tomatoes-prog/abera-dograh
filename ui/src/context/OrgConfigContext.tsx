@@ -5,10 +5,12 @@ import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, u
 import { client } from '@/client/client.gen';
 import { getCurrentOrganizationContextApiV1OrganizationsContextGet, getPreferencesApiV1OrganizationsPreferencesGet, getUserConfigurationsApiV1UserConfigurationsUserGet } from '@/client/sdk.gen';
 import type { OrganizationContextResponse, OrganizationPreferencesResponse, UserConfigurationRequestResponseSchema } from '@/client/types.gen';
+import { useCopy } from "@/i18n/LocaleProvider";
 import { setupAuthInterceptor } from '@/lib/apiClient';
 import { detailFromError } from '@/lib/apiError';
 import type { AuthUser } from '@/lib/auth';
 import { useAuth } from '@/lib/auth';
+
 
 interface TeamPermission {
     id: string;
@@ -50,6 +52,7 @@ const pricingFromUserConfig = (
 };
 
 export function OrgConfigProvider({ children }: { children: ReactNode }) {
+    const copy = useCopy();
     const [orgContext, setOrgContext] = useState<OrganizationContextResponse | null>(null);
     const [userConfig, setUserConfig] = useState<UserConfigurationRequestResponseSchema | null>(null);
     const [loading, setLoading] = useState(true);
@@ -113,7 +116,7 @@ export function OrgConfigProvider({ children }: { children: ReactNode }) {
             ]);
 
             if (preferencesResponse.error) {
-                throw new Error(detailFromError(preferencesResponse.error, 'Failed to load organization preferences'));
+                throw new Error(copy(detailFromError(preferencesResponse.error, 'Failed to load organization preferences')));
             }
 
             if (orgContextResponse.data) {
@@ -135,7 +138,7 @@ export function OrgConfigProvider({ children }: { children: ReactNode }) {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [copy]);
 
     useEffect(() => {
         if (auth.loading || !auth.isAuthenticated || hasFetchedConfig.current) {

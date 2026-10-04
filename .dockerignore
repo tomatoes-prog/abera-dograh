@@ -17,5 +17,12 @@ api/.env
 .venv
 evals/
 api/mcp_server/ts_validator/node_modules/
-sdk/
 venv
+
+.worktrees/
+.capacity-run/
+.capacity-venv/
+pipecat/.git
+
+*.log
+.local-services/

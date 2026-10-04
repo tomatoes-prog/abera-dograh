@@ -23,7 +23,9 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { useAuth } from "@/lib/auth";
+
 
 interface CreateCredentialDialogProps {
     open: boolean;
@@ -69,6 +71,7 @@ export function CreateCredentialDialog({
     onOpenChange,
     onCreated,
 }: CreateCredentialDialogProps) {
+    const copy = useCopy();
     const { getAccessToken } = useAuth();
 
     const [name, setName] = useState("");
@@ -98,7 +101,7 @@ export function CreateCredentialDialog({
 
             if (response.error) {
                 const errorDetail = (response.error as { detail?: string })?.detail
-                    || "Failed to create credential";
+                    || copy("Failed to create credential");
                 setError(errorDetail);
                 return;
             }
@@ -110,7 +113,7 @@ export function CreateCredentialDialog({
         } catch (err) {
             console.error("Failed to create credential:", err);
             setError(
-                err instanceof Error ? err.message : "An unexpected error occurred"
+                err instanceof Error ? err.message : copy("An unexpected error occurred")
             );
         } finally {
             setIsCreating(false);
@@ -140,10 +143,8 @@ export function CreateCredentialDialog({
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>Add Credential</DialogTitle>
-                    <DialogDescription>
-                        Create a new credential for authentication.
-                    </DialogDescription>
+                    <DialogTitle>{copy("Add Credential")}</DialogTitle>
+                    <DialogDescription>{copy("Create a new credential for authentication.")}</DialogDescription>
                 </DialogHeader>
 
                 {error && (
@@ -155,27 +156,27 @@ export function CreateCredentialDialog({
 
                 <div className="space-y-4 py-4">
                     <div className="grid gap-2">
-                        <Label htmlFor="cred-name">Name *</Label>
+                        <Label htmlFor="cred-name">{copy("Name *")}</Label>
                         <Input
                             id="cred-name"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            placeholder="My API Key"
+                            placeholder={copy("My API Key")}
                         />
                     </div>
 
                     <div className="grid gap-2">
-                        <Label htmlFor="cred-description">Description</Label>
+                        <Label htmlFor="cred-description">{copy("Description")}</Label>
                         <Input
                             id="cred-description"
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
-                            placeholder="Optional description"
+                            placeholder={copy("Optional description")}
                         />
                     </div>
 
                     <div className="grid gap-2">
-                        <Label>Credential Type</Label>
+                        <Label>{copy("Credential Type")}</Label>
                         <Select
                             value={credentialType}
                             onValueChange={(v) => {
@@ -187,17 +188,17 @@ export function CreateCredentialDialog({
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="bearer_token">Bearer Token</SelectItem>
-                                <SelectItem value="api_key">API Key</SelectItem>
-                                <SelectItem value="basic_auth">Basic Auth</SelectItem>
-                                <SelectItem value="custom_header">Custom Header</SelectItem>
+                                <SelectItem value="bearer_token">{copy("Bearer Token")}</SelectItem>
+                                <SelectItem value="api_key">{copy("API Key")}</SelectItem>
+                                <SelectItem value="basic_auth">{copy("Basic Auth")}</SelectItem>
+                                <SelectItem value="custom_header">{copy("Custom Header")}</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
 
                     {fields.map((field) => (
                         <div key={field.key} className="grid gap-2">
-                            <Label htmlFor={`cred-${field.key}`}>{field.label}</Label>
+                            <Label htmlFor={`cred-${field.key}`}>{copy(field.label)}</Label>
                             <Input
                                 id={`cred-${field.key}`}
                                 type={field.isSecret ? "password" : "text"}
@@ -219,20 +220,16 @@ export function CreateCredentialDialog({
                         variant="outline"
                         onClick={handleClose}
                         disabled={isCreating}
-                    >
-                        Cancel
-                    </Button>
+                    >{copy("Cancel")}</Button>
                     <Button
                         onClick={handleCreate}
                         disabled={!name.trim() || isCreating}
                     >
                         {isCreating ? (
                             <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                Creating...
-                            </>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />{copy("Creating...")}</>
                         ) : (
-                            "Create"
+                            copy("Create")
                         )}
                     </Button>
                 </DialogFooter>

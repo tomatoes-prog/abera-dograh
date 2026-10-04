@@ -16,8 +16,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useUserConfig } from "@/context/UserConfigContext";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { detailFromError } from "@/lib/apiError";
 import { useAuth } from "@/lib/auth";
+
 
 const emptyPreferences: OrganizationPreferences = {
   test_phone_number: "",
@@ -108,6 +110,7 @@ function getTimezoneValue(tz: ITimezoneOption | string): string {
 }
 
 export function OrganizationPreferencesSection() {
+    const copy = useCopy();
   const { user, loading: authLoading } = useAuth();
   const { refreshConfig } = useUserConfig();
   const timezoneSelectId = useId();
@@ -138,10 +141,7 @@ export function OrganizationPreferencesSection() {
 
       if (result.error) {
         toast.error(
-          detailFromError(
-            result.error,
-            "Failed to load organization preferences",
-          ),
+          copy(detailFromError(result.error, "Failed to load organization preferences")),
         );
         return;
       }
@@ -152,7 +152,7 @@ export function OrganizationPreferencesSection() {
         nextPreferences.timezone || emptyPreferences.timezone || "UTC",
       );
     } catch {
-      toast.error("Failed to load organization preferences");
+      toast.error(copy("Failed to load organization preferences"));
     } finally {
       setLoading(false);
     }
@@ -183,11 +183,11 @@ export function OrganizationPreferencesSection() {
         );
 
       if (result.error) {
-        toast.error(detailFromError(result.error, "Failed to save preferences"));
+        toast.error(copy(detailFromError(result.error, "Failed to save preferences")));
         return false;
       }
       if (!result.data) {
-        toast.error("Failed to save preferences");
+        toast.error(copy("Failed to save preferences"));
         return false;
       }
 
@@ -197,7 +197,7 @@ export function OrganizationPreferencesSection() {
       toast.success(successMessage);
       return true;
     } catch {
-      toast.error("Failed to save preferences");
+      toast.error(copy("Failed to save preferences"));
       return false;
     } finally {
       setSaving(false);
@@ -219,19 +219,17 @@ export function OrganizationPreferencesSection() {
   }
 
   if (loading) {
-    return <p className="text-sm text-muted-foreground">Loading...</p>;
+    return <p className="text-sm text-muted-foreground">{copy("Loading...")}</p>;
   }
 
   const mappingCount = Object.keys(preferences.disposition_mapping ?? {}).length;
 
   return (
     <form onSubmit={handleSave} className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        Set organization-wide defaults used by testing and scheduling flows.
-      </p>
+      <p className="text-sm text-muted-foreground">{copy("Set organization-wide defaults used by testing and scheduling flows.")}</p>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="settings-test-phone-number">Test Phone Number</Label>
+          <Label htmlFor="settings-test-phone-number">{copy("Test Phone Number")}</Label>
           <Input
             id="settings-test-phone-number"
             value={preferences.test_phone_number || ""}
@@ -245,7 +243,7 @@ export function OrganizationPreferencesSection() {
           />
         </div>
         <div className="space-y-2">
-          <Label>Timezone</Label>
+          <Label>{copy("Timezone")}</Label>
           <TimezoneSelect
             instanceId={timezoneSelectId}
             value={timezone}
@@ -256,14 +254,8 @@ export function OrganizationPreferencesSection() {
       </div>
       <div className="flex items-start justify-between gap-4 rounded-lg border p-4">
         <div className="space-y-1">
-          <Label htmlFor="settings-external-pbx-integrations">
-            External PBX integrations
-          </Label>
-          <p className="text-xs text-muted-foreground">
-            Show and enable advanced external-PBX configuration for Asterisk,
-            transfer tools, and workflows. Existing configuration is preserved
-            when this is disabled.
-          </p>
+          <Label htmlFor="settings-external-pbx-integrations">{copy("External PBX integrations")}</Label>
+          <p className="text-xs text-muted-foreground">{copy("Show and enable advanced external-PBX configuration for Asterisk, transfer tools, and workflows. Existing configuration is preserved when this is disabled.")}</p>
         </div>
         <Switch
           id="settings-external-pbx-integrations"
@@ -279,15 +271,8 @@ export function OrganizationPreferencesSection() {
       <div className="space-y-3 rounded-lg border p-4">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
-            <Label htmlFor="settings-disposition-mapping">
-              Disposition mapping
-            </Label>
-            <p className="text-xs text-muted-foreground">
-              Report call outcomes using your own disposition codes instead of
-              Dograh&apos;s. Applies to webhooks, run filters, reports, and
-              external PBX write-backs. Configuration is preserved when this is
-              disabled.
-            </p>
+            <Label htmlFor="settings-disposition-mapping">{copy("Disposition mapping")}</Label>
+            <p className="text-xs text-muted-foreground">{copy("Report call outcomes using your own disposition codes instead of Dograh's. Applies to webhooks, run filters, reports, and external PBX write-backs. Configuration is preserved when this is disabled.")}</p>
           </div>
           <Switch
             id="settings-disposition-mapping"
@@ -308,13 +293,11 @@ export function OrganizationPreferencesSection() {
               size="sm"
               onClick={() => setMappingDialogOpen(true)}
             >
-              <SlidersHorizontal className="mr-2 h-3.5 w-3.5" />
-              Configure mapping
-            </Button>
+              <SlidersHorizontal className="mr-2 h-3.5 w-3.5" />{copy("Configure mapping")}</Button>
             <span className="text-xs text-muted-foreground">
               {mappingCount === 0
-                ? "No overrides yet"
-                : `${mappingCount} disposition${mappingCount === 1 ? "" : "s"} mapped`}
+                ? copy("No overrides yet")
+                : copy("{value0} disposition{value1} mapped", {value0: mappingCount, value1: mappingCount === 1 ? "" : "s"})}
             </span>
           </div>
         )}
@@ -327,7 +310,7 @@ export function OrganizationPreferencesSection() {
       />
       <Button type="submit" disabled={saving}>
         <Save className="mr-2 h-4 w-4" />
-        {saving ? "Saving..." : "Save"}
+        {saving ? copy("Saving...") : copy("Save")}
       </Button>
     </form>
   );

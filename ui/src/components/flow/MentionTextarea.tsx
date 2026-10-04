@@ -1,3 +1,5 @@
+"use client";
+
 import {
     type ChangeEvent,
     type KeyboardEvent,
@@ -9,7 +11,9 @@ import {
 } from "react";
 
 import type { RecordingResponseSchema } from "@/client/types.gen";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { cn } from "@/lib/utils";
+
 
 export interface MentionItem {
     id: string;
@@ -33,6 +37,7 @@ export function MentionTextarea({
     className,
     recordings = [],
 }: MentionTextareaProps) {
+    const copy = useCopy();
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const [showDropdown, setShowDropdown] = useState(false);
@@ -206,9 +211,7 @@ export function MentionTextarea({
                 </div>
             )}
             {showDropdown && filtered.length === 0 && items.length === 0 && (
-                <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-md p-3 text-sm text-muted-foreground">
-                    No recordings found. Upload recordings via the Recordings panel.
-                </div>
+                <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-md p-3 text-sm text-muted-foreground">{copy("No recordings found. Upload recordings via the Recordings panel.")}</div>
             )}
         </div>
     );

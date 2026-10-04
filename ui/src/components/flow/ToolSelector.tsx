@@ -12,8 +12,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TOOLS_INTRODUCTION_DOC_URL } from "@/constants/documentation";
+import { useCopy } from "@/i18n/LocaleProvider";
 
 import { type McpDiscoveredTool, refreshMcpTools } from "./mcpRefresh";
+
 
 interface ToolSelectorProps {
     value: string[];
@@ -76,6 +78,7 @@ export function ToolSelector({
     mcpToolFilters = {},
     onMcpToolFiltersChange = () => {},
 }: ToolSelectorProps) {
+    const copy = useCopy();
     const workflow = useWorkflowOptional();
     const activeTools = tools.filter((t) => t.status === "active");
     const httpTools = activeTools.filter((t) => !isMcp(t));
@@ -144,9 +147,7 @@ export function ToolSelector({
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="underline"
-                            >
-                                Learn more
-                            </a>
+                            >{copy("Learn more")}</a>
                         </Label>
                     )}
                 </>
@@ -154,33 +155,25 @@ export function ToolSelector({
 
             {activeTools.length === 0 ? (
                 <div className="p-4 border rounded-md text-center">
-                    <p className="text-sm text-muted-foreground mb-2">
-                        No tools available.
-                    </p>
+                    <p className="text-sm text-muted-foreground mb-2">{copy("No tools available.")}</p>
                     <Button variant="outline" size="sm" asChild>
                         <Link href="/tools" target="_blank">
-                            <ExternalLink className="h-4 w-4 mr-2" />
-                            Create a Tool
-                        </Link>
+                            <ExternalLink className="h-4 w-4 mr-2" />{copy("Create a Tool")}</Link>
                     </Button>
                 </div>
             ) : (
                 <Tabs defaultValue="http">
                     <TabsList>
-                        <TabsTrigger value="http">
-                            HTTP &amp; Tools ({httpTools.length})
+                        <TabsTrigger value="http">{copy("HTTP & Tools (")}{httpTools.length})
                         </TabsTrigger>
-                        <TabsTrigger value="mcp">
-                            MCP ({mcpTools.length})
+                        <TabsTrigger value="mcp">{copy("MCP (")}{mcpTools.length})
                         </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="http">
                         <div className="border rounded-md divide-y">
                             {httpTools.length === 0 && (
-                                <div className="p-3 text-sm text-muted-foreground">
-                                    No HTTP/native tools.
-                                </div>
+                                <div className="p-3 text-sm text-muted-foreground">{copy("No HTTP/native tools.")}</div>
                             )}
                             {httpTools.map((tool) => {
                                 const isSelected = value.includes(tool.tool_uuid);
@@ -225,9 +218,7 @@ export function ToolSelector({
                     <TabsContent value="mcp">
                         <div className="border rounded-md divide-y">
                             {mcpTools.length === 0 && (
-                                <div className="p-3 text-sm text-muted-foreground">
-                                    No MCP tools.
-                                </div>
+                                <div className="p-3 text-sm text-muted-foreground">{copy("No MCP tools.")}</div>
                             )}
                             {mcpTools.map((tool) => {
                                 const fns = discoveredOf(tool);
@@ -256,8 +247,7 @@ export function ToolSelector({
                                                 )}
                                             </div>
                                             <span className="text-xs text-muted-foreground shrink-0">
-                                                {selected.length}/{fns.length} tools
-                                            </span>
+                                                {selected.length}/{fns.length}{copy(" tools")}</span>
                                         </summary>
 
                                         <div className="mt-3 pl-9 grid gap-2">
@@ -271,17 +261,13 @@ export function ToolSelector({
                                                 >
                                                     <RefreshCw
                                                         className={`h-3 w-3 mr-2 ${busy ? "animate-spin" : ""}`}
-                                                    />
-                                                    Refresh tools
-                                                </Button>
+                                                    />{copy("Refresh tools")}</Button>
                                             </div>
                                             {err && (
                                                 <p className="text-xs text-destructive">{err}</p>
                                             )}
                                             {fns.length === 0 && !err && (
-                                                <p className="text-xs text-muted-foreground">
-                                                    No tools discovered - Refresh.
-                                                </p>
+                                                <p className="text-xs text-muted-foreground">{copy("No tools discovered - Refresh.")}</p>
                                             )}
                                             {fns.map((fn) => {
                                                 const checked = selected.includes(fn.name);
@@ -325,8 +311,7 @@ export function ToolSelector({
                                                             }
                                                         />
                                                         <span className="text-sm line-through">
-                                                            {n} (unavailable)
-                                                        </span>
+                                                            {n}{copy(" (unavailable)")}</span>
                                                     </label>
                                                 ))}
                                         </div>
@@ -342,17 +327,14 @@ export function ToolSelector({
                             target="_blank"
                             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
                         >
-                            <ExternalLink className="h-4 w-4" />
-                            Manage Tools
-                        </Link>
+                            <ExternalLink className="h-4 w-4" />{copy("Manage Tools")}</Link>
                     </div>
                 </Tabs>
             )}
 
             {selectedCount > 0 && (
                 <p className="text-xs text-muted-foreground">
-                    {selectedCount} tool{selectedCount !== 1 ? "s" : ""} selected
-                </p>
+                    {selectedCount}{copy(" tool")}{selectedCount !== 1 ? "s" : ""}{copy(" selected")}</p>
             )}
         </div>
     );

@@ -38,8 +38,7 @@ serviceAccount:
 #   internal  — bundled Redis manifest (see `redisinternal` below)
 #   external  — operator supplies REDIS_URL via secrets.redisUrl
 # storage.mode:
-#   internalMinio — bundled MinIO manifest (see `minio` below)
-#   externalMinio — operator supplies a MinIO-compatible endpoint + creds
+#   s3 — private AWS S3 bucket supplied by the operator
 #   s3            — sets ENABLE_AWS_S3=true; uses AWS S3
 # exposure.mode:
 #   gatewayApi — renders Gateway + HTTPRoute (gateway.networking.k8s.io/v1)
@@ -54,20 +53,12 @@ redis:
   # For external mode, secrets.redisUrl must be set.
 
 storage:
-  mode: internalMinio
-  # For externalMinio mode, set externalMinio.endpoint + secrets.minioAccessKey
-  # + secrets.minioSecretKey.
-  externalMinio:
-    endpoint: ""  # e.g. minio.example.com
-    publicEndpoint: ""  # browser-visible URL
-    secure: false
-    bucket: voice-audio
+  mode: s3
   # For s3 mode, set s3.region. AWS credentials are picked up from the pod's
   # IAM role (IRSA recommended) or from secrets.awsAccessKeyId + secrets.awsSecretAccessKey.
   s3:
     region: us-east-1
-    bucket: voice-audio
-    publicEndpoint: ""  # e.g. https://s3.amazonaws.com
+    bucket: ""  # required: an existing private bucket
 
 exposure:
   # Default is `ingress` because it works out-of-the-box on any cluster
@@ -92,7 +83,6 @@ exposure:
     className: ""  # e.g. "nginx", "alb"
     annotations: {}
     # Hostname for the API/UI. UI is served at / and API under /api/.
-    # MinIO browser-visible path uses the same hostname under /voice-audio/.
     host: ""  # e.g. dograh.example.com
     tls:
       enabled: false
@@ -106,12 +96,8 @@ config:
   environment: production
   logLevel: INFO
   backendApiEndpoint: ""  # public URL the browser uses to reach the API; auto-derived from exposure.host if empty in NOTES
-  minioBucket: voice-audio
-  minioEndpoint: ""  # internal cluster endpoint (auto-set when internalMinio)
-  minioPublicEndpoint: ""  # browser-visible endpoint (auto-set when ingress/gateway path exposes MinIO)
-  minioSecure: false
-  enableAwsS3: false
   enableTelemetry: false
+  enableDograhMps: false
   posthogHost: https://us.i.posthog.com
   posthogApiKey: ""
   sentryDsn: ""
@@ -119,10 +105,9 @@ config:
   turnHost: ""  # public hostname/IP of coturn (the LoadBalancer address)
   fastapiWorkers: 1  # informational only; web tier scales by pod, not in-pod workers
   enableSignup: true   # set false to 403 the /api/v1/auth/signup endpoint (invite-only lockdown)
-  # Reject media WebSocket connections whose capability token is missing or
-  # invalid (close 4401). No effect until secrets.telephonyWsTokenSecret is set —
-  # enabling this without a secret does nothing
-  telephonyWsTokenEnforce: false
+  # Media tokens are required; the signing secret defaults to a key derived
+  # from ossJwtSecret when telephonyWsTokenSecret is omitted.
+  telephonyWsTokenEnforce: true
 
 # -----------------------------------------------------------------------------
 # Secrets — rendered into a Kubernetes Secret unless secrets.existingSecret is
@@ -139,14 +124,12 @@ secrets:
   # Required when redis.mode=external.
   redisUrl: ""  # e.g. redis://:pass@host:6379
 
-  # MinIO / S3 credentials.
-  minioAccessKey: ""
-  minioSecretKey: ""
+  # S3 credentials; prefer the workload IAM role.
   awsAccessKeyId: ""  # only used when storage.mode=s3 and not using IRSA
   awsSecretAccessKey: ""
 
   # JWT signing key for the OSS auth path. MUST be overridden in production.
-  ossJwtSecret: "ChangeMeInProduction"
+  ossJwtSecret: ""  # required: at least 32 random characters
 
   # TURN REST API shared secret (matches coturn.staticAuthSecret below).
   turnSecret: ""
@@ -609,7 +592,6 @@ autoscaling:
 # not subcharts. Each renders only in its internal mode:
 #   postgresql   -> database.mode == internal
 #   redisinternal-> redis.mode == internal
-#   minio        -> storage.mode == internalMinio
 # For production, use the external/managed modes instead (see database/redis/
 # storage above).
 # -----------------------------------------------------------------------------
@@ -648,21 +630,3 @@ redisinternal:
   resources:
     requests: { cpu: 50m, memory: 64Mi }
     limits: { cpu: 500m, memory: 256Mi }
-
-minio:
-  # Official upstream MinIO. Root creds are shared with the app (single source of
-  # truth) so they can't drift; the app creates its bucket on first use.
-  image:
-    registry: quay.io
-    repository: minio/minio
-    tag: RELEASE.2025-04-22T22-12-26Z
-    pullPolicy: IfNotPresent
-  auth:
-    rootUser: minioadmin
-    rootPassword: ""     # auto-generated and persisted across upgrades if empty
-  persistence:
-    size: 20Gi
-    storageClass: ""
-  resources:
-    requests: { cpu: 100m, memory: 256Mi }
-    limits: { cpu: "1", memory: 1Gi }

@@ -16,6 +16,7 @@ from api.db.models import UserModel
 from api.services.auth.depends import get_user, get_user_with_selected_organization
 from api.services.call_concurrency import call_concurrency
 from api.services.mps_service_key_client import mps_service_key_client
+from api.services.model_services.policy import require_mps_enabled
 from api.services.reports import generate_usage_runs_report_csv
 from api.utils.artifacts import artifact_url
 from api.utils.recording_artifacts import has_recording_track
@@ -245,6 +246,7 @@ async def get_billing_credits(
     ] = "UTC",
 ):
     """Return per-key MPS credits (OSS) or the org's paginated billing ledger."""
+    require_mps_enabled()
     try:
         if DEPLOYMENT_MODE == "oss":
             return await _oss_mps_credits_response(user)
@@ -391,6 +393,7 @@ async def create_mps_credit_purchase_url(
     user: UserModel = Depends(get_user_with_selected_organization),
 ):
     """Create a checkout URL for purchasing organization credits."""
+    require_mps_enabled()
     if DEPLOYMENT_MODE == "oss":
         raise HTTPException(
             status_code=404,

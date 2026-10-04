@@ -5,21 +5,22 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 
 from api.errors.mps import MPS_UNAVAILABLE_PUBLIC_MESSAGE, MPSUnavailableError
+from fastapi import HTTPException
 from api.routes import user as user_routes
 
 
 @pytest.mark.asyncio
-async def test_voice_catalog_does_not_duplicate_mps_failure(monkeypatch):
+async def test_voice_catalog_preserves_direct_provider_limit_error(monkeypatch):
     route_log_failure = Mock()
-    get_voices = AsyncMock(side_effect=MPSUnavailableError("get_voices"))
+    get_voices = AsyncMock(side_effect=HTTPException(429, "Provider limit"))
     monkeypatch.setattr(
-        user_routes.mps_service_key_client,
-        "get_voices",
+        user_routes,
+        "get_direct_voices",
         get_voices,
     )
     monkeypatch.setattr(user_routes, "log_failure", route_log_failure)
 
-    with pytest.raises(MPSUnavailableError):
+    with pytest.raises(HTTPException) as error:
         await user_routes.get_voices(
             provider="cartesia",
             user=SimpleNamespace(
@@ -29,6 +30,7 @@ async def test_voice_catalog_does_not_duplicate_mps_failure(monkeypatch):
         )
 
     route_log_failure.assert_not_called()
+    assert error.value.status_code == 429
 
 
 @pytest.mark.asyncio

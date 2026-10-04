@@ -1,3 +1,5 @@
+"use client";
+
 import { Check, ChevronDown, Copy, ExternalLink, Loader2, MessageCircle, Mic, Plus, Rocket, Send, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -34,9 +36,12 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { WIDGET_CONTEXT_DOC_URL, WIDGET_MODE_DOCUMENTATION_URLS } from "@/constants/documentation";
 import { HEADLESS_CHAT_EXAMPLE } from "@/constants/embedExamples";
+import { useCopy } from "@/i18n/LocaleProvider";
+import { newWidgetTextOverrides } from "@/i18n/widget";
 import { detailFromError } from "@/lib/apiError";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import type { WorkflowConfigurations } from "@/types/workflow-configurations";
+
 
 interface EmbedDialogProps {
     open: boolean;
@@ -138,14 +143,15 @@ function WidgetTextSection({
     defaults: WidgetTexts | null;
     onChange: (key: WidgetTextKey, value: string) => void;
 }) {
+    const copy = useCopy();
     const [open, setOpen] = useState(false);
 
     return (
         <Collapsible open={open} onOpenChange={setOpen} className="rounded-lg border bg-muted/20">
             <CollapsibleTrigger className="flex w-full items-center justify-between gap-4 p-4 text-left">
                 <div className="space-y-0.5">
-                    <div className="text-sm font-medium">{title}</div>
-                    <p className="text-xs text-muted-foreground">{description}</p>
+                    <div className="text-sm font-medium">{copy(title)}</div>
+                    <p className="text-xs text-muted-foreground">{copy(description)}</p>
                 </div>
                 <ChevronDown
                     className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
@@ -156,17 +162,17 @@ function WidgetTextSection({
                     <div key={group.heading ?? groupIndex} className="space-y-3">
                         {group.heading && (
                             <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                {group.heading}
+                                {copy(group.heading)}
                             </div>
                         )}
                         <div className="grid grid-cols-2 gap-4">
                             {group.fields.map(({ key, label, hint }) => (
                                 <div key={key} className="space-y-2">
                                     <Label htmlFor={`widget-text-${key}`} className="text-sm">
-                                        {label}
+                                        {copy(label)}
                                         {hint && (
                                             <span className="ml-1 text-xs font-normal text-muted-foreground">
-                                                ({hint})
+                                                ({copy(hint)})
                                             </span>
                                         )}
                                     </Label>
@@ -214,7 +220,9 @@ export function EmbedDialog({
     widgetTextDefaults,
     onSaveWorkflowConfigurations,
 }: EmbedDialogProps) {
+    const copy = useCopy();
     const [loading, setLoading] = useState(false);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const [embedToken, setEmbedToken] = useState<EmbedToken | null>(null);
     const [copied, setCopied] = useState(false);
@@ -226,9 +234,9 @@ export function EmbedDialog({
     const [widgetType, setWidgetType] = useState<WidgetType>("voice");
     const [embedMode, setEmbedMode] = useState<"floating" | "inline" | "headless">("floating");
     const [position, setPosition] = useState("bottom-right");
-    const [buttonText, setButtonText] = useState("Talk to Agent");
+    const [buttonText, setButtonText] = useState(() => copy("Talk to Agent"));
     const [buttonColor, setButtonColor] = useState("#10b981");
-    const [callToActionText, setCallToActionText] = useState("Click to start voice conversation");
+    const [callToActionText, setCallToActionText] = useState(() => copy("Click to start voice conversation"));
     // Sparse: only keys the owner has overridden. Anything absent renders (and
     // saves as) the backend default.
     const [widgetTexts, setWidgetTexts] = useState<Partial<Record<WidgetTextKey, string>>>({});
@@ -266,8 +274,8 @@ export function EmbedDialog({
                 parsedTextChatInactivitySeconds <=
                     maximumTextChatInactivitySeconds));
     const textChatInactivityValidationMessage = hasTextChatInactivityBounds
-        ? `Chat inactivity timeout must be a whole number between ${minimumTextChatInactivityMinutes} and ${maximumTextChatInactivityMinutes} minutes`
-        : "Chat inactivity timeout must be a whole number of minutes";
+        ? copy("Chat inactivity timeout must be a whole number between {value0} and {value1} minutes", { value0: minimumTextChatInactivityMinutes!, value1: maximumTextChatInactivityMinutes! })
+        : copy("Chat inactivity timeout must be a whole number of minutes");
 
     const handleWidgetTextChange = useCallback((key: WidgetTextKey, value: string) => {
         setWidgetTexts((prev) => ({ ...prev, [key]: value }));
@@ -277,25 +285,36 @@ export function EmbedDialog({
         if (type === widgetType) return;
         const from = WIDGET_TYPE_DEFAULTS[widgetType];
         const to = WIDGET_TYPE_DEFAULTS[type];
-        if (buttonText === from.buttonText) setButtonText(to.buttonText);
-        if (callToActionText === from.callToActionText) setCallToActionText(to.callToActionText);
+        if (buttonText === from.buttonText || buttonText === copy(from.buttonText)) setButtonText(copy(to.buttonText));
+        if (callToActionText === from.callToActionText || callToActionText === copy(from.callToActionText)) setCallToActionText(copy(to.callToActionText));
         setWidgetType(type);
     };
 
     const loadEmbedToken = useCallback(async () => {
         setLoading(true);
+        setLoadError(null);
         try {
             const response = await getEmbedTokenApiV1WorkflowWorkflowIdEmbedTokenGet({
                 path: { workflow_id: workflowId },
             });
 
+            if (response.error) throw new Error(copy(detailFromError(response.error, "Failed to load widget configuration")));
+            if (!response.data) {
+                setEmbedToken(null);
+                setIsEnabled(false);
+                setDomains([]);
+                setWidgetType("voice");
+                setButtonText(copy(WIDGET_TYPE_DEFAULTS.voice.buttonText));
+                setCallToActionText(copy(WIDGET_TYPE_DEFAULTS.voice.callToActionText));
+                setWidgetTexts(newWidgetTextOverrides(widgetTextDefaults, copy));
+            }
             if (response.data) {
                 setEmbedToken(response.data as EmbedToken);
                 setIsEnabled(response.data.is_active);
 
                 // Load settings
-                if (response.data.settings) {
-                    const settings = response.data.settings as Record<string, string>;
+                {
+                    const settings = (response.data.settings ?? {}) as Record<string, string>;
                     const loadedType: WidgetType = settings.widgetType === "chat" ? "chat" : "voice";
                     setWidgetType(loadedType);
                     setEmbedMode((settings.embedMode as "floating" | "inline" | "headless") || "floating");
@@ -319,10 +338,11 @@ export function EmbedDialog({
             }
         } catch (error) {
             console.error("Failed to load embed token:", error);
+            setLoadError(copy("Failed to load widget configuration"));
         } finally {
             setLoading(false);
         }
-    }, [workflowId]);
+    }, [workflowId, widgetTextDefaults, copy]);
 
     useEffect(() => {
         if (open) {
@@ -336,6 +356,7 @@ export function EmbedDialog({
     }, [open, loadEmbedToken, configuredTextChatInactivitySeconds]);
 
     const handleSave = async () => {
+        if (loading || loadError) return;
         if (isEnabled && widgetType === "chat" && !textChatInactivityIsValid) {
             toast.error(textChatInactivityValidationMessage);
             return;
@@ -360,7 +381,7 @@ export function EmbedDialog({
                 });
                 if (response.error) {
                     throw new Error(
-                        detailFromError(response.error, "Failed to disable embedding"),
+                        copy(detailFromError(response.error, "Failed to disable embedding")),
                     );
                 }
                 setEmbedToken(null);
@@ -396,7 +417,7 @@ export function EmbedDialog({
 
                 if (response.error) {
                     throw new Error(
-                        detailFromError(response.error, "Failed to save widget configuration"),
+                        copy(detailFromError(response.error, "Failed to save widget configuration")),
                     );
                 }
                 if (response.data) {
@@ -405,13 +426,13 @@ export function EmbedDialog({
             }
 
             toast.success(
-                "Widget configuration saved. Publish the agent to apply the changes.",
+                copy("Widget configuration saved. Publish the agent to apply the changes."),
             );
             // Don't close modal after saving - let user copy the embed code
         } catch (error) {
             console.error("Failed to save embed token:", error);
             toast.error(
-                error instanceof Error ? error.message : "Failed to save widget configuration",
+                error instanceof Error ? copy(error.message) : copy("Failed to save widget configuration"),
             );
         } finally {
             setSaving(false);
@@ -424,7 +445,7 @@ export function EmbedDialog({
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         } catch {
-            toast.error("Failed to copy embed code");
+            toast.error(copy("Failed to copy embed code"));
         }
     };
 
@@ -452,37 +473,34 @@ export function EmbedDialog({
                 <DialogHeader>
                     <div className="flex items-center justify-between">
                         <DialogTitle className="flex items-center gap-2">
-                            <Rocket className="h-5 w-5" />
-                            Configure Widget
-                        </DialogTitle>
+                            <Rocket className="h-5 w-5" />{copy("Configure Widget")}</DialogTitle>
                         <a
                             href={WIDGET_MODE_DOCUMENTATION_URLS[embedMode]}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors pr-6"
-                        >
-                            Docs
-                            <ExternalLink className="h-3.5 w-3.5" />
+                        >{copy("Docs")}<ExternalLink className="h-3.5 w-3.5" />
                         </a>
                     </div>
-                    <DialogDescription>
-                        Add &quot;{workflowName}&quot; to any website with a simple script tag.
-                    </DialogDescription>
+                    <DialogDescription>{copy("Add \"")}{workflowName}{copy("\" to any website with a simple script tag.")}</DialogDescription>
                 </DialogHeader>
 
                 {loading ? (
                     <div className="flex items-center justify-center py-8">
                         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                     </div>
+                ) : loadError ? (
+                    <div role="alert" className="space-y-3 py-4">
+                        <p className="text-sm text-destructive">{loadError}</p>
+                        <Button variant="outline" onClick={loadEmbedToken}>{copy("Retry")}</Button>
+                    </div>
                 ) : (
                     <div className="space-y-6">
                         {/* Enable/Disable Toggle */}
                         <div className="flex items-center justify-between">
                             <div className="space-y-0.5">
-                                <Label htmlFor="embed-enabled">Enable Embedding</Label>
-                                <p className="text-sm text-muted-foreground">
-                                    Allow this workflow to be embedded on external websites
-                                </p>
+                                <Label htmlFor="embed-enabled">{copy("Enable Embedding")}</Label>
+                                <p className="text-sm text-muted-foreground">{copy("Allow this workflow to be embedded on external websites")}</p>
                             </div>
                             <Switch
                                 id="embed-enabled"
@@ -497,17 +515,13 @@ export function EmbedDialog({
 
                                 {/* Allowed Domains */}
                                 <div className="space-y-3">
-                                    <Label>
-                                        Allowed Domains
-                                        <span className="text-xs text-muted-foreground ml-2">
-                                            (leave empty to allow all domains)
-                                        </span>
+                                    <Label>{copy("Allowed Domains")}<span className="text-xs text-muted-foreground ml-2">{copy("(leave empty to allow all domains)")}</span>
                                     </Label>
 
                                     {/* Domain Input */}
                                     <div className="flex gap-2">
                                         <Input
-                                            placeholder="example.com or *.example.com"
+                                            placeholder={copy("example.com or *.example.com")}
                                             value={newDomain}
                                             onChange={(e) => setNewDomain(e.target.value)}
                                             onKeyPress={handleKeyPress}
@@ -549,7 +563,7 @@ export function EmbedDialog({
 
                                 {/* Widget Type Selection */}
                                 <div className="space-y-4">
-                                    <Label>Widget Type</Label>
+                                    <Label>{copy("Widget Type")}</Label>
                                     <div className="grid grid-cols-2 gap-4">
                                         <button
                                             type="button"
@@ -562,12 +576,8 @@ export function EmbedDialog({
                                         >
                                             <div className="space-y-2">
                                                 <div className="flex items-center justify-center gap-2 font-medium">
-                                                    <Mic className="h-4 w-4" />
-                                                    Voice Agent
-                                                </div>
-                                                <div className="text-xs text-muted-foreground">
-                                                    Visitors talk to your agent by voice
-                                                </div>
+                                                    <Mic className="h-4 w-4" />{copy("Voice Agent")}</div>
+                                                <div className="text-xs text-muted-foreground">{copy("Visitors talk to your agent by voice")}</div>
                                             </div>
                                         </button>
                                         <button
@@ -581,12 +591,8 @@ export function EmbedDialog({
                                         >
                                             <div className="space-y-2">
                                                 <div className="flex items-center justify-center gap-2 font-medium">
-                                                    <MessageCircle className="h-4 w-4" />
-                                                    Chat Agent
-                                                </div>
-                                                <div className="text-xs text-muted-foreground">
-                                                    Visitors type messages to your agent
-                                                </div>
+                                                    <MessageCircle className="h-4 w-4" />{copy("Chat Agent")}</div>
+                                                <div className="text-xs text-muted-foreground">{copy("Visitors type messages to your agent")}</div>
                                             </div>
                                         </button>
                                     </div>
@@ -594,9 +600,7 @@ export function EmbedDialog({
 
                                 {widgetType === "chat" && (
                                     <div className="space-y-2 rounded-lg border bg-muted/20 p-4">
-                                        <Label htmlFor="text-chat-inactivity-timeout">
-                                            Chat Inactivity Timeout
-                                        </Label>
+                                        <Label htmlFor="text-chat-inactivity-timeout">{copy("Chat Inactivity Timeout")}</Label>
                                         <div className="flex items-center gap-2">
                                             <Input
                                                 id="text-chat-inactivity-timeout"
@@ -611,13 +615,9 @@ export function EmbedDialog({
                                                 aria-invalid={!textChatInactivityIsValid}
                                                 className="w-32"
                                             />
-                                            <span className="text-sm text-muted-foreground">
-                                                minutes
-                                            </span>
+                                            <span className="text-sm text-muted-foreground">{copy("minutes")}</span>
                                         </div>
-                                        <p className="text-xs text-muted-foreground">
-                                            End a text chat and trigger its completion webhook after this long without chat activity.
-                                        </p>
+                                        <p className="text-xs text-muted-foreground">{copy("End a text chat and trigger its completion webhook after this long without chat activity.")}</p>
                                         {!textChatInactivityIsValid && (
                                             <p className="text-xs text-destructive">
                                                 {textChatInactivityValidationMessage}.
@@ -628,7 +628,7 @@ export function EmbedDialog({
 
                                 {/* Embed Mode Selection */}
                                 <div className="space-y-4">
-                                    <Label>Embed Mode</Label>
+                                    <Label>{copy("Embed Mode")}</Label>
                                     <div className="grid grid-cols-3 gap-4">
                                         <button
                                             type="button"
@@ -640,10 +640,8 @@ export function EmbedDialog({
                                             }`}
                                         >
                                             <div className="space-y-2">
-                                                <div className="font-medium">Floating Widget</div>
-                                                <div className="text-xs text-muted-foreground">
-                                                    Shows as a button in corner of the page
-                                                </div>
+                                                <div className="font-medium">{copy("Floating Widget")}</div>
+                                                <div className="text-xs text-muted-foreground">{copy("Shows as a button in corner of the page")}</div>
                                             </div>
                                         </button>
                                         <button
@@ -656,10 +654,8 @@ export function EmbedDialog({
                                             }`}
                                         >
                                             <div className="space-y-2">
-                                                <div className="font-medium">Inline Component</div>
-                                                <div className="text-xs text-muted-foreground">
-                                                    Embeds directly in your page content
-                                                </div>
+                                                <div className="font-medium">{copy("Inline Component")}</div>
+                                                <div className="text-xs text-muted-foreground">{copy("Embeds directly in your page content")}</div>
                                             </div>
                                         </button>
                                         <button
@@ -672,10 +668,8 @@ export function EmbedDialog({
                                             }`}
                                         >
                                             <div className="space-y-2">
-                                                <div className="font-medium">Headless (Bring Your Own UI)</div>
-                                                <div className="text-xs text-muted-foreground">
-                                                    No UI - drive calls from your own buttons via the JS API
-                                                </div>
+                                                <div className="font-medium">{copy("Headless (Bring Your Own UI)")}</div>
+                                                <div className="text-xs text-muted-foreground">{copy("No UI - drive calls from your own buttons via the JS API")}</div>
                                             </div>
                                         </button>
                                     </div>
@@ -683,23 +677,23 @@ export function EmbedDialog({
 
                                 {/* Configuration based on mode */}
                                 <div className="space-y-4">
-                                    <Label>Configuration</Label>
+                                    <Label>{copy("Configuration")}</Label>
 
                                     {/* Shared: Button Text + Button Color (skipped in headless — host renders its own UI) */}
                                     {embedMode !== "headless" && (
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="space-y-2">
-                                                <Label htmlFor="button-text" className="text-sm">Button Text</Label>
+                                                <Label htmlFor="button-text" className="text-sm">{copy("Button Text")}</Label>
                                                 <Input
                                                     id="button-text"
                                                     value={buttonText}
                                                     onChange={(e) => setButtonText(e.target.value)}
-                                                    placeholder={WIDGET_TYPE_DEFAULTS[widgetType].buttonText}
+                                                    placeholder={copy(WIDGET_TYPE_DEFAULTS[widgetType].buttonText)}
                                                     maxLength={40}
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <Label htmlFor="button-color" className="text-sm">Button Color</Label>
+                                                <Label htmlFor="button-color" className="text-sm">{copy("Button Color")}</Label>
                                                 <div className="flex gap-2">
                                                     <Input
                                                         id="button-color-picker"
@@ -723,16 +717,16 @@ export function EmbedDialog({
                                     {/* Floating mode: Position */}
                                     {embedMode === "floating" && (
                                         <div className="space-y-2">
-                                            <Label htmlFor="position" className="text-sm">Position</Label>
+                                            <Label htmlFor="position" className="text-sm">{copy("Position")}</Label>
                                             <Select value={position} onValueChange={setPosition}>
                                                 <SelectTrigger id="position">
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="bottom-right">Bottom Right</SelectItem>
-                                                    <SelectItem value="bottom-left">Bottom Left</SelectItem>
-                                                    <SelectItem value="top-right">Top Right</SelectItem>
-                                                    <SelectItem value="top-left">Top Left</SelectItem>
+                                                    <SelectItem value="bottom-right">{copy("Bottom Right")}</SelectItem>
+                                                    <SelectItem value="bottom-left">{copy("Bottom Left")}</SelectItem>
+                                                    <SelectItem value="top-right">{copy("Top Right")}</SelectItem>
+                                                    <SelectItem value="top-left">{copy("Top Left")}</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
@@ -741,12 +735,12 @@ export function EmbedDialog({
                                     {/* Inline mode: Call to Action Text */}
                                     {embedMode === "inline" && (
                                         <div className="space-y-2">
-                                            <Label htmlFor="cta-text" className="text-sm">Call to Action Text</Label>
+                                            <Label htmlFor="cta-text" className="text-sm">{copy("Call to Action Text")}</Label>
                                             <Input
                                                 id="cta-text"
                                                 value={callToActionText}
                                                 onChange={(e) => setCallToActionText(e.target.value)}
-                                                placeholder={WIDGET_TYPE_DEFAULTS[widgetType].callToActionText}
+                                                placeholder={copy(WIDGET_TYPE_DEFAULTS[widgetType].callToActionText)}
                                             />
                                         </div>
                                     )}
@@ -755,8 +749,8 @@ export function EmbedDialog({
                                         Headless renders no UI of ours, so it has nothing to translate. */}
                                     {embedMode !== "headless" && widgetType === "chat" && (
                                         <WidgetTextSection
-                                            title="Chat Panel Text"
-                                            description="Wording visitors see inside the chat panel."
+                                            title={copy("Chat Panel Text")}
+                                            description={copy("Wording visitors see inside the chat panel.")}
                                             groups={[{ fields: CHAT_TEXT_FIELDS }]}
                                             values={widgetTexts}
                                             defaults={widgetTextDefaults}
@@ -766,11 +760,11 @@ export function EmbedDialog({
 
                                     {embedMode !== "headless" && widgetType === "voice" && (
                                         <WidgetTextSection
-                                            title="Voice Call Text"
+                                            title={copy("Voice Call Text")}
                                             description={
                                                 embedMode === "inline"
-                                                    ? "Wording visitors see on the call panel across the call lifecycle."
-                                                    : "Wording the call button cycles through while a call connects and runs."
+                                                    ? copy("Wording visitors see on the call panel across the call lifecycle.")
+                                                    : copy("Wording the call button cycles through while a call connects and runs.")
                                             }
                                             groups={
                                                 embedMode === "inline"
@@ -808,18 +802,14 @@ export function EmbedDialog({
                                                     className="px-4 py-3 text-sm font-semibold text-white"
                                                     style={{ backgroundColor: buttonColor }}
                                                 >
-                                                    {buttonText || "Chat with Agent"}
+                                                    {buttonText || copy("Chat with Agent")}
                                                 </div>
                                                 <div className="p-4 space-y-2 bg-muted/20">
-                                                    <div className="max-w-[80%] rounded-lg rounded-bl-sm bg-muted px-3 py-2 text-sm">
-                                                        Hi! How can I help you today?
-                                                    </div>
+                                                    <div className="max-w-[80%] rounded-lg rounded-bl-sm bg-muted px-3 py-2 text-sm">{copy("Hi! How can I help you today?")}</div>
                                                     <div
                                                         className="max-w-[80%] ml-auto rounded-lg rounded-br-sm px-3 py-2 text-sm text-white"
                                                         style={{ backgroundColor: buttonColor }}
-                                                    >
-                                                        I have a question…
-                                                    </div>
+                                                    >{copy("I have a question…")}</div>
                                                 </div>
                                                 <div className="flex items-center gap-2 border-t px-3 py-2">
                                                     <div className="flex-1 rounded-md border bg-background px-3 py-1.5 text-sm text-muted-foreground">
@@ -859,21 +849,21 @@ export function EmbedDialog({
                                     {embedMode === "headless" && widgetType === "chat" && (
                                         <div className="space-y-3">
                                             <div className="rounded-lg bg-muted/50 p-4">
-                                                <h4 className="font-medium mb-2">Integration Instructions</h4>
+                                                <h4 className="font-medium mb-2">{copy("Integration Instructions")}</h4>
                                                 <ul className="text-sm space-y-2 text-muted-foreground">
-                                                    <li>• Add the embed script tag to your page (see below).</li>
-                                                    <li>• The widget renders no UI - render your own chat interface.</li>
-                                                    <li>• Call <code className="text-xs">window.DograhWidget.startChat()</code> to start a conversation (the agent greeting arrives via <code className="text-xs">onMessage</code>).</li>
-                                                    <li>• Call <code className="text-xs">window.DograhWidget.sendMessage(text)</code> to send a visitor message; it resolves with the updated transcript, or <code className="text-xs">null</code> if the message could not be delivered.</li>
-                                                    <li>• Call <code className="text-xs">window.DograhWidget.endChat()</code> to end the active conversation and trigger its completion webhook.</li>
-                                                    <li>• Use <code className="text-xs">getMessages()</code> to read the transcript at any time.</li>
-                                                    <li>• Subscribe to <code className="text-xs">onMessage</code> and <code className="text-xs">onChatStateChange</code> to drive your UI. States are <code className="text-xs">idle</code>, <code className="text-xs">starting</code>, <code className="text-xs">ready</code>, <code className="text-xs">waiting</code>, <code className="text-xs">ended</code>, <code className="text-xs">expired</code>, <code className="text-xs">error</code>.</li>
-                                                    <li>• Call <code className="text-xs">window.DograhWidget.setContext({"{ ... }"})</code> before <code className="text-xs">startChat()</code> to pass visitor details the page learned after load.</li>
+                                                    <li>{copy("• Add the embed script tag to your page (see below).")}</li>
+                                                    <li>{copy("• The widget renders no UI - render your own chat interface.")}</li>
+                                                    <li>{copy("• Call ")}<code className="text-xs">window.DograhWidget.startChat()</code>{copy(" to start a conversation (the agent greeting arrives via ")}<code className="text-xs">onMessage</code>).</li>
+                                                    <li>{copy("• Call ")}<code className="text-xs">window.DograhWidget.sendMessage(text)</code>{copy(" to send a visitor message; it resolves with the updated transcript, or ")}<code className="text-xs">null</code>{copy(" if the message could not be delivered.")}</li>
+                                                    <li>{copy("• Call ")}<code className="text-xs">window.DograhWidget.endChat()</code>{copy(" to end the active conversation and trigger its completion webhook.")}</li>
+                                                    <li>{copy("• Use ")}<code className="text-xs">getMessages()</code>{copy(" to read the transcript at any time.")}</li>
+                                                    <li>{copy("• Subscribe to ")}<code className="text-xs">onMessage</code>{copy(" and ")}<code className="text-xs">onChatStateChange</code>{copy(" to drive your UI. States are ")}<code className="text-xs">idle</code>, <code className="text-xs">starting</code>, <code className="text-xs">ready</code>, <code className="text-xs">waiting</code>, <code className="text-xs">ended</code>, <code className="text-xs">expired</code>, <code className="text-xs">error</code>.</li>
+                                                    <li>{copy("• Call ")}<code className="text-xs">window.DograhWidget.setContext({"{ ... }"})</code>{copy(" before ")}<code className="text-xs">startChat()</code>{copy(" to pass visitor details the page learned after load.")}</li>
                                                 </ul>
                                             </div>
 
                                             <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 p-4 border border-blue-200 dark:border-blue-800">
-                                                <h4 className="font-medium mb-2 text-blue-900 dark:text-blue-100">Example - drive your own chat UI</h4>
+                                                <h4 className="font-medium mb-2 text-blue-900 dark:text-blue-100">{copy("Example - drive your own chat UI")}</h4>
                                                 <pre className="text-xs overflow-x-auto">
                                                     <code className="text-blue-800 dark:text-blue-200">{HEADLESS_CHAT_EXAMPLE}</code>
                                                 </pre>
@@ -885,22 +875,21 @@ export function EmbedDialog({
                                     {embedMode === "headless" && widgetType === "voice" && (
                                         <div className="space-y-3">
                                             <div className="rounded-lg bg-muted/50 p-4">
-                                                <h4 className="font-medium mb-2">Integration Instructions</h4>
+                                                <h4 className="font-medium mb-2">{copy("Integration Instructions")}</h4>
                                                 <ul className="text-sm space-y-2 text-muted-foreground">
-                                                    <li>• Add the embed script tag to your page (see below).</li>
-                                                    <li>• The widget renders no UI - render your own buttons.</li>
-                                                    <li>• Call <code className="text-xs">window.DograhWidget.start()</code> to begin a call.</li>
-                                                    <li>• Call <code className="text-xs">window.DograhWidget.end()</code> to end it.</li>
-                                                    <li>• Subscribe to <code className="text-xs">onCallStart</code>, <code className="text-xs">onCallEnd</code>, <code className="text-xs">onStatusChange</code>, <code className="text-xs">onError</code> to drive your UI.</li>
-                                                    <li>• <code className="text-xs">start()</code> must run inside a user-gesture handler (click) so the browser grants microphone access.</li>
-                                                    <li>• Call <code className="text-xs">window.DograhWidget.setContext({"{ ... }"})</code> before <code className="text-xs">start()</code> to pass visitor details the page learned after load.</li>
+                                                    <li>{copy("• Add the embed script tag to your page (see below).")}</li>
+                                                    <li>{copy("• The widget renders no UI - render your own buttons.")}</li>
+                                                    <li>{copy("• Call ")}<code className="text-xs">window.DograhWidget.start()</code>{copy(" to begin a call.")}</li>
+                                                    <li>{copy("• Call ")}<code className="text-xs">window.DograhWidget.end()</code>{copy(" to end it.")}</li>
+                                                    <li>{copy("• Subscribe to ")}<code className="text-xs">onCallStart</code>, <code className="text-xs">onCallEnd</code>, <code className="text-xs">onStatusChange</code>, <code className="text-xs">onError</code>{copy(" to drive your UI.")}</li>
+                                                    <li>• <code className="text-xs">start()</code>{copy(" must run inside a user-gesture handler (click) so the browser grants microphone access.")}</li>
+                                                    <li>{copy("• Call ")}<code className="text-xs">window.DograhWidget.setContext({"{ ... }"})</code>{copy(" before ")}<code className="text-xs">start()</code>{copy(" to pass visitor details the page learned after load.")}</li>
                                                 </ul>
                                             </div>
 
                                             <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 p-4 border border-blue-200 dark:border-blue-800">
-                                                <h4 className="font-medium mb-2 text-blue-900 dark:text-blue-100">Example - track status in your own state</h4>
-                                                <p className="text-xs text-blue-900/80 dark:text-blue-100/80 mb-2">
-                                                    Mirror the call status into a variable you control, then render whatever UI you like from it. The status values are <code className="text-xs">idle</code>, <code className="text-xs">connecting</code>, <code className="text-xs">connected</code>, <code className="text-xs">failed</code>.
+                                                <h4 className="font-medium mb-2 text-blue-900 dark:text-blue-100">{copy("Example - track status in your own state")}</h4>
+                                                <p className="text-xs text-blue-900/80 dark:text-blue-100/80 mb-2">{copy("Mirror the call status into a variable you control, then render whatever UI you like from it. The status values are ")}<code className="text-xs">idle</code>, <code className="text-xs">connecting</code>, <code className="text-xs">connected</code>, <code className="text-xs">failed</code>.
                                                 </p>
                                                 <pre className="text-xs overflow-x-auto">
                                                     <code className="text-blue-800 dark:text-blue-200">{`// Vanilla JS - keep your own state, render however you want
@@ -919,7 +908,7 @@ document.getElementById('talk-btn').addEventListener('click', () => {
   }
 });`}</code>
                                                 </pre>
-                                                <p className="text-xs text-blue-900/80 dark:text-blue-100/80 mt-3 mb-2">React:</p>
+                                                <p className="text-xs text-blue-900/80 dark:text-blue-100/80 mt-3 mb-2">{copy("React:")}</p>
                                                 <pre className="text-xs overflow-x-auto">
                                                     <code className="text-blue-800 dark:text-blue-200">{`function TalkButton() {
   const [status, setStatus] = useState('idle');
@@ -944,17 +933,17 @@ document.getElementById('talk-btn').addEventListener('click', () => {
                                     {embedMode === "inline" && (
                                         <div className="space-y-3">
                                             <div className="rounded-lg bg-muted/50 p-4">
-                                                <h4 className="font-medium mb-2">Integration Instructions</h4>
+                                                <h4 className="font-medium mb-2">{copy("Integration Instructions")}</h4>
                                                 <ul className="text-sm space-y-2 text-muted-foreground">
-                                                    <li>• Add a div with id=&quot;dograh-inline-container&quot; where you want the widget</li>
-                                                    <li>• The widget will render inside this container</li>
-                                                    <li>• You have full control over the container&apos;s styling</li>
+                                                    <li>{copy("• Add a div with id=\"dograh-inline-container\" where you want the widget")}</li>
+                                                    <li>{copy("• The widget will render inside this container")}</li>
+                                                    <li>{copy("• You have full control over the container's styling")}</li>
                                                     {widgetType === "chat" ? (
-                                                        <li>• The chat panel renders in the container; the conversation starts when the visitor clicks the button</li>
+                                                        <li>{copy("• The chat panel renders in the container; the conversation starts when the visitor clicks the button")}</li>
                                                     ) : (
                                                         <>
-                                                            <li>• Call window.DograhWidget.start() to begin the call</li>
-                                                            <li>• Call window.DograhWidget.end() to end the call</li>
+                                                            <li>{copy("• Call window.DograhWidget.start() to begin the call")}</li>
+                                                            <li>{copy("• Call window.DograhWidget.end() to end the call")}</li>
                                                         </>
                                                     )}
                                                 </ul>
@@ -962,7 +951,7 @@ document.getElementById('talk-btn').addEventListener('click', () => {
 
                                             {widgetType === "chat" ? (
                                                 <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 p-4 border border-blue-200 dark:border-blue-800">
-                                                    <h4 className="font-medium mb-2 text-blue-900 dark:text-blue-100">Example</h4>
+                                                    <h4 className="font-medium mb-2 text-blue-900 dark:text-blue-100">{copy("Example")}</h4>
                                                     <pre className="text-xs overflow-x-auto">
                                                         <code className="text-blue-800 dark:text-blue-200">{`<h2>Chat with Our Agent</h2>
 <div id="dograh-inline-container" style="min-height: 480px">
@@ -972,7 +961,7 @@ document.getElementById('talk-btn').addEventListener('click', () => {
                                                 </div>
                                             ) : (
                                                 <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 p-4 border border-blue-200 dark:border-blue-800">
-                                                    <h4 className="font-medium mb-2 text-blue-900 dark:text-blue-100">Example React Component</h4>
+                                                    <h4 className="font-medium mb-2 text-blue-900 dark:text-blue-100">{copy("Example React Component")}</h4>
                                                     <pre className="text-xs overflow-x-auto">
                                                         <code className="text-blue-800 dark:text-blue-200">{`export function DograhAgent() {
   const [isCallActive, setIsCallActive] = useState(false);
@@ -1023,11 +1012,9 @@ document.getElementById('talk-btn').addEventListener('click', () => {
                                     >
                                         {saving ? (
                                             <>
-                                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                                Saving...
-                                            </>
+                                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />{copy("Saving...")}</>
                                         ) : (
-                                            "Save Configurations"
+                                            copy("Save Configurations")
                                         )}
                                     </Button>
                                 </div>
@@ -1038,7 +1025,7 @@ document.getElementById('talk-btn').addEventListener('click', () => {
                                         <Separator />
                                         <div className="space-y-3">
                                             <div className="flex items-center justify-between">
-                                                <Label>Embed Code</Label>
+                                                <Label>{copy("Embed Code")}</Label>
                                                 <Button
                                                     size="sm"
                                                     variant="outline"
@@ -1046,14 +1033,10 @@ document.getElementById('talk-btn').addEventListener('click', () => {
                                                 >
                                                     {copied ? (
                                                         <>
-                                                            <Check className="h-4 w-4 mr-1" />
-                                                            Copied!
-                                                        </>
+                                                            <Check className="h-4 w-4 mr-1" />{copy("Copied!")}</>
                                                     ) : (
                                                         <>
-                                                            <Copy className="h-4 w-4 mr-1" />
-                                                            Copy Code
-                                                        </>
+                                                            <Copy className="h-4 w-4 mr-1" />{copy("Copy Code")}</>
                                                     )}
                                                 </Button>
                                             </div>
@@ -1062,24 +1045,17 @@ document.getElementById('talk-btn').addEventListener('click', () => {
                                                     <code>{embedToken.embed_script}</code>
                                                 </pre>
                                             </div>
-                                            <p className="text-xs text-muted-foreground">
-                                                Add this script to your website&apos;s HTML to enable the widget.
-                                                Configuration changes will apply automatically without re-embedding.
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">
-                                                To pass visitor details to the agent, edit the{" "}
-                                                <code className="text-xs">data-dograh-context</code> values above — or call{" "}
-                                                <code className="text-xs">{"window.DograhWidget.setContext({ ... })"}</code> for
-                                                details your page learns later. Each one is available in your prompts as{" "}
+                                            <p className="text-xs text-muted-foreground">{copy("Add this script to your website's HTML to enable the widget. Configuration changes will apply automatically without re-embedding.")}</p>
+                                            <p className="text-xs text-muted-foreground">{copy("To pass visitor details to the agent, edit the")}{" "}
+                                                <code className="text-xs">data-dograh-context</code>{copy(" values above — or call")}{" "}
+                                                <code className="text-xs">{"window.DograhWidget.setContext({ ... })"}</code>{copy(" for details your page learns later. Each one is available in your prompts as")}{" "}
                                                 <code className="text-xs">{"{{initial_context.page_url}}"}</code>.{" "}
                                                 <a
                                                     href={WIDGET_CONTEXT_DOC_URL}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="underline underline-offset-2 hover:text-foreground"
-                                                >
-                                                    Learn more
-                                                </a>
+                                                >{copy("Learn more")}</a>
                                             </p>
                                         </div>
                                     </>
@@ -1087,10 +1063,8 @@ document.getElementById('talk-btn').addEventListener('click', () => {
                                     <>
                                         <Separator />
                                         <div className="space-y-3">
-                                            <Label className="text-muted-foreground">Embed Code</Label>
-                                            <div className="rounded-lg border border-dashed bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
-                                                Click <span className="font-medium">Save Configurations</span> to generate your embed script.
-                                            </div>
+                                            <Label className="text-muted-foreground">{copy("Embed Code")}</Label>
+                                            <div className="rounded-lg border border-dashed bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">{copy("Click ")}<span className="font-medium">{copy("Save Configurations")}</span>{copy(" to generate your embed script.")}</div>
                                         </div>
                                     </>
                                 )}

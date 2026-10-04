@@ -13,6 +13,7 @@ import { PostHogEvent } from "@/constants/posthog-events";
 import { WORKFLOW_RUN_MODES } from "@/constants/workflowRunModes";
 import { useOnboarding } from "@/context/OnboardingContext";
 import { captureAnalyticsEvent } from "@/lib/analytics";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { useAuth } from "@/lib/auth";
 import { cn, getRandomId } from "@/lib/utils";
 
@@ -22,6 +23,7 @@ import { ManualTextChatPanel } from "./workflow-tester/ManualTextChatPanel";
 import { ChatModeToggle, DisabledNotice, EmptyState } from "./workflow-tester/shared";
 import type { WorkflowRuntimeNodeTransition } from "./workflow-tester/types";
 import { extractSdkErrorMessage, getErrorMessage } from "./workflow-tester/utils";
+
 
 interface WorkflowTesterPanelProps {
     workflowId: number;
@@ -46,6 +48,7 @@ export function WorkflowTesterPanel({
     onClose,
     onRuntimeNodeTransition,
 }: WorkflowTesterPanelProps) {
+    const copy = useCopy();
     const auth = useAuth();
     const { markActionCompleted } = useOnboarding();
     const { isAuthenticated, loading: authLoading, getAccessToken } = auth;
@@ -165,13 +168,9 @@ export function WorkflowTesterPanel({
                     <div className="flex items-center gap-3">
                         <TabsList className="grid h-9 flex-1 grid-cols-2 rounded-lg bg-muted/60 p-1">
                             <TabsTrigger value="audio" className="rounded-md text-sm">
-                                <Mic className="h-4 w-4" />
-                                Test Audio
-                            </TabsTrigger>
+                                <Mic className="h-4 w-4" />{copy("Test Audio")}</TabsTrigger>
                             <TabsTrigger value="text" className="rounded-md text-sm">
-                                <MessageSquareText className="h-4 w-4" />
-                                Test Chat
-                            </TabsTrigger>
+                                <MessageSquareText className="h-4 w-4" />{copy("Test Chat")}</TabsTrigger>
                         </TabsList>
                         {onClose ? (
                             <Button
@@ -179,7 +178,7 @@ export function WorkflowTesterPanel({
                                 size="icon"
                                 onClick={onClose}
                                 className="shrink-0 text-muted-foreground hover:text-foreground"
-                                aria-label="Close tester panel"
+                                aria-label={copy("Close tester panel")}
                             >
                                 <X className="h-4 w-4" />
                             </Button>
@@ -212,8 +211,8 @@ export function WorkflowTesterPanel({
                                 {effectiveDisabledReason ? <DisabledNotice reason={effectiveDisabledReason} /> : null}
                                 <EmptyState
                                     icon={<Phone className="h-7 w-7" />}
-                                    title="Call this agent in the browser"
-                                    description="Test the agent over a voice call. Some telephony-only tools, like call transfer, are not yet supported here."
+                                    title={copy("Call this agent in the browser")}
+                                    description={copy("Test the agent over a voice call. Some telephony-only tools, like call transfer, are not yet supported here.")}
                                     action={
                                         <Button
                                             ref={runTestButtonRef}
@@ -222,14 +221,10 @@ export function WorkflowTesterPanel({
                                         >
                                             {creatingVoiceRun ? (
                                                 <>
-                                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                                    Starting test...
-                                                </>
+                                                    <Loader2 className="h-4 w-4 animate-spin" />{copy("Starting test...")}</>
                                             ) : (
                                                 <>
-                                                    <Phone className="h-4 w-4" />
-                                                    Run Test
-                                                </>
+                                                    <Phone className="h-4 w-4" />{copy("Run Test")}</>
                                             )}
                                         </Button>
                                     }
@@ -251,9 +246,7 @@ export function WorkflowTesterPanel({
                                     disabled={testerBlocked}
                                     className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
                                 >
-                                    <RefreshCw className="h-3.5 w-3.5" />
-                                    Reset
-                                </Button>
+                                    <RefreshCw className="h-3.5 w-3.5" />{copy("Reset")}</Button>
                             ) : null}
                         </div>
 
@@ -278,7 +271,7 @@ export function WorkflowTesterPanel({
             <OnboardingTooltip
                 tooltipKey="web_call"
                 targetRef={runTestButtonRef}
-                title="Try Your First Web Call"
+                title={copy("Try Your First Web Call")}
                 message="Start a browser call here to hear the agent, inspect the transcript, and validate the workflow before you customize it further."
                 showNext={false}
                 enabled={runTestTooltipEnabled}

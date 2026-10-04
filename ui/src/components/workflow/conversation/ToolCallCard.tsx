@@ -5,9 +5,11 @@ import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { cn } from "@/lib/utils";
 
 import { formatConversationValue } from "./utils";
+
 
 interface ToolCallCardProps {
     functionName: string;
@@ -24,6 +26,7 @@ export function ToolCallCard({
     resultValue,
     reasoningDurationMs,
 }: ToolCallCardProps) {
+    const copy = useCopy();
     const [open, setOpen] = useState(false);
     const hasArguments = argumentsValue !== undefined;
     const hasResult = resultValue !== undefined;
@@ -35,8 +38,8 @@ export function ToolCallCard({
                 {reasoningDurationMs !== undefined ? (
                     <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
                         <Brain className="h-3 w-3" />
-                        <span className="font-medium">Reasoning Delay:</span>
-                        <span>{Math.round(reasoningDurationMs)}ms</span>
+                        <span className="font-medium">{copy("Reasoning Delay:")}</span>
+                        <span>{Math.round(reasoningDurationMs)}{copy("ms")}</span>
                     </div>
                 ) : null}
                 <Collapsible
@@ -60,7 +63,7 @@ export function ToolCallCard({
                                             : "border-emerald-500/30 text-emerald-700 dark:text-emerald-300",
                                     )}
                                 >
-                                    {status === "running" ? "Running" : "Completed"}
+                                    {status === "running" ? copy("Running") : copy("Completed")}
                                 </Badge>
                             </div>
                             {hasDetails ? (
@@ -75,9 +78,7 @@ export function ToolCallCard({
                                                     "h-3.5 w-3.5 transition-transform",
                                                     open && "rotate-90",
                                                 )}
-                                            />
-                                            Details
-                                        </button>
+                                            />{copy("Details")}</button>
                                     </CollapsibleTrigger>
                                 </div>
                             ) : null}
@@ -88,9 +89,7 @@ export function ToolCallCard({
                             <div className="space-y-3">
                                 {hasArguments ? (
                                     <div className="space-y-1">
-                                        <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                                            Arguments
-                                        </p>
+                                        <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">{copy("Arguments")}</p>
                                         <pre className="overflow-x-auto rounded-xl bg-background/70 p-3 text-xs leading-5 text-foreground">
                                             {formatConversationValue(argumentsValue)}
                                         </pre>
@@ -98,9 +97,7 @@ export function ToolCallCard({
                                 ) : null}
                                 {hasResult ? (
                                     <div className="space-y-1">
-                                        <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                                            Result
-                                        </p>
+                                        <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">{copy("Result")}</p>
                                         <pre className="overflow-x-auto rounded-xl bg-background/70 p-3 text-xs leading-5 text-foreground">
                                             {formatConversationValue(resultValue)}
                                         </pre>

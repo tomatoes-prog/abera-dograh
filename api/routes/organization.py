@@ -83,6 +83,7 @@ from api.services.configuration.registry import (
 )
 from api.services.mps_billing import ensure_hosted_mps_billing_account_v2
 from api.services.mps_service_key_client import mps_service_key_client
+from api import constants
 from api.services.observability.call_events.configuration import (
     check_connection,
     resolve_settings,
@@ -376,6 +377,7 @@ async def get_model_configuration_v2_defaults(
     }
     return {
         "dograh": {
+            "enabled": constants.ENABLE_DOGRAH_MPS,
             "voices": [DOGRAH_DEFAULT_VOICE],
             "allow_custom_input": _dograh_allows_custom_voice(),
             "speeds": list(DOGRAH_SPEED_OPTIONS),
@@ -428,7 +430,7 @@ async def get_model_configuration_pricing(
     user: UserModel = Depends(get_user_with_selected_organization),
 ) -> ModelConfigurationPricingResponse:
     """Return the hosted organization prices shown in Model Configurations."""
-    if DEPLOYMENT_MODE == "oss":
+    if DEPLOYMENT_MODE == "oss" or not constants.ENABLE_DOGRAH_MPS:
         return ModelConfigurationPricingResponse()
 
     try:

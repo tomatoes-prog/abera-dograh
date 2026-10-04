@@ -44,14 +44,20 @@ ENV BACKEND_URL="http://api:8000"
 # Increase Node.js heap size to prevent out-of-memory errors during build
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npm run build && \
+    find .next/standalone -type f -name "*.map" -delete && \
+    rm -rf .next/standalone/.next/cache && \
     rm -rf /tmp/* /root/.npm /root/.next/cache
 
 # Stage 3: Runner (production image)
-FROM node:22-alpine AS runner
+FROM alpine:3.24 AS runner
+RUN apk add --no-cache libstdc++
+COPY --from=node:22-alpine /usr/local/bin/node /usr/local/bin/node
 WORKDIR /app
 
 # Environment variables will be provided by docker-compose
 ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3010
 
 # Create a non-root user
 RUN addgroup --system --gid 1001 nodejs && \
@@ -61,6 +67,7 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --chown=nextjs:nodejs LICENSE /usr/share/licenses/dograh/LICENSE
 
 # Switch to non-root user
 USER nextjs
@@ -69,4 +76,4 @@ USER nextjs
 EXPOSE 3010
 
 # Start the production server using the standalone Node.js server
-CMD sh -c "echo '🚀 Application ready at http://localhost:3010' && PORT=3010 node server.js"
+CMD ["node", "server.js"]

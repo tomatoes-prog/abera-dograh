@@ -12,6 +12,8 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useCopy } from "@/i18n/LocaleProvider";
+
 
 // ---------------------------------------------------------------------------
 // Context
@@ -42,6 +44,7 @@ const UnsavedChangesContext = createContext<UnsavedChangesContextValue | null>(n
  * Sections register via the `useUnsavedChanges` hook.
  */
 export function UnsavedChangesProvider({ children }: { children: React.ReactNode }) {
+    const copy = useCopy();
     const [dirtySections, setDirtySections] = useState<Set<string>>(new Set());
     const [showDialog, setShowDialog] = useState(false);
     const pendingNavigate = useRef<(() => void) | null>(null);
@@ -218,14 +221,12 @@ export function UnsavedChangesProvider({ children }: { children: React.ReactNode
             <AlertDialog open={showDialog} onOpenChange={(open) => { if (!open) handleCancel(); }}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Unsaved changes</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            You have unsaved changes that will be lost. Are you sure you want to leave?
-                        </AlertDialogDescription>
+                        <AlertDialogTitle>{copy("Unsaved changes")}</AlertDialogTitle>
+                        <AlertDialogDescription>{copy("You have unsaved changes that will be lost. Are you sure you want to leave?")}</AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel onClick={handleCancel}>Stay on page</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleConfirm}>Discard changes</AlertDialogAction>
+                        <AlertDialogCancel onClick={handleCancel}>{copy("Stay on page")}</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleConfirm}>{copy("Discard changes")}</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

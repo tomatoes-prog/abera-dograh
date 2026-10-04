@@ -13,6 +13,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { useCopy } from "@/i18n/LocaleProvider";
+
 
 interface SchemaProperty {
     type?: string;
@@ -45,6 +47,7 @@ export function LLMConfigSelector({
     apiKey,
     onApiKeyChange,
 }: LLMConfigSelectorProps) {
+    const copy = useCopy();
     const [schemas, setSchemas] = useState<Record<string, ProviderSchema>>({});
     const [isManualModelInput, setIsManualModelInput] = useState(false);
 
@@ -104,10 +107,10 @@ export function LLMConfigSelector({
         <div className="space-y-4 p-3 border rounded-md bg-muted/10">
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <Label>Provider</Label>
+                    <Label>{copy("Provider")}</Label>
                     <Select value={provider} onValueChange={handleProviderChange}>
                         <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select provider" />
+                            <SelectValue placeholder={copy("Select provider")} />
                         </SelectTrigger>
                         <SelectContent>
                             {availableProviders.map((p) => (
@@ -120,12 +123,12 @@ export function LLMConfigSelector({
                 </div>
 
                 <div className="space-y-2">
-                    <Label>Model</Label>
+                    <Label>{copy("Model")}</Label>
                     {isManualModelInput ? (
                         <div className="space-y-2">
                             <Input
                                 type="text"
-                                placeholder="Enter model name"
+                                placeholder={copy("Enter model name")}
                                 value={model}
                                 onChange={(e) => onModelChange(e.target.value)}
                             />
@@ -143,9 +146,7 @@ export function LLMConfigSelector({
                                 <Label
                                     htmlFor="qa-manual-model"
                                     className="text-sm font-normal cursor-pointer"
-                                >
-                                    Add Model Manually
-                                </Label>
+                                >{copy("Add Model Manually")}</Label>
                             </div>
                         </div>
                     ) : modelOptions.length > 0 ? (
@@ -157,7 +158,7 @@ export function LLMConfigSelector({
                                 }}
                             >
                                 <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Select model" />
+                                    <SelectValue placeholder={copy("Select model")} />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {modelOptions.map((m) => (
@@ -178,15 +179,13 @@ export function LLMConfigSelector({
                                 <Label
                                     htmlFor="qa-manual-model-dropdown"
                                     className="text-sm font-normal cursor-pointer"
-                                >
-                                    Add Model Manually
-                                </Label>
+                                >{copy("Add Model Manually")}</Label>
                             </div>
                         </div>
                     ) : (
                         <Input
                             type="text"
-                            placeholder="Enter model name"
+                            placeholder={copy("Enter model name")}
                             value={model}
                             onChange={(e) => onModelChange(e.target.value)}
                         />
@@ -195,10 +194,10 @@ export function LLMConfigSelector({
             </div>
 
             <div className="space-y-2">
-                <Label>API Key</Label>
+                <Label>{copy("API Key")}</Label>
                 <Input
                     type="text"
-                    placeholder="Enter API key"
+                    placeholder={copy("Enter API key")}
                     value={apiKey}
                     onChange={(e) => onApiKeyChange(e.target.value)}
                 />

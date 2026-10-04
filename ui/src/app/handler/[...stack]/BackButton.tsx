@@ -4,8 +4,11 @@ import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { useCopy } from "@/i18n/LocaleProvider";
+
 
 export function BackButton() {
+    const copy = useCopy();
   const router = useRouter();
 
   // On a direct load (e.g. an OAuth redirect or a deep link to /handler/sign-in)
@@ -26,8 +29,6 @@ export function BackButton() {
       onClick={handleBack}
       className="-ml-2 gap-2 text-muted-foreground hover:text-foreground"
     >
-      <ArrowLeft className="h-4 w-4" />
-      Go Back
-    </Button>
+      <ArrowLeft className="h-4 w-4" />{copy("Go Back")}</Button>
   );
 }

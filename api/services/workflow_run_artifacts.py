@@ -1,16 +1,28 @@
 """Upload end-of-call artifacts (recordings, transcript) to object storage.
 
-Called from the pipeline process itself, straight from the in-memory call
-buffers, so no local file ever has to cross a process/host boundary (no
-shared /tmp between web and ARQ workers). Uploads happen before the
-workflow-completion job is enqueued so QA and webhooks see the artifacts
-in storage.
+Called from the pipeline process itself; managed recordings use local temporary
+files for bounded-memory uploads, without crossing a process/host boundary.
+Uploads happen before the workflow-completion job is enqueued so QA and
+webhooks see the artifacts in storage. download_run_transcript_text retrieves
+transcripts for consumers of persisted runs.
 """
+
+import asyncio
+import os
+import tempfile
 
 from loguru import logger
 
 from api.db import db_client
-from api.services.storage import get_current_storage_backend, storage_fs
+from api.services.storage import (
+    get_current_storage_backend,
+    get_storage_for_backend,
+    storage_fs,
+)
+
+
+class TranscriptDownloadError(Exception):
+    """A transcript exists for the run but could not be fetched from storage."""
 
 
 def _recording_metadata(storage_key: str, storage_backend: str, track: str) -> dict:
@@ -43,12 +55,31 @@ async def _upload_bytes(
         return False
 
 
+async def _upload_file(
+    workflow_run_id: int, path: str, storage_key: str, label: str
+) -> bool:
+    try:
+        if await storage_fs.aupload_file(path, storage_key):
+            logger.info(f"Successfully uploaded {label}: {storage_key}")
+            return True
+        logger.error(
+            f"Storage backend rejected {label} upload for workflow "
+            f"{workflow_run_id}: {storage_key}"
+        )
+    except Exception as e:
+        logger.error(f"Error uploading {label} for workflow {workflow_run_id}: {e}")
+    return False
+
+
 async def upload_workflow_run_artifacts(
     workflow_run_id: int,
     *,
     mixed_audio_wav: bytes | None = None,
     user_audio_wav: bytes | None = None,
     bot_audio_wav: bytes | None = None,
+    mixed_audio_path: str | None = None,
+    user_audio_path: str | None = None,
+    bot_audio_path: str | None = None,
     transcript_text: str | None = None,
 ) -> None:
     """Upload call artifacts to object storage and persist their metadata.
@@ -60,13 +91,15 @@ async def upload_workflow_run_artifacts(
 
     recordings_metadata: dict[str, dict] = {}
 
-    if mixed_audio_wav:
+    if mixed_audio_wav or mixed_audio_path:
         recording_url = f"recordings/{workflow_run_id}.wav"
         logger.info(
             f"Uploading mixed audio to {storage_backend.name} - workflow_run_id: {workflow_run_id}"
         )
-        if await _upload_bytes(
-            workflow_run_id, mixed_audio_wav, recording_url, "mixed audio"
+        if await (
+            _upload_file(workflow_run_id, mixed_audio_path, recording_url, "mixed audio")
+            if mixed_audio_path
+            else _upload_bytes(workflow_run_id, mixed_audio_wav, recording_url, "mixed audio")
         ):
             recordings_metadata["mixed"] = _recording_metadata(
                 recording_url, storage_backend.value, "mixed"
@@ -77,25 +110,29 @@ async def upload_workflow_run_artifacts(
                 storage_backend=storage_backend.value,
             )
 
-    if user_audio_wav:
+    if user_audio_wav or user_audio_path:
         user_recording_url = f"recordings/{workflow_run_id}/user.wav"
         logger.info(
             f"Uploading user audio to {storage_backend.name} - workflow_run_id: {workflow_run_id}"
         )
-        if await _upload_bytes(
-            workflow_run_id, user_audio_wav, user_recording_url, "user audio"
+        if await (
+            _upload_file(workflow_run_id, user_audio_path, user_recording_url, "user audio")
+            if user_audio_path
+            else _upload_bytes(workflow_run_id, user_audio_wav, user_recording_url, "user audio")
         ):
             recordings_metadata["user"] = _recording_metadata(
                 user_recording_url, storage_backend.value, "user"
             )
 
-    if bot_audio_wav:
+    if bot_audio_wav or bot_audio_path:
         bot_recording_url = f"recordings/{workflow_run_id}/bot.wav"
         logger.info(
             f"Uploading bot audio to {storage_backend.name} - workflow_run_id: {workflow_run_id}"
         )
-        if await _upload_bytes(
-            workflow_run_id, bot_audio_wav, bot_recording_url, "bot audio"
+        if await (
+            _upload_file(workflow_run_id, bot_audio_path, bot_recording_url, "bot audio")
+            if bot_audio_path
+            else _upload_bytes(workflow_run_id, bot_audio_wav, bot_recording_url, "bot audio")
         ):
             recordings_metadata["bot"] = _recording_metadata(
                 bot_recording_url, storage_backend.value, "bot"
@@ -124,3 +161,46 @@ async def upload_workflow_run_artifacts(
                 transcript_url=transcript_url,
                 storage_backend=storage_backend.value,
             )
+
+
+def _read_transcript_file(path: str) -> str:
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
+        return f.read()
+
+
+async def download_run_transcript_text(
+    *, transcript_url: str | None, storage_backend: str
+) -> str:
+    """Return the stored transcript text for a run.
+
+    Returns "" when no transcript was recorded (``transcript_url`` is empty).
+    Raises ``ValueError`` for an unknown storage backend and
+    ``TranscriptDownloadError`` when the object exists but the download
+    fails — so callers can tell "no transcript" apart from "couldn't fetch
+    it" instead of conflating both as empty.
+    """
+    if not transcript_url:
+        return ""
+
+    # Raises ValueError for an unrecognized backend; let it propagate.
+    storage = get_storage_for_backend(storage_backend)
+
+    tmp_path: str | None = None
+    try:
+        fd, tmp_path = tempfile.mkstemp(suffix=".txt")
+        os.close(fd)
+
+        ok = await storage.adownload_file(transcript_url, tmp_path)
+        if not ok:
+            raise TranscriptDownloadError(
+                f"transcript object {transcript_url!r} could not be "
+                f"downloaded from {storage_backend} storage"
+            )
+
+        return await asyncio.to_thread(_read_transcript_file, tmp_path)
+    finally:
+        if tmp_path is not None:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass

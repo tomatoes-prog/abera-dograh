@@ -1,7 +1,9 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+
+import { useCopy, useUiLocale } from "@/i18n/LocaleProvider";
 
 declare global {
   interface Window {
@@ -15,10 +17,12 @@ declare global {
       position?: "left" | "right";
       type?: "standard" | "expanded_bubble";
       launcherTitle?: string;
+      locale?: string;
     };
     $chatwoot?: {
       toggleBubbleVisibility?: (visibility: "hide" | "show") => void;
       toggle?: (state?: "open" | "close") => void;
+      setLocale?: (locale: string) => void;
     };
   }
 }
@@ -32,6 +36,11 @@ const isBuilderPath = (pathname: string) =>
 
 export default function ChatwootWidget() {
   const pathname = usePathname();
+  const copy = useCopy();
+  const { locale } = useUiLocale();
+  const chatLocale = locale === "es-419" ? "es" : "en";
+  const widgetLanguage = useRef({ locale: chatLocale, title: copy("Chat with us") });
+  widgetLanguage.current = { locale: chatLocale, title: copy("Chat with us") };
 
   // The support widget is an optional external script. Load it only when an
   // operator explicitly configures it on the server.
@@ -52,13 +61,14 @@ export default function ChatwootWidget() {
         }
 
         const start = () => {
-          if (window.chatwootSettings) return;
+          if (cancelled || window.chatwootSettings || !window.chatwootSDK) return;
           window.chatwootSettings = {
             position: "right",
             type: "standard",
-            launcherTitle: "Chat with us",
+            launcherTitle: widgetLanguage.current.title,
+            locale: widgetLanguage.current.locale,
           };
-          window.chatwootSDK?.run({
+          window.chatwootSDK.run({
             websiteToken: config.websiteToken,
             baseUrl: config.baseUrl,
           });
@@ -67,6 +77,7 @@ export default function ChatwootWidget() {
         const scriptUrl = `${config.baseUrl}/packs/js/sdk.js`;
         const existingScript = document.querySelector(`script[src="${scriptUrl}"]`);
         if (existingScript) {
+          existingScript.addEventListener("load", start, { once: true });
           start();
           return;
         }
@@ -87,6 +98,16 @@ export default function ChatwootWidget() {
       cancelled = true;
     };
   }, []);
+
+  // Chatwoot's documented locale API updates an existing widget without
+  // recreating the SDK or losing an active support conversation.
+  useEffect(() => {
+    const applyLocale = () => window.$chatwoot?.setLocale?.(chatLocale);
+    if (window.chatwootSettings) window.chatwootSettings.locale = chatLocale;
+    applyLocale();
+    window.addEventListener("chatwoot:ready", applyLocale, { once: true });
+    return () => window.removeEventListener("chatwoot:ready", applyLocale);
+  }, [chatLocale]);
 
   // Show/hide the bubble per route using Chatwoot's native API. We never tear
   // down and recreate the SDK — doing so left the bubble permanently hidden

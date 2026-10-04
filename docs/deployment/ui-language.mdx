@@ -1,0 +1,97 @@
+---
+title: "Idioma de la interfaz de Abera"
+description: "Español para Latinoamérica, idioma por instalación y mantenimiento del fork."
+---
+
+La interfaz usa español latinoamericano (`es-419`) por defecto. El selector de
+idioma está en la pantalla de acceso y al pie del menú lateral. También permite
+usar inglés. Cambiar el idioma conserva la página y los formularios sin guardar.
+La preferencia se conserva en una cookie durante un año.
+
+## Configuración de Docker
+
+El archivo `docker-compose.yaml` ya usa español por defecto. Puedes cambiarlo
+con `UI_DEFAULT_LOCALE=en` en el `.env` de la instalación. Si usas otro archivo
+Compose, agrega al servicio `ui`:
+
+```yaml
+ui:
+  environment:
+    UI_DEFAULT_LOCALE: es-419
+```
+
+Usa `en` para una instalación cuyo idioma inicial sea inglés. Es una variable de
+ejecución: ambos idiomas usan la misma imagen. No agrega un prefijo a las URLs.
+La cookie del usuario tiene prioridad. Los valores no admitidos usan `es-419`.
+
+## Textos y datos
+
+Los catálogos están en `ui/src/i18n/messages`. `sources.json` relaciona el texto
+original con un identificador estable. La función `useCopy()` traduce solo los
+textos de la aplicación marcados en cada componente. Esto mantiene el texto
+original cerca de su lugar de uso y reduce las diferencias con upstream.
+
+No se traducen nombres escritos por el cliente, instrucciones guardadas,
+transcripciones, código, IDs de modelo, variables ni valores enviados a la API.
+Los textos nuevos del backend que no tengan entrada conservan su texto original
+hasta que se revise el catálogo. El auditor detecta nuevos metadatos del editor,
+proveedores y telefonía definidos en este repositorio.
+
+Las fechas y calendarios usan el idioma seleccionado. Conservan la zona horaria
+configurada en la organización; las fechas sin hora conservan el día. Las
+monedas mantienen su código y su valor. La interfaz no cambia el idioma hablado
+por un agente: ese idioma se configura en su modelo.
+
+Si está configurado el chat de soporte, también recibe el idioma seleccionado
+mediante la [API de idiomas de Chatwoot](https://www.chatwoot.com/hc/user-guide/articles/1677695546-languages-supported-in-chatwoot).
+Los textos personalizados de servicios externos, como encuestas de PostHog,
+se administran en esos servicios. En DEV puedes usar `ENABLE_TELEMETRY: "false"`
+en el servicio `ui` para evitar las encuestas del proyecto de demostración.
+
+Los widgets nuevos guardan textos traducidos usando el contrato existente de
+personalización. Los widgets existentes conservan sus textos publicados o
+personalizados. Su dueño puede editarlos desde la configuración del widget.
+
+## Criterios de redacción
+
+| Texto original | Español de la interfaz |
+| --- | --- |
+| API key | API key |
+| System prompt | Instrucciones del agente |
+| Workflow | Flujo de conversación |
+| Node | Paso |
+| Disposition | Resultado de llamada |
+| LLM | Modelo de texto |
+| Failed to save configuration | No pudimos guardar los cambios. Inténtalo de nuevo. |
+
+Usa frases breves que indiquen qué hacer. Mantén los nombres de proveedores y
+los términos necesarios para una integración. No traduzcas un identificador
+porque se parezca a una palabra de la interfaz.
+
+## Después de integrar upstream
+
+```bash
+cd ui
+npm ci
+npm run i18n:audit
+npm test
+npx tsc --noEmit
+cd ..
+python scripts/audit_ui_metadata.py
+```
+
+Para agregar un texto:
+
+1. Usa `copy("Original text")` dentro de un componente con `useCopy()`. En un
+   componente servidor, usa la hoja cliente `CopyText`.
+2. Agrega el texto a `sources.json` y su mensaje a los dos catálogos. El ID actual
+   es `m` seguido de los primeros 12 caracteres de SHA-256 del texto original.
+3. Usa parámetros ICU para valores dinámicos y plurales. Nunca pases contenido
+   del cliente por el traductor. Escapa las llaves de ejemplos de código.
+4. Solo agrega a `technical.json` valores que deban conservarse por ser código,
+   identificadores o nombres propios. No lo uses para omitir traducciones.
+5. Ejecuta las revisiones anteriores. La CI las ejecuta al revisar un PR.
+
+Las pruebas cubren renderizado por solicitud, cookies inválidas, cambios de
+idioma sin recargar datos, formularios sin guardar, errores de acceso, variables
+literales, plurales y metadatos cuyos valores de API deben conservarse.

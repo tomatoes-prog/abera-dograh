@@ -6,6 +6,10 @@ import { useEffect } from "react";
 
 import type { WorkflowVersionResponse } from "@/client/types.gen";
 import { Button } from "@/components/ui/button";
+import { dateFnsLocale } from "@/i18n/format";
+import { useCopy } from "@/i18n/LocaleProvider";
+import { useUiLocale } from "@/i18n/LocaleProvider";
+
 
 interface VersionHistoryPanelProps {
     isOpen: boolean;
@@ -46,6 +50,8 @@ export const VersionHistoryPanel = ({
     loadingMore,
     onLoadMore,
 }: VersionHistoryPanelProps) => {
+    const { locale } = useUiLocale();
+    const copy = useCopy();
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === "Escape" && isOpen) {
@@ -64,13 +70,11 @@ export const VersionHistoryPanel = ({
         >
             <div className="p-4 h-full overflow-y-auto">
                 <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-lg font-semibold text-white">
-                        Version History
-                    </h2>
+                    <h2 className="text-lg font-semibold text-white">{copy("Version History")}</h2>
                     <Button
                         variant="ghost"
                         size="icon"
-                        aria-label="Close version history"
+                        aria-label={copy("Close version history")}
                         onClick={onClose}
                         className="text-gray-400 hover:text-white hover:bg-[#2a2a2a]"
                     >
@@ -83,9 +87,7 @@ export const VersionHistoryPanel = ({
                         <LoaderCircle className="w-6 h-6 text-gray-400 animate-spin" />
                     </div>
                 ) : versions.length === 0 ? (
-                    <p className="text-sm text-gray-500 text-center py-8">
-                        No versions found.
-                    </p>
+                    <p className="text-sm text-gray-500 text-center py-8">{copy("No versions found.")}</p>
                 ) : (
                     <div className="space-y-2">
                         {versions.map((version, index) => {
@@ -94,8 +96,8 @@ export const VersionHistoryPanel = ({
                             const previousVersion = versions[index + 1];
                             const canCompare = Boolean(previousVersion) || hasMore;
                             const compareLabel = previousVersion
-                                ? `Compare v${version.version_number} with v${previousVersion.version_number}`
-                                : `Compare v${version.version_number} with its previous version`;
+                                ? copy("Compare v{value0} with v{value1}", { value0: version.version_number, value1: previousVersion.version_number })
+                                : copy("Compare v{value0} with its previous version", { value0: version.version_number });
                             return (
                                 <div
                                     key={version.id}
@@ -128,9 +130,9 @@ export const VersionHistoryPanel = ({
                                             )}
                                         </div>
                                         <p className="text-xs text-gray-500">
-                                            {formatDistanceToNow(new Date(date), {
+                                            {formatDistanceToNow(new Date(date), {...{
                                                 addSuffix: true,
-                                            })}
+                                            }, locale: dateFnsLocale(locale)})}
                                         </p>
                                     </button>
 
@@ -164,7 +166,7 @@ export const VersionHistoryPanel = ({
                                 {loadingMore ? (
                                     <LoaderCircle className="w-4 h-4 animate-spin" />
                                 ) : (
-                                    "Load more"
+                                    copy("Load more")
                                 )}
                             </Button>
                         )}

@@ -7,10 +7,13 @@ import { toast } from 'sonner';
 
 import { createFolderApiV1FolderPost } from '@/client/sdk.gen';
 import { Button } from '@/components/ui/button';
+import { useCopy } from "@/i18n/LocaleProvider";
 
 import { FolderFormDialog } from './FolderFormDialog';
 
+
 export function CreateFolderButton() {
+    const copy = useCopy();
     const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
 
@@ -20,24 +23,22 @@ export function CreateFolderButton() {
             // 409 = duplicate name; surface the server's message when present.
             const detail =
                 (response.error as { detail?: string })?.detail ??
-                'Failed to create folder';
+                copy("Failed to create folder");
             toast.error(detail);
             throw new Error(detail);
         }
-        toast.success(`Folder "${name}" created`);
+        toast.success(copy("Folder \"{value0}\" created", {value0: name}));
         router.refresh();
     };
 
     return (
         <>
             <Button variant="outline" onClick={() => setIsOpen(true)}>
-                <FolderPlus className="w-4 h-4 mr-2" />
-                New Folder
-            </Button>
+                <FolderPlus className="w-4 h-4 mr-2" />{copy("New Folder")}</Button>
             <FolderFormDialog
                 open={isOpen}
                 onOpenChange={setIsOpen}
-                title="Create folder"
+                title={copy("Create folder")}
                 submitLabel="Create"
                 onSubmit={handleCreate}
             />

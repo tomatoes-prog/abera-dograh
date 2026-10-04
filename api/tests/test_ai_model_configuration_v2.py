@@ -2,6 +2,8 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
+
+pytestmark = pytest.mark.usefixtures("mps_enabled")
 from pydantic import ValidationError
 
 from api.schemas.ai_model_configuration import (

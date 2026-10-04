@@ -15,6 +15,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useDispositionCodes } from "@/hooks/useDispositionCodes";
+import { useCopy } from "@/i18n/LocaleProvider";
+
 
 type Row = {
   /** The Dograh disposition being translated. Fixed for a built-in row. */
@@ -78,6 +80,7 @@ export function DispositionMappingDialog({
   mapping,
   onSave,
 }: Props) {
+    const copy = useCopy();
   const { systemCodes, isLoading } = useDispositionCodes();
   const [rows, setRows] = useState<Row[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -136,24 +139,17 @@ export function DispositionMappingDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Configure disposition mapping</DialogTitle>
-          <DialogDescription>
-            Each Dograh disposition is sent as your own code wherever a call
-            outcome is reported &mdash; webhooks, run filters, reports, and
-            external PBX write-backs. Leave a row unchanged to send the
-            disposition as-is. Saving here applies the mapping immediately.
-          </DialogDescription>
+          <DialogTitle>{copy("Configure disposition mapping")}</DialogTitle>
+          <DialogDescription>{copy("Each Dograh disposition is sent as your own code wherever a call outcome is reported — webhooks, run filters, reports, and external PBX write-backs. Leave a row unchanged to send the disposition as-is. Saving here applies the mapping immediately.")}</DialogDescription>
         </DialogHeader>
 
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">
-            Loading dispositions...
-          </p>
+          <p className="text-sm text-muted-foreground">{copy("Loading dispositions...")}</p>
         ) : (
           <>
             <div className="grid grid-cols-[1fr_1fr_auto] items-center gap-x-3 gap-y-1 px-1 text-xs font-medium text-muted-foreground">
-              <span>Dograh disposition</span>
-              <span>Your code</span>
+              <span>{copy("Dograh disposition")}</span>
+              <span>{copy("Your code")}</span>
               <span className="w-8" />
             </div>
 
@@ -177,25 +173,25 @@ export function DispositionMappingDialog({
                       </Label>
                     ) : (
                       <Input
-                        aria-label="Dograh disposition"
+                        aria-label={copy("Dograh disposition")}
                         value={row.source}
                         disabled={isSaving}
                         onChange={(event) =>
                           updateRow(index, { source: event.target.value })
                         }
-                        placeholder="e.g. no_medicare_card"
+                        placeholder={copy("e.g. no_medicare_card")}
                         className="font-mono text-xs"
                       />
                     )}
                     <Input
                       id={`disposition-target-${index}`}
-                      aria-label={`Code for ${row.source || "new disposition"}`}
+                      aria-label={copy("Code for {value0}", {value0: row.source || "new disposition"})}
                       value={row.target}
                       disabled={isSaving}
                       onChange={(event) =>
                         updateRow(index, { target: event.target.value })
                       }
-                      placeholder={row.source || "Your code"}
+                      placeholder={row.source || copy("Your code")}
                       className="font-mono text-xs"
                     />
                     {row.builtIn ? (
@@ -208,12 +204,10 @@ export function DispositionMappingDialog({
                         // reflow as rows are edited.
                         disabled={isSaving || !changed}
                         onClick={() => updateRow(index, { target: row.source })}
-                        title="Reset to the Dograh disposition"
+                        title={copy("Reset to the Dograh disposition")}
                       >
                         <RotateCcw className="h-3.5 w-3.5" />
-                        <span className="sr-only">
-                          Reset {row.source} to its default
-                        </span>
+                        <span className="sr-only">{copy("Reset ")}{row.source}{copy(" to its default")}</span>
                       </Button>
                     ) : (
                       <Button
@@ -223,11 +217,10 @@ export function DispositionMappingDialog({
                         className="h-8 w-8"
                         disabled={isSaving}
                         onClick={() => removeRow(index)}
-                        title="Remove this disposition"
+                        title={copy("Remove this disposition")}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
-                        <span className="sr-only">
-                          Remove {row.source || "this disposition"}
+                        <span className="sr-only">{copy("Remove ")}{row.source || copy("this disposition")}
                         </span>
                       </Button>
                     )}
@@ -244,13 +237,11 @@ export function DispositionMappingDialog({
                 disabled={isSaving}
                 onClick={addRow}
               >
-                <Plus className="mr-2 h-3.5 w-3.5" />
-                Add disposition
-              </Button>
+                <Plus className="mr-2 h-3.5 w-3.5" />{copy("Add disposition")}</Button>
               <p className="text-xs text-muted-foreground">
                 {overrideCount === 0
-                  ? "No overrides — every disposition is sent as-is."
-                  : `${overrideCount} override${overrideCount === 1 ? "" : "s"}`}
+                  ? copy("No overrides — every disposition is sent as-is.")
+                  : copy("{value0} override{value1}", {value0: overrideCount, value1: overrideCount === 1 ? "" : "s"})}
               </p>
             </div>
           </>
@@ -262,15 +253,13 @@ export function DispositionMappingDialog({
             variant="outline"
             disabled={isSaving}
             onClick={() => onOpenChange(false)}
-          >
-            Cancel
-          </Button>
+          >{copy("Cancel")}</Button>
           <Button
             type="button"
             onClick={handleSave}
             disabled={isLoading || isSaving}
           >
-            {isSaving ? "Saving..." : "Save mapping"}
+            {isSaving ? copy("Saving...") : copy("Save mapping")}
           </Button>
         </DialogFooter>
       </DialogContent>

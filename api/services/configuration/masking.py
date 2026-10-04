@@ -13,7 +13,7 @@ import copy
 from typing import Any, Dict, Optional
 
 from api.schemas.ai_model_configuration import EffectiveAIModelConfiguration
-from api.services.configuration.registry import ServiceConfig
+from api.services.configuration.registry import ServiceConfig, ServiceProviders
 from api.services.integrations import get_node_secret_fields
 
 VISIBLE_CHARS = 4  # number of trailing characters to reveal
@@ -35,6 +35,20 @@ def contains_masked_key(value: str | list[str] | None) -> bool:
         return False
     keys = value if isinstance(value, list) else [value]
     return any(MASK_MARKER in k for k in keys)
+
+
+def require_new_key_for_changed_embedding_url(incoming: dict, existing: dict) -> None:
+    """Never send a stored, hidden credential to a newly selected endpoint."""
+    if (
+        existing.get("provider") != ServiceProviders.OPENAI_COMPATIBLE
+        or incoming.get("provider", existing.get("provider")) != ServiceProviders.OPENAI_COMPATIBLE
+        or not incoming.get("base_url")
+        or incoming["base_url"].strip().rstrip("/") == (existing.get("base_url") or "").strip().rstrip("/")
+    ):
+        return
+    key = incoming.get("api_key")
+    if not key or contains_masked_key(key):
+        raise ValueError("Al cambiar la URL del proveedor de embeddings, vuelve a ingresar la API key.")
 
 
 def check_for_masked_keys(config: "EffectiveAIModelConfiguration") -> None:

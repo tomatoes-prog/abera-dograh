@@ -1,5 +1,8 @@
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
+
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -17,7 +20,8 @@ const sentryBuildConfigured = Boolean(
     process.env.SENTRY_PROJECT,
 );
 
-export default sentryBuildConfigured ? withSentryConfig(nextConfig, {
+const localizedConfig = withNextIntl(nextConfig);
+export default sentryBuildConfigured ? withSentryConfig(localizedConfig, {
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
@@ -45,4 +49,4 @@ export default sentryBuildConfigured ? withSentryConfig(nextConfig, {
     // https://vercel.com/docs/cron-jobs
     automaticVercelMonitors: true,
   },
-}) : nextConfig;
+}) : localizedConfig;

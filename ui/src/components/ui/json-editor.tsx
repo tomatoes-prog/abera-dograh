@@ -1,3 +1,5 @@
+"use client";
+
 import { AlertCircle, Check, Copy } from "lucide-react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
@@ -5,7 +7,9 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { copyTextToClipboard } from "@/lib/clipboard";
+
 
 interface JsonEditorProps {
     value: string;
@@ -112,6 +116,7 @@ export function JsonEditor({
     showCopyButton = true,
     className = "",
 }: JsonEditorProps) {
+    const copy = useCopy();
     const [copied, setCopied] = useState(false);
 
     const handleCopy = useCallback(async () => {
@@ -120,9 +125,9 @@ export function JsonEditor({
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         } catch {
-            toast.error("Failed to copy JSON");
+            toast.error(copy("Failed to copy JSON"));
         }
-    }, [value]);
+    }, [copy, value]);
 
     return (
         <div className={`grid gap-2 ${className}`}>
@@ -140,9 +145,7 @@ export function JsonEditor({
                                 <Check className="h-4 w-4 mr-1" />
                             ) : (
                                 <Copy className="h-4 w-4 mr-1" />
-                            )}
-                            Copy
-                        </Button>
+                            )}{copy("Copy")}</Button>
                     )}
                 </div>
             )}

@@ -26,7 +26,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { copyTextToClipboard } from "@/lib/clipboard";
+
 
 interface SipConnectivityCardProps {
   details: SipConnectivityDetails;
@@ -43,6 +45,7 @@ export function SipConnectivityCard({
   details,
   defaultOpen = false,
 }: SipConnectivityCardProps) {
+    const copy = useCopy();
   const [open, setOpen] = useState(defaultOpen);
   const [selectedRegion, setSelectedRegion] = useState<string>();
   const defaultRegion =
@@ -70,8 +73,8 @@ export function SipConnectivityCard({
 
   const copyValue = (value: string, label: string) => {
     copyTextToClipboard(value)
-      .then(() => toast.success(`${label} copied`))
-      .catch(() => toast.error(`Failed to copy ${label.toLowerCase()}`));
+      .then(() => toast.success(copy("{value0} copied", {value0: label})))
+      .catch(() => toast.error(copy("Failed to copy {value0}", {value0: label.toLowerCase()})));
   };
 
   return (
@@ -79,15 +82,12 @@ export function SipConnectivityCard({
       <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div className="space-y-1">
-            <CardTitle>SIP connectivity</CardTitle>
-            <CardDescription>
-              The endpoints to give your SIP carrier or PBX. Pick a region to see
-              the addresses that region uses.
-            </CardDescription>
+            <CardTitle>{copy("SIP connectivity")}</CardTitle>
+            <CardDescription>{copy("The endpoints to give your SIP carrier or PBX. Pick a region to see the addresses that region uses.")}</CardDescription>
           </div>
           <CollapsibleTrigger asChild>
             <Button variant="outline" size="sm" className="shrink-0">
-              {open ? "Hide details" : "View details"}
+              {open ? copy("Hide details") : copy("View details")}
               <ChevronDown
                 className={`ml-2 h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`}
               />
@@ -98,9 +98,7 @@ export function SipConnectivityCard({
         <CollapsibleContent>
           <CardContent className="space-y-6 border-t pt-6">
             <div className="max-w-xs space-y-2">
-              <p className="flex items-center gap-2 text-sm font-medium">
-                Select Region
-                {/* Every endpoint below is region-specific, so the picker is
+              <p className="flex items-center gap-2 text-sm font-medium">{copy("Select Region")}{/* Every endpoint below is region-specific, so the picker is
                     easy to walk past and read the wrong hostnames from. */}
                 <span aria-hidden className="relative flex h-3 w-3 shrink-0">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
@@ -108,7 +106,7 @@ export function SipConnectivityCard({
                 </span>
               </p>
               <Select value={region.region} onValueChange={setSelectedRegion}>
-                <SelectTrigger aria-label="SIP region">
+                <SelectTrigger aria-label={copy("SIP region")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -123,21 +121,19 @@ export function SipConnectivityCard({
 
             <section className="overflow-hidden rounded-md border">
               <div className="border-b bg-muted/20 p-4">
-                <h3 className="font-semibold">Inbound</h3>
-                <p className="text-sm text-muted-foreground">
-                  Route calls to {details.provider_display_name}/Dograh using this
-                  SIP endpoint.
+                <h3 className="font-semibold">{copy("Inbound")}</h3>
+                <p className="text-sm text-muted-foreground">{copy("Route calls to ")}{details.provider_display_name}{copy("/Dograh using this SIP endpoint.")}
                 </p>
               </div>
               <div className="space-y-3 p-4">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md bg-muted/30 px-3 py-2 text-sm">
-                  <span className="text-muted-foreground">Hostname</span>
+                  <span className="text-muted-foreground">{copy("Hostname")}</span>
                   {inboundHostname ? (
                     <button
                       type="button"
                       onClick={() => copyValue(inboundHostname, "Hostname")}
-                      title="Copy inbound hostname"
-                      aria-label="Copy inbound hostname"
+                      title={copy("Copy inbound hostname")}
+                      aria-label={copy("Copy inbound hostname")}
                       className="inline-flex items-center gap-2 rounded font-mono hover:text-foreground"
                     >
                       {inboundHostname}
@@ -146,7 +142,7 @@ export function SipConnectivityCard({
                   ) : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-2 text-sm">
-                  <span className="text-muted-foreground">Ports</span>
+                  <span className="text-muted-foreground">{copy("Ports")}</span>
                   {portGroups.map((group) => (
                     <Badge
                       key={group.port}
@@ -162,22 +158,20 @@ export function SipConnectivityCard({
 
             <section className="overflow-hidden rounded-md border">
               <div className="border-b bg-muted/20 p-4">
-                <h3 className="font-semibold">Outbound</h3>
-                <p className="text-sm text-muted-foreground">
-                  Send calls from {details.provider_display_name}/Dograh to your SIP
-                  carrier or PBX.
+                <h3 className="font-semibold">{copy("Outbound")}</h3>
+                <p className="text-sm text-muted-foreground">{copy("Send calls from ")}{details.provider_display_name}{copy("/Dograh to your SIP carrier or PBX.")}
                 </p>
               </div>
               <div className="space-y-3 p-4">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md bg-muted/30 px-3 py-2 text-sm">
-                  <span className="text-muted-foreground">Origin IP address</span>
+                  <span className="text-muted-foreground">{copy("Origin IP address")}</span>
                   <button
                     type="button"
                     onClick={() =>
                       copyValue(region.outbound_origin_ip, "Origin IP address")
                     }
-                    title="Copy outbound origin IP address"
-                    aria-label="Copy outbound origin IP address"
+                    title={copy("Copy outbound origin IP address")}
+                    aria-label={copy("Copy outbound origin IP address")}
                     className="inline-flex items-center gap-2 rounded font-mono hover:text-foreground"
                   >
                     {region.outbound_origin_ip}

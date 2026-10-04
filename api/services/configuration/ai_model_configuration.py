@@ -29,6 +29,7 @@ from api.services.configuration.masking import (
     SERVICE_SECRET_FIELDS,
     contains_masked_key,
     mask_key,
+    require_new_key_for_changed_embedding_url,
     resolve_masked_api_keys,
 )
 from api.services.configuration.registry import ServiceProviders
@@ -364,6 +365,7 @@ def _merge_byok_secret_fields(incoming_byok: dict | None, existing_byok: dict | 
 
 
 def _merge_service_secret_fields(incoming: dict, existing: dict):
+    require_new_key_for_changed_embedding_url(incoming, existing)
     if (
         incoming.get("provider") is not None
         and existing.get("provider") is not None

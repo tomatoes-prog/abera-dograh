@@ -1,11 +1,15 @@
+"use client";
+
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useCopy } from "@/i18n/LocaleProvider";
 import type { BillingActivity, BillingPeriod } from "@/lib/billingFilters";
 import { getBillingDateRange } from "@/lib/billingFilters";
+
 
 interface BillingLedgerFiltersProps {
     activity: BillingActivity;
@@ -19,6 +23,7 @@ interface BillingLedgerFiltersProps {
 export function BillingLedgerFilters({
     activity, period, startDate, endDate, timezone, onChange,
 }: BillingLedgerFiltersProps) {
+    const copy = useCopy();
     const [from, setFrom] = useState(startDate || "");
     const [to, setTo] = useState(endDate || "");
 
@@ -35,25 +40,25 @@ export function BillingLedgerFilters({
         <div className="mb-4 space-y-3">
             <div className="flex flex-wrap items-end gap-3">
                 <div className="space-y-2">
-                    <Label htmlFor="billing-activity">Activity</Label>
+                    <Label htmlFor="billing-activity">{copy("Activity")}</Label>
                     <Select value={activity} onValueChange={value => onChange({ activity: value })}>
                         <SelectTrigger id="billing-activity" className="w-40"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">All activity</SelectItem>
-                            <SelectItem value="credit">Credit</SelectItem>
-                            <SelectItem value="debit">Usage</SelectItem>
+                            <SelectItem value="all">{copy("All activity")}</SelectItem>
+                            <SelectItem value="credit">{copy("Credit")}</SelectItem>
+                            <SelectItem value="debit">{copy("Usage")}</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="billing-period">Date range</Label>
+                    <Label htmlFor="billing-period">{copy("Date range")}</Label>
                     <Select value={period} onValueChange={changePeriod}>
                         <SelectTrigger id="billing-period" className="w-40"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">All time</SelectItem>
-                            <SelectItem value="this_month">This month</SelectItem>
-                            <SelectItem value="last_month">Last month</SelectItem>
-                            <SelectItem value="custom">Custom</SelectItem>
+                            <SelectItem value="all">{copy("All time")}</SelectItem>
+                            <SelectItem value="this_month">{copy("This month")}</SelectItem>
+                            <SelectItem value="last_month">{copy("Last month")}</SelectItem>
+                            <SelectItem value="custom">{copy("Custom")}</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -66,19 +71,19 @@ export function BillingLedgerFilters({
                     }
                 }}>
                     <div className="space-y-2">
-                        <Label htmlFor="billing-from">From</Label>
+                        <Label htmlFor="billing-from">{copy("From")}</Label>
                         <Input id="billing-from" type="date" required value={from}
                             max={to || undefined} onChange={event => setFrom(event.target.value)} />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="billing-to">To</Label>
+                        <Label htmlFor="billing-to">{copy("To")}</Label>
                         <Input id="billing-to" type="date" required value={to}
                             min={from || undefined} onChange={event => setTo(event.target.value)} />
                     </div>
-                    <Button type="submit" variant="outline">Apply dates</Button>
+                    <Button type="submit" variant="outline">{copy("Apply dates")}</Button>
                 </form>
             )}
-            <p className="text-xs text-muted-foreground">Dates and times shown in {timezone}.</p>
+            <p className="text-xs text-muted-foreground">{copy("Dates and times shown in ")}{timezone}.</p>
         </div>
     );
 }

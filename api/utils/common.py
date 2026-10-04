@@ -8,7 +8,7 @@ import re
 
 from loguru import logger
 
-from api.constants import BACKEND_API_ENDPOINT
+from api.constants import BACKEND_API_ENDPOINT, ENABLE_CLOUDFLARE_TUNNEL
 from api.utils.tunnel import TunnelURLProvider
 
 
@@ -159,7 +159,7 @@ async def get_backend_endpoints() -> tuple[str, str]:
     if BACKEND_API_ENDPOINT:
         # Non-public address (localhost or a private/reserved IP) - the host isn't
         # reachable from the internet, so prefer a running Cloudflare tunnel's URL.
-        if is_local_or_private_url(BACKEND_API_ENDPOINT):
+        if ENABLE_CLOUDFLARE_TUNNEL and is_local_or_private_url(BACKEND_API_ENDPOINT):
             logger.debug(
                 f"BACKEND_API_ENDPOINT is not publicly reachable ({BACKEND_API_ENDPOINT}), checking tunnel URL"
             )
@@ -198,6 +198,9 @@ async def get_backend_endpoints() -> tuple[str, str]:
             raise ValueError(
                 f"Invalid BACKEND_API_ENDPOINT format: '{BACKEND_API_ENDPOINT}' - {str(e)}"
             )
+
+    if not ENABLE_CLOUDFLARE_TUNNEL:
+        raise ValueError("Set BACKEND_API_ENDPOINT; tunnel discovery is disabled")
 
     # Second priority: Query cloudflared tunnel URL when no environment variable is set
     logger.debug("No BACKEND_API_ENDPOINT set, using tunnel URL")

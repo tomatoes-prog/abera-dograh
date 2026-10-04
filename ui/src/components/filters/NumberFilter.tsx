@@ -1,8 +1,12 @@
+"use client";
+
 import { useEffect, useState } from "react";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { NumberValue } from "@/types/filters";
+
 
 interface NumberFilterProps {
   value: NumberValue;
@@ -23,6 +27,7 @@ export const NumberFilter: React.FC<NumberFilterProps> = ({
   max,
   step = 1,
 }) => {
+    const copy = useCopy();
   // Local state for fast typing - only syncs to parent on blur
   const [localValue, setLocalValue] = useState<string>(value.value?.toString() ?? '');
 
@@ -49,7 +54,7 @@ export const NumberFilter: React.FC<NumberFilterProps> = ({
   return (
     <div className="space-y-2">
       <div className="space-y-2">
-        <Label htmlFor="number-filter">Value</Label>
+        <Label htmlFor="number-filter">{copy("Value")}</Label>
         <Input
           id="number-filter"
           type="number"

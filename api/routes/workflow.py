@@ -6,11 +6,9 @@ from typing import Annotated, List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
-from httpx import HTTPStatusError
 from loguru import logger
 from pydantic import BaseModel, Field, ValidationError
 
-from api.constants import DEPLOYMENT_MODE
 from api.db import db_client
 from api.db.agent_trigger_client import TriggerPathConflictError
 from api.db.models import UserModel
@@ -22,6 +20,7 @@ from api.enums import (
     WorkflowRunMode,
     WorkflowStatus,
 )
+from api.errors.abera import AgentLimitExceeded
 from api.schemas.ai_model_configuration import OrganizationAIModelConfigurationV2
 from api.schemas.workflow import WorkflowRunResponseSchema
 from api.schemas.workflow_configurations import WorkflowConfigurationDefaults
@@ -46,7 +45,7 @@ from api.services.configuration.resolve import (
     enrich_overrides_with_api_keys,
     resolve_effective_config,
 )
-from api.services.mps_service_key_client import mps_service_key_client
+from api.services.model_services.workflow_generation import generate_workflow
 from api.services.posthog_client import capture_event
 from api.services.reports import generate_workflow_report_csv
 from api.services.storage import storage_fs
@@ -540,10 +539,7 @@ async def create_workflow_from_template(
     """
     Create a new workflow from a natural language template request.
 
-    This endpoint:
-    1. Uses mps_service_key_client to call MPS workflow API
-    2. Passes organization ID (authenticated mode) or created_by (OSS mode)
-    3. Creates the workflow in the database
+    Uses the organization's configured LLM directly and saves an editable draft.
 
     Args:
         request: The template creation request with call_type, use_case, and activity_description
@@ -553,27 +549,17 @@ async def create_workflow_from_template(
         The created workflow
 
     Raises:
-        HTTPException: If MPS API call fails
+        HTTPException: If the configured provider cannot generate a valid draft
     """
     try:
-        # Call MPS API to generate workflow using the client
-        if DEPLOYMENT_MODE == "oss":
-            workflow_data = await mps_service_key_client.call_workflow_api(
-                call_type=request.call_type.upper(),
-                use_case=request.use_case,
-                activity_description=request.activity_description,
-                created_by=str(user.provider_id),
-            )
-        else:
-            if not user.selected_organization_id:
-                raise HTTPException(status_code=400, detail="No organization selected")
-
-            workflow_data = await mps_service_key_client.call_workflow_api(
-                call_type=request.call_type.upper(),
-                use_case=request.use_case,
-                activity_description=request.activity_description,
-                organization_id=user.selected_organization_id,
-            )
+        if not user.selected_organization_id:
+            raise HTTPException(status_code=400, detail="No organization selected")
+        workflow_data = await generate_workflow(
+            call_type=request.call_type.upper(),
+            use_case=request.use_case,
+            activity_description=request.activity_description,
+            organization_id=user.selected_organization_id,
+        )
 
         # Create the workflow in our database
         # Regenerate trigger UUIDs to avoid conflicts with existing triggers
@@ -632,17 +618,15 @@ async def create_workflow_from_template(
 
     except HTTPException:
         raise
-    except HTTPStatusError as e:
-        logger.error(f"MPS API error: {e}")
-        raise HTTPException(
-            status_code=e.response.status_code if hasattr(e, "response") else 500,
-            detail=str(e),
-        )
+    except ValueError:
+        raise HTTPException(422, "No se pudo crear un borrador válido. Ajusta la descripción e inténtalo de nuevo.") from None
+    except AgentLimitExceeded:
+        raise
     except Exception as e:
-        logger.error(f"Unexpected error creating workflow from template: {e}")
+        logger.error("Failed to create a workflow draft: {}", type(e).__name__)
         raise HTTPException(
-            status_code=500,
-            detail=f"An unexpected error occurred: {str(e)}",
+            status_code=502,
+            detail="El proveedor de IA no pudo crear el agente. Revisa la configuración y el saldo.",
         )
 
 
@@ -1394,6 +1378,8 @@ async def duplicate_workflow_endpoint(
                 workflow.workflow_configurations
             ),
         }
+    except AgentLimitExceeded:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -1763,12 +1749,17 @@ async def get_ambient_noise_upload_url(
         f"/{request.workflow_id}/{uuid.uuid4()}_{sanitized}"
     )
 
-    upload_url = await storage_fs.aget_presigned_put_url(
-        file_path=storage_key,
-        expiration=1800,
-        content_type=request.mime_type,
-        max_size=request.file_size,
-    )
+    from api.constants import DEPLOYMENT_MODE
+
+    if DEPLOYMENT_MODE == "abera":
+        from api.services.abera.storage_upload import create_upload_url
+
+        upload_url = await create_upload_url(storage_key, request.file_size, request.mime_type)
+    else:
+        upload_url = await storage_fs.aget_presigned_put_url(
+            file_path=storage_key, expiration=1800,
+            content_type=request.mime_type, max_size=request.file_size,
+        )
     if not upload_url:
         raise HTTPException(status_code=500, detail="Failed to generate upload URL")
 

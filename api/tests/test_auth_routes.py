@@ -58,6 +58,16 @@ def test_signup_disabled_returns_403(monkeypatch):
     assert response.json() == {"detail": "Signup is disabled"}
 
 
+def test_abera_mode_disables_signup_even_if_flag_is_true(monkeypatch):
+    monkeypatch.setattr(auth_routes, "DEPLOYMENT_MODE", "abera")
+    monkeypatch.setattr(auth_routes, "ENABLE_SIGNUP", True)
+    response = TestClient(_make_test_app()).post(
+        "/auth/signup",
+        json={"email": "user@example.com", "password": "password123"},
+    )
+    assert response.status_code == 403
+
+
 def test_stack_mode_keeps_current_user_route_available(monkeypatch):
     monkeypatch.setattr(auth_depends, "AUTH_PROVIDER", "stack")
     app = _make_test_app()

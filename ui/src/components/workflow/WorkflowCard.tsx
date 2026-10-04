@@ -3,7 +3,10 @@
 import { useRouter } from 'next/navigation';
 
 import { useOrganizationTimezone } from '@/hooks/useOrganizationTimezone';
+import { useCopy } from "@/i18n/LocaleProvider";
+import { useUiLocale } from "@/i18n/LocaleProvider";
 import { formatDate } from '@/lib/dateTime';
+
 
 interface WorkflowCardProps {
     id: number;
@@ -12,6 +15,8 @@ interface WorkflowCardProps {
 }
 
 export function WorkflowCard({ id, name, createdAt }: WorkflowCardProps) {
+    const { locale } = useUiLocale();
+    const copy = useCopy();
     const router = useRouter();
     const organizationTimezone = useOrganizationTimezone();
 
@@ -26,8 +31,7 @@ export function WorkflowCard({ id, name, createdAt }: WorkflowCardProps) {
         >
             <div>
                 <h3 className="text-lg font-semibold mb-2">{name}</h3>
-                <p className="text-gray-600 mb-2">
-                    Created: {formatDate(createdAt, organizationTimezone)}
+                <p className="text-gray-600 mb-2">{copy("Created: ")}{formatDate(createdAt, organizationTimezone, locale)}
                 </p>
             </div>
         </div>

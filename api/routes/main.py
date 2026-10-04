@@ -84,6 +84,7 @@ class HealthResponse(BaseModel):
     turn_enabled: bool
     force_turn_relay: bool
     signup_enabled: bool
+    dograh_mps_enabled: bool = False
     # Public Stack Auth client config — only populated when auth_provider == "stack".
     # The UI reads these at runtime to initialize Stack, so they no longer need to
     # be baked into the browser bundle at build time. Both are public values.
@@ -100,6 +101,7 @@ async def health() -> HealthResponse:
         DEPLOYMENT_MODE,
         ENABLE_COTURN,
         ENABLE_SIGNUP,
+        ENABLE_DOGRAH_MPS,
         FORCE_TURN_RELAY,
         STACK_AUTH_PROJECT_ID,
         STACK_PUBLISHABLE_CLIENT_KEY,
@@ -129,6 +131,7 @@ async def health() -> HealthResponse:
         turn_enabled=ENABLE_COTURN,
         force_turn_relay=FORCE_TURN_RELAY,
         signup_enabled=ENABLE_SIGNUP,
+        dograh_mps_enabled=ENABLE_DOGRAH_MPS,
         stack_project_id=STACK_AUTH_PROJECT_ID if is_stack else None,
         stack_publishable_client_key=(
             STACK_PUBLISHABLE_CLIENT_KEY if is_stack else None

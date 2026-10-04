@@ -3,6 +3,8 @@ from datetime import UTC, datetime
 import httpx
 import pytest
 
+pytestmark = pytest.mark.usefixtures("mps_enabled")
+
 from api.errors.failure import ErrorType
 from api.errors.mps import MPSUnavailableError
 from api.services import mps_service_key_client as mps_client_module
