@@ -13,8 +13,8 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { PostHogEvent } from '@/constants/posthog-events';
-import { captureAnalyticsEvent } from '@/lib/analytics';
 import { useCopy } from "@/i18n/LocaleProvider";
+import { captureAnalyticsEvent } from '@/lib/analytics';
 import { downloadFile, getSignedUrl } from '@/lib/files';
 
 

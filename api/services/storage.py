@@ -4,8 +4,8 @@ import re
 from loguru import logger
 
 from api.constants import (
-    ENABLE_AWS_S3,
     ABERA_STORAGE_LIMIT_BYTES,
+    ENABLE_AWS_S3,
     ENVIRONMENT,
     S3_ADDRESSING_STYLE,
     S3_BUCKET,

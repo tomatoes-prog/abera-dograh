@@ -1,4 +1,5 @@
 """The deployed tenant must fit the connection budget reserved by Automations."""
+
 import pytest
 from sqlalchemy.ext.asyncio import create_async_engine
 
@@ -23,7 +24,9 @@ async def test_managed_clients_share_a_bounded_pool(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_rds_url_uses_asyncpg_supported_tls_argument():
-    engine = create_async_engine("postgresql+asyncpg://tenant:example@db.internal/app?ssl=verify-full")
+    engine = create_async_engine(
+        "postgresql+asyncpg://tenant:example@db.internal/app?ssl=verify-full"
+    )
     try:
         _, kwargs = engine.dialect.create_connect_args(engine.url)
         assert kwargs["ssl"] == "verify-full"

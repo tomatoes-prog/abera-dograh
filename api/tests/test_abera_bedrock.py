@@ -10,9 +10,7 @@ def test_basic_cannot_borrow_instance_role(monkeypatch):
     monkeypatch.setenv("ABERA_PLAN", "basic")
     monkeypatch.setenv("ABERA_MANAGED_NOVA_ENABLED", "true")
     with pytest.raises(ValueError, match="unavailable"):
-        bedrock.validate_managed_nova(
-            bedrock.NOVA_MODEL, bedrock.NOVA_REGION
-        )
+        bedrock.validate_managed_nova(bedrock.NOVA_MODEL, bedrock.NOVA_REGION)
 
 
 def test_pro_cannot_select_a_different_chargeable_model(monkeypatch):
@@ -20,9 +18,7 @@ def test_pro_cannot_select_a_different_chargeable_model(monkeypatch):
     monkeypatch.setenv("ABERA_PLAN", "pro")
     monkeypatch.setenv("ABERA_MANAGED_NOVA_ENABLED", "true")
     with pytest.raises(ValueError, match="fixed"):
-        bedrock.validate_managed_nova(
-            "amazon.other-model", bedrock.NOVA_REGION
-        )
+        bedrock.validate_managed_nova("amazon.other-model", bedrock.NOVA_REGION)
 
 
 def test_pro_reads_temporary_role_credentials(monkeypatch):
@@ -35,9 +31,7 @@ def test_pro_reads_temporary_role_credentials(monkeypatch):
         token="short-lived-token",
     )
     session = SimpleNamespace(
-        get_credentials=lambda: SimpleNamespace(
-            get_frozen_credentials=lambda: frozen
-        )
+        get_credentials=lambda: SimpleNamespace(get_frozen_credentials=lambda: frozen)
     )
     monkeypatch.setattr("boto3.Session", lambda: session)
     assert bedrock.temporary_nova_credentials(

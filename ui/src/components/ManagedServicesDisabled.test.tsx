@@ -4,6 +4,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 import APIKeysPage from "@/app/api-keys/page";
 import ExternalProcessingNotice from "@/app/files/ExternalProcessingNotice";
 import { LocaleProvider } from "@/i18n/LocaleProvider";
+
 import { AIModelConfigurationV2Editor, type ModelConfigurationDefaultsV2 } from "./AIModelConfigurationV2Editor";
 
 const { apiKeys, serviceKeys } = vi.hoisted(() => ({

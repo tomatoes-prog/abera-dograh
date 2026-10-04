@@ -1,5 +1,5 @@
-import os
 import hashlib
+import os
 from pathlib import Path
 
 from api.enums import Environment
@@ -68,7 +68,9 @@ ABERA_BILLING_API_URL = os.getenv("ABERA_BILLING_API_URL", "")
 ABERA_BILLING_REGION = os.getenv("ABERA_BILLING_REGION", "us-east-2")
 ABERA_DB_POOL_SIZE = int(os.getenv("ABERA_DB_POOL_SIZE", "2"))
 if DEPLOYMENT_MODE == "abera" and not 1 <= ABERA_DB_POOL_SIZE <= 2:
-    raise ValueError("ABERA_DB_POOL_SIZE must be 1 or 2 for the ten-connection tenant budget")
+    raise ValueError(
+        "ABERA_DB_POOL_SIZE must be 1 or 2 for the ten-connection tenant budget"
+    )
 CORS_ALLOWED_ORIGINS = [
     o.strip() for o in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if o.strip()
 ]
@@ -94,7 +96,9 @@ ENABLE_PROMETHEUS_METRICS = (
 
 # Storage Configuration
 ENABLE_AWS_S3 = True
-ENABLE_CLOUDFLARE_TUNNEL = os.getenv("ENABLE_CLOUDFLARE_TUNNEL", "false").lower() == "true"
+ENABLE_CLOUDFLARE_TUNNEL = (
+    os.getenv("ENABLE_CLOUDFLARE_TUNNEL", "false").lower() == "true"
+)
 ABERA_STORAGE_LIMIT_BYTES = int(os.getenv("ABERA_STORAGE_LIMIT_BYTES", "0"))
 
 # AWS S3 Configuration
@@ -276,7 +280,8 @@ OSS_JWT_SECRET = os.getenv("OSS_JWT_SECRET", "")
 # Domain separation keeps media signing distinct from JWT signing.
 TELEPHONY_WS_TOKEN_SECRET = TELEPHONY_WS_TOKEN_SECRET or (
     hashlib.sha256(("telephony-media-v1:" + OSS_JWT_SECRET).encode()).hexdigest()
-    if OSS_JWT_SECRET else None
+    if OSS_JWT_SECRET
+    else None
 )
 OSS_JWT_EXPIRY_HOURS = int(os.getenv("OSS_JWT_EXPIRY_HOURS", "720"))  # 30 days
 

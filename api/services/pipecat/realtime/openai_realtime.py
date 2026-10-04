@@ -87,14 +87,18 @@ class DograhOpenAIRealtimeLLMService(
                 future.set_result(evt.item)
 
     async def confirm_conversation_item(self, item_id):
-        return await asyncio.wait_for(self.retrieve_conversation_item(item_id), timeout=5)
+        return await asyncio.wait_for(
+            self.retrieve_conversation_item(item_id), timeout=5
+        )
 
     async def delete_conversation_item_confirmed(self, item_id):
         try:
             await self.confirm_conversation_item(item_id)
         except RealtimeItemMissing:
             return  # Retry after an acknowledged deletion is harmless.
-        await self.send_client_event(events.ConversationItemDeleteEvent(item_id=item_id))
+        await self.send_client_event(
+            events.ConversationItemDeleteEvent(item_id=item_id)
+        )
         try:
             await self.confirm_conversation_item(item_id)
         except RealtimeItemMissing:

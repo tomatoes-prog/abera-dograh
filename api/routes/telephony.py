@@ -780,7 +780,9 @@ async def _handle_telephony_websocket(
             return
 
         # Set workflow run state to 'running' before starting the pipeline
-        if not await db_client.claim_telephony_media(workflow_run_id, workflow_id, organization_id):
+        if not await db_client.claim_telephony_media(
+            workflow_run_id, workflow_id, organization_id
+        ):
             await websocket.close(code=4409, reason="Media connection already claimed")
             return
 

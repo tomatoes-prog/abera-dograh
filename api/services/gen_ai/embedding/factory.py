@@ -15,8 +15,8 @@ from api.db.db_client import DBClient
 from .azure_openai_service import AzureOpenAIEmbeddingService
 from .base import BaseEmbeddingService
 from .dograh_service import DograhEmbeddingService
-from .openai_service import OpenAIEmbeddingService
 from .openai_compatible_service import OpenAICompatibleEmbeddingService
+from .openai_service import OpenAIEmbeddingService
 
 DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
 DEFAULT_AZURE_API_VERSION = "2024-02-15-preview"
@@ -81,9 +81,14 @@ async def build_embedding_service(
 
     if provider == ServiceProviders.OPENAI_COMPATIBLE.value:
         if not base_url or not model:
-            raise ValueError("Configura la URL y el modelo de tu proveedor de embeddings.")
+            raise ValueError(
+                "Configura la URL y el modelo de tu proveedor de embeddings."
+            )
         return OpenAICompatibleEmbeddingService(
-            db_client=db_client, api_key=api_key, model_id=model, base_url=base_url,
+            db_client=db_client,
+            api_key=api_key,
+            model_id=model,
+            base_url=base_url,
         )
 
     if provider == ServiceProviders.AZURE.value and endpoint:

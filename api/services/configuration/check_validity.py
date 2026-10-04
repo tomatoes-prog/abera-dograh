@@ -265,9 +265,14 @@ class UserConfigurationValidator:
         return validator(provider, api_key)
 
     def _check_openai_compatible_embedding_api_key(
-        self, provider: str, api_key: str, service_config: Optional[ServiceConfig] = None,
+        self,
+        provider: str,
+        api_key: str,
+        service_config: Optional[ServiceConfig] = None,
     ) -> bool:
-        from api.services.gen_ai.embedding.openai_compatible_service import validate_embedding_vectors
+        from api.services.gen_ai.embedding.openai_compatible_service import (
+            validate_embedding_vectors,
+        )
 
         if not service_config or not api_key:
             raise ValueError("Configura la URL, API key y modelo de embeddings.")
@@ -275,21 +280,31 @@ class UserConfigurationValidator:
             # Many compatible providers expose /embeddings without /models.
             # Probe a short input and verify the actual vector before saving.
             with openai.OpenAI(
-                api_key=api_key, base_url=service_config.base_url,
-                timeout=10, max_retries=0,
+                api_key=api_key,
+                base_url=service_config.base_url,
+                timeout=10,
+                max_retries=0,
                 http_client=httpx.Client(follow_redirects=False, trust_env=False),
             ) as client:
                 result = client.embeddings.create(
-                    model=service_config.model, input=["Prueba"], encoding_format="float",
+                    model=service_config.model,
+                    input=["Prueba"],
+                    encoding_format="float",
                 )
-            validate_embedding_vectors([item.embedding for item in result.data], expected_count=1)
+            validate_embedding_vectors(
+                [item.embedding for item in result.data], expected_count=1
+            )
             return True
         except openai.AuthenticationError:
             raise ValueError("El proveedor rechazó la API key de embeddings.") from None
         except openai.RateLimitError:
-            raise ValueError("El proveedor alcanzó su límite de uso. Revisa el saldo y vuelve a intentar.") from None
+            raise ValueError(
+                "El proveedor alcanzó su límite de uso. Revisa el saldo y vuelve a intentar."
+            ) from None
         except openai.APIError:
-            raise ValueError("No se pudo comprobar el modelo de embeddings. Revisa la URL, el modelo y la API key.") from None
+            raise ValueError(
+                "No se pudo comprobar el modelo de embeddings. Revisa la URL, el modelo y la API key."
+            ) from None
 
     def _check_openai_api_key(
         self, model: str, api_key: str, service_config: Optional[ServiceConfig] = None
@@ -545,8 +560,7 @@ class UserConfigurationValidator:
 
     def _check_aws_bedrock_api_key(self, model: str, service_config) -> bool:
         if (
-            getattr(service_config, "provider", None)
-            == ServiceProviders.AWS_NOVA_SONIC
+            getattr(service_config, "provider", None) == ServiceProviders.AWS_NOVA_SONIC
             and not service_config.aws_access_key
             and not service_config.aws_secret_key
         ):

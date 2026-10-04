@@ -197,8 +197,12 @@ def register_event_handlers(
                 try:
                     await voice_meter.authorize()
                 except Exception:
-                    logger.warning("Managed voice authorization denied for run {}", workflow_run_id)
-                    await engine.end_call_with_reason(EndTaskReason.PIPELINE_ERROR.value, abort_immediately=True)
+                    logger.warning(
+                        "Managed voice authorization denied for run {}", workflow_run_id
+                    )
+                    await engine.end_call_with_reason(
+                        EndTaskReason.PIPELINE_ERROR.value, abort_immediately=True
+                    )
                     return
             started = await engine.start_initial_agent()
 

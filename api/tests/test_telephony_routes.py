@@ -619,9 +619,14 @@ async def test_inbound_run_rejects_when_concurrency_limit_reached():
 
 
 @pytest.mark.asyncio
-async def test_smallwebrtc_run_reaching_telephony_websocket_closes_without_running(monkeypatch):
+async def test_smallwebrtc_run_reaching_telephony_websocket_closes_without_running(
+    monkeypatch,
+):
     from api import constants
-    monkeypatch.setattr(constants, "TELEPHONY_WS_TOKEN_SECRET", "test-only-media-secret")
+
+    monkeypatch.setattr(
+        constants, "TELEPHONY_WS_TOKEN_SECRET", "test-only-media-secret"
+    )
     websocket = AsyncMock()
     workflow_run = SimpleNamespace(
         id=501,
@@ -648,7 +653,10 @@ async def test_smallwebrtc_run_reaching_telephony_websocket_closes_without_runni
         mock_db.update_workflow_run = AsyncMock()
 
         from api.services.telephony.ws_auth import mint_ws_token
-        await _handle_telephony_websocket(websocket, 33, 11, 501, token=mint_ws_token(33, 11, 501))
+
+        await _handle_telephony_websocket(
+            websocket, 33, 11, 501, token=mint_ws_token(33, 11, 501)
+        )
 
     mock_db.get_workflow_run.assert_awaited_once_with(501, organization_id=11)
     mock_db.get_workflow.assert_awaited_once_with(33, organization_id=11)

@@ -2,16 +2,15 @@ from datetime import datetime, timedelta
 from typing import List, Literal, Optional, TypedDict, Union
 
 import httpx
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field, ValidationError
 
+from api import constants
 from api.db import db_client
 from api.db.models import (
     UserModel,
 )
 from api.errors.failure import ErrorSource, classify_exception, log_failure
-from api import constants
 from api.schemas.onboarding_state import OnboardingState, OnboardingStateUpdate
 from api.schemas.widget_texts import WidgetTexts
 from api.schemas.workflow_configurations import (
@@ -542,7 +541,8 @@ class VoiceCatalogueRequest(BaseModel):
 
 @router.post("/configurations/voices/{provider}", response_model=VoicesResponse)
 async def query_voices(
-    provider: TTSProvider, request: VoiceCatalogueRequest,
+    provider: TTSProvider,
+    request: VoiceCatalogueRequest,
     user: UserModel = Depends(get_user),
 ) -> VoicesResponse:
     if not user.selected_organization_id:
@@ -550,10 +550,13 @@ async def query_voices(
     try:
         result = await get_direct_voices(
             organization_id=user.selected_organization_id,
-            provider=provider, **request.model_dump(),
+            provider=provider,
+            **request.model_dump(),
         )
         return VoicesResponse.model_validate(result)
     except HTTPException:
         raise
     except (httpx.HTTPError, ValueError, KeyError):
-        raise HTTPException(502, "No se pudo consultar el catálogo de voces. Inténtalo de nuevo.") from None
+        raise HTTPException(
+            502, "No se pudo consultar el catálogo de voces. Inténtalo de nuevo."
+        ) from None

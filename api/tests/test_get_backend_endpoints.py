@@ -19,6 +19,7 @@ def explicitly_enable_tunnel_for_tunnel_tests(monkeypatch):
     # covered separately by test_runtime_security.
     monkeypatch.setattr("api.utils.common.ENABLE_CLOUDFLARE_TUNNEL", True)
 
+
 # Valid test URLs covering various formats
 possible_env_paths = [
     "http://localhost",

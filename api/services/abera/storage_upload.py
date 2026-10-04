@@ -18,7 +18,8 @@ async def create_upload_url(key: str, size: int, content_type: str) -> str:
     await redis.set(
         "storage-upload:" + token,
         json.dumps({"key": key, "size": size, "content_type": content_type}),
-        ex=900, nx=True,
+        ex=900,
+        nx=True,
     )
     origin, _ = await get_backend_endpoints()
     return f"{origin}/api/v1/s3/managed-upload/{token}"
@@ -33,7 +34,10 @@ async def receive_upload(token: str, request: Request):
     if raw is None:
         raise HTTPException(410, "Upload expired or already used")
     grant = json.loads(raw)
-    if request.headers.get("content-type", "").split(";", 1)[0] != grant["content_type"]:
+    if (
+        request.headers.get("content-type", "").split(";", 1)[0]
+        != grant["content_type"]
+    ):
         raise HTTPException(400, "Unexpected content type")
     with tempfile.NamedTemporaryFile(delete=False) as output:
         path = output.name

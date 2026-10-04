@@ -331,13 +331,19 @@ async def get_presigned_upload_url(
     try:
         # Generate presigned PUT URL using current storage backend
         from api.constants import DEPLOYMENT_MODE
+
         if DEPLOYMENT_MODE == "abera":
             from api.services.abera.storage_upload import create_upload_url
-            upload_url = await create_upload_url(file_key, request.file_size, request.content_type)
+
+            upload_url = await create_upload_url(
+                file_key, request.file_size, request.content_type
+            )
         else:
             upload_url = await storage_fs.aget_presigned_put_url(
-                file_path=file_key, expiration=900,
-                content_type=request.content_type, max_size=request.file_size,
+                file_path=file_key,
+                expiration=900,
+                content_type=request.content_type,
+                max_size=request.file_size,
             )
 
         if not upload_url:
@@ -369,5 +375,6 @@ async def managed_upload(token: str, request: Request):
     # Authentication is the one-time, server-issued upload capability, bound to
     # an organization key, exact byte count and MIME type in Redis.
     from api.services.abera.storage_upload import receive_upload
+
     await receive_upload(token, request)
     return Response(status_code=204)

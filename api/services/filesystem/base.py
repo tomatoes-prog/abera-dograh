@@ -115,7 +115,9 @@ class BaseFileSystem(ABC):
         pass
 
     @abstractmethod
-    async def adownload_file(self, source_path: str, local_path: str, *, max_size: int | None = None) -> bool:
+    async def adownload_file(
+        self, source_path: str, local_path: str, *, max_size: int | None = None
+    ) -> bool:
         """Download a file from storage to local path.
 
         Args:

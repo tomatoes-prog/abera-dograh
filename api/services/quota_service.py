@@ -791,6 +791,7 @@ async def authorize_workflow_run_start(
 
             if uses_managed_voice(user_config):
                 from api.services.abera.voice_minutes import managed_balance_available
+
                 if await managed_balance_available():
                     return QuotaCheckResult(has_quota=True)
                 return QuotaCheckResult(
@@ -801,7 +802,9 @@ async def authorize_workflow_run_start(
             return QuotaCheckResult(has_quota=True)
 
         if not ENABLE_DOGRAH_MPS:
-            if uses_managed_model_services_v2(user_config) or _dograh_api_keys(user_config):
+            if uses_managed_model_services_v2(user_config) or _dograh_api_keys(
+                user_config
+            ):
                 return QuotaCheckResult(
                     has_quota=False,
                     error_code="unsupported_provider",

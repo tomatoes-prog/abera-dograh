@@ -24,6 +24,7 @@ class FakeService:
 
     async def delete_conversation_item_confirmed(self, item_id):
         from pipecat.services.openai.realtime.events import ConversationItemDeleteEvent
+
         await self.send_client_event(ConversationItemDeleteEvent(item_id=item_id))
 
     async def send_client_event(self, event):
@@ -47,13 +48,15 @@ def make_compactor(service=None, **kwargs):
 
 async def drive_turns(compactor, service, count, start=1):
     for turn in range(start, start + count):
-        await service.handlers["on_conversation_item_created"](service,
-            f"u{turn}", message(f"u{turn}", "user")
+        await service.handlers["on_conversation_item_created"](
+            service, f"u{turn}", message(f"u{turn}", "user")
         )
-        await service.handlers["on_conversation_item_created"](service,
-            f"a{turn}", message(f"a{turn}", "assistant")
+        await service.handlers["on_conversation_item_created"](
+            service, f"a{turn}", message(f"a{turn}", "assistant")
         )
-        await compactor.notify_turn_completed(turn, f"pregunta {turn}", f"respuesta {turn}")
+        await compactor.notify_turn_completed(
+            turn, f"pregunta {turn}", f"respuesta {turn}"
+        )
     if compactor._cycle_task is not None:
         await compactor._cycle_task
 
@@ -104,13 +107,15 @@ async def test_summary_note_is_never_deleted():
     assert creates[0].item.role == "system"
     # The server echoes the note back as a system item; a later cycle that
     # ages everything out must still keep it.
-    await service.handlers["on_conversation_item_created"](service,
-        "sys-note-1", message("sys-note-1", "system")
+    await service.handlers["on_conversation_item_created"](
+        service, "sys-note-1", message("sys-note-1", "system")
     )
     service.sent.clear()
     await drive_turns(compactor, service, 20, start=21)
     deleted = {
-        event.item_id for event in service.sent if event.type == "conversation.item.delete"
+        event.item_id
+        for event in service.sent
+        if event.type == "conversation.item.delete"
     }
     assert deleted
     assert "sys-note-1" not in deleted
@@ -121,12 +126,16 @@ async def test_incomplete_tool_pair_is_never_split():
     service = FakeService()
     compactor = make_compactor(service)
     # Incomplete pair (call without output) sits among the OLDEST items.
-    await service.handlers["on_conversation_item_created"](service,
-        "call-old", SimpleNamespace(id="call-old", type="function_call", call_id="c1")
+    await service.handlers["on_conversation_item_created"](
+        service,
+        "call-old",
+        SimpleNamespace(id="call-old", type="function_call", call_id="c1"),
     )
     await drive_turns(compactor, service, 20)
     deleted = {
-        event.item_id for event in service.sent if event.type == "conversation.item.delete"
+        event.item_id
+        for event in service.sent
+        if event.type == "conversation.item.delete"
     }
     assert "call-old" not in deleted
     # ...but ordinary old messages around it still go.
@@ -137,16 +146,21 @@ async def test_incomplete_tool_pair_is_never_split():
 async def test_complete_old_tool_pair_leaves_together():
     service = FakeService()
     compactor = make_compactor(service)
-    await service.handlers["on_conversation_item_created"](service,
-        "call-old", SimpleNamespace(id="call-old", type="function_call", call_id="c9")
+    await service.handlers["on_conversation_item_created"](
+        service,
+        "call-old",
+        SimpleNamespace(id="call-old", type="function_call", call_id="c9"),
     )
-    await service.handlers["on_conversation_item_created"](service,
+    await service.handlers["on_conversation_item_created"](
+        service,
         "out-old",
         SimpleNamespace(id="out-old", type="function_call_output", call_id="c9"),
     )
     await drive_turns(compactor, service, 20)
     deleted = {
-        event.item_id for event in service.sent if event.type == "conversation.item.delete"
+        event.item_id
+        for event in service.sent
+        if event.type == "conversation.item.delete"
     }
     assert {"call-old", "out-old"} <= deleted
 
@@ -203,6 +217,7 @@ async def test_summarize_turns_returns_none_on_empty():
 @pytest.mark.asyncio
 async def test_unconfirmed_summary_is_retried_without_duplicate_insert_or_deletion():
     from unittest.mock import AsyncMock
+
     service = FakeService()
     summarize = AsyncMock(return_value="primer resumen")
     service.confirm_conversation_item = AsyncMock(side_effect=TimeoutError())
@@ -219,17 +234,26 @@ async def test_unconfirmed_summary_is_retried_without_duplicate_insert_or_deleti
 @pytest.mark.asyncio
 async def test_cumulative_summary_replaces_only_our_previous_note():
     from unittest.mock import AsyncMock
+
     service = FakeService()
     summarize = AsyncMock(side_effect=["dato importante", "dato importante y nuevo"])
     compactor = make_compactor(service, summarize=summarize)
     await drive_turns(compactor, service, 20)
     previous_id = service.sent[0].item.id
-    await service.handlers["on_conversation_item_created"](service, previous_id, message(previous_id, "system"))
-    await service.handlers["on_conversation_item_created"](service, "instructions", message("instructions", "system"))
+    await service.handlers["on_conversation_item_created"](
+        service, previous_id, message(previous_id, "system")
+    )
+    await service.handlers["on_conversation_item_created"](
+        service, "instructions", message("instructions", "system")
+    )
     await drive_turns(compactor, service, 20, start=21)
     inputs = summarize.await_args.args[0]
     assert inputs[0].assistant_text == "dato importante"
-    deleted = {event.item_id for event in service.sent if event.type == "conversation.item.delete"}
+    deleted = {
+        event.item_id
+        for event in service.sent
+        if event.type == "conversation.item.delete"
+    }
     assert previous_id in deleted
     assert "instructions" not in deleted
     assert len(compactor._summary_item_ids) == 1
@@ -238,6 +262,7 @@ async def test_cumulative_summary_replaces_only_our_previous_note():
 @pytest.mark.asyncio
 async def test_failed_deletion_is_not_forgotten_or_resummarized():
     from unittest.mock import AsyncMock
+
     service = FakeService()
     summarize = AsyncMock(return_value="resumen")
     service.delete_conversation_item_confirmed = AsyncMock(side_effect=TimeoutError())
@@ -253,9 +278,17 @@ async def test_failed_deletion_is_not_forgotten_or_resummarized():
 @pytest.mark.asyncio
 async def test_summary_budget_preserves_prior_context():
     from unittest.mock import AsyncMock
+
     llm = SimpleNamespace(run_inference=AsyncMock(return_value="resumen"))
-    turns = [SimpleNamespace(turn_id=0, user_text="Resumen anterior", assistant_text="dato inicial")]
-    turns += [SimpleNamespace(turn_id=i, user_text="x" * 1000, assistant_text="y" * 1000) for i in range(1, 10)]
+    turns = [
+        SimpleNamespace(
+            turn_id=0, user_text="Resumen anterior", assistant_text="dato inicial"
+        )
+    ]
+    turns += [
+        SimpleNamespace(turn_id=i, user_text="x" * 1000, assistant_text="y" * 1000)
+        for i in range(1, 10)
+    ]
     await summarize_turns(llm, turns)
     body = llm.run_inference.await_args.args[0].messages[0]["content"]
     assert "dato inicial" in body

@@ -9,9 +9,7 @@ from api.services.abera import provision_admin as provisioning
 @pytest.mark.asyncio
 async def test_retries_keep_existing_password_and_organization(monkeypatch):
     monkeypatch.setattr(provisioning, "DEPLOYMENT_MODE", "abera")
-    user = SimpleNamespace(
-        id=4, selected_organization_id=8, is_superuser=False
-    )
+    user = SimpleNamespace(id=4, selected_organization_id=8, is_superuser=False)
     organization = SimpleNamespace(id=8)
     get_user = AsyncMock(return_value=user)
     create_user = AsyncMock()
@@ -23,9 +21,7 @@ async def test_retries_keep_existing_password_and_organization(monkeypatch):
     monkeypatch.setattr(
         provisioning.db_client, "get_or_create_organization_by_provider_id", get_org
     )
-    monkeypatch.setattr(
-        provisioning.db_client, "add_user_to_organization", add_member
-    )
+    monkeypatch.setattr(provisioning.db_client, "add_user_to_organization", add_member)
     monkeypatch.setattr(
         provisioning.db_client, "update_user_selected_organization", update_selected
     )
@@ -44,9 +40,7 @@ async def test_retries_keep_existing_password_and_organization(monkeypatch):
 @pytest.mark.asyncio
 async def test_admin_cannot_be_attached_to_another_organization(monkeypatch):
     monkeypatch.setattr(provisioning, "DEPLOYMENT_MODE", "abera")
-    user = SimpleNamespace(
-        id=4, selected_organization_id=99, is_superuser=False
-    )
+    user = SimpleNamespace(id=4, selected_organization_id=99, is_superuser=False)
     monkeypatch.setattr(
         provisioning.db_client,
         "get_user_by_email",
@@ -58,6 +52,4 @@ async def test_admin_cannot_be_attached_to_another_organization(monkeypatch):
         AsyncMock(return_value=(SimpleNamespace(id=8), False)),
     )
     with pytest.raises(RuntimeError, match="another organization"):
-        await provisioning.provision_admin(
-            "sub_123", "admin@example.com", "a" * 24
-        )
+        await provisioning.provision_admin("sub_123", "admin@example.com", "a" * 24)

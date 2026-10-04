@@ -33,8 +33,8 @@ import { LANGUAGE_DISPLAY_NAMES } from "@/constants/languages";
 import { PostHogEvent } from "@/constants/posthog-events";
 import { useUserConfig } from "@/context/UserConfigContext";
 import { useAudioPlayback } from "@/hooks/useAudioPlayback";
-import { captureAnalyticsEvent } from "@/lib/analytics";
 import { useCopy } from "@/i18n/LocaleProvider";
+import { captureAnalyticsEvent } from "@/lib/analytics";
 
 interface RecordingsDialogProps {
     open: boolean;

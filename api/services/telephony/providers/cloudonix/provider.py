@@ -579,7 +579,9 @@ class CloudonixProvider(TelephonyProvider):
             logger.error(f"Error in Cloudonix WebSocket handler: {e}")
             raise
 
-    async def authenticate_external_websocket(self, websocket, *, organization_id: int, workflow_id: int):
+    async def authenticate_external_websocket(
+        self, websocket, *, organization_id: int, workflow_id: int
+    ):
         """Verify the provider handshake before any customer call state is allocated."""
         try:
             first_msg = await asyncio.wait_for(
@@ -613,9 +615,7 @@ class CloudonixProvider(TelephonyProvider):
 
         start = start_msg.get("start")
         if not isinstance(start, dict):
-            logger.error(
-                "Cloudonix agent-stream start message missing start object"
-            )
+            logger.error("Cloudonix agent-stream start message missing start object")
             await websocket.close(code=4400, reason="Missing start metadata")
             return
 
@@ -666,7 +666,15 @@ class CloudonixProvider(TelephonyProvider):
             )
             return
 
-        self._authenticated_external_start = (start, stream_sid, call_sid, call_session, domain_id, config, bearer_token)
+        self._authenticated_external_start = (
+            start,
+            stream_sid,
+            call_sid,
+            call_session,
+            domain_id,
+            config,
+            bearer_token,
+        )
         return True
 
     async def handle_external_websocket(
@@ -701,7 +709,15 @@ class CloudonixProvider(TelephonyProvider):
                     websocket, organization_id=organization_id, workflow_id=workflow_id
                 ):
                     return
-            start, stream_sid, call_sid, call_session, domain_id, config, bearer_token = self._authenticated_external_start
+            (
+                start,
+                stream_sid,
+                call_sid,
+                call_session,
+                domain_id,
+                config,
+                bearer_token,
+            ) = self._authenticated_external_start
             self._authenticated_external_start = None
 
             start_context = start.get("context")

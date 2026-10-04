@@ -23,6 +23,10 @@ from api.schemas.knowledge_base import (
 )
 from api.sdk_expose import sdk_expose
 from api.services.auth.depends import get_user
+from api.services.knowledge_base.processing import (
+    MAX_FILE_SIZE_BYTES,
+    SUPPORTED_EXTENSIONS,
+)
 from api.services.knowledge_base_content import (
     DocumentContentConflictError,
     DocumentContentTooLargeError,
@@ -31,21 +35,25 @@ from api.services.knowledge_base_content import (
     read_document_content,
     update_document_content,
 )
+from api.services.model_services.policy import MPSDisabledError
 from api.services.posthog_client import capture_event
 from api.services.storage import storage_fs
-from api.services.knowledge_base.processing import MAX_FILE_SIZE_BYTES, SUPPORTED_EXTENSIONS
-from api.services.model_services.policy import MPSDisabledError
 
 router = APIRouter(prefix="/knowledge-base", tags=["knowledge-base"])
 
 
 def _validate_filename(filename: str) -> None:
     if (
-        not filename or len(filename) > 500 or "/" in filename or "\\" in filename
+        not filename
+        or len(filename) > 500
+        or "/" in filename
+        or "\\" in filename
         or any(ord(character) < 32 for character in filename)
         or Path(filename).suffix.lower() not in SUPPORTED_EXTENSIONS
     ):
-        raise HTTPException(422, "Usa un nombre de archivo PDF, Word, TXT, Markdown o JSON sin rutas.")
+        raise HTTPException(
+            422, "Usa un nombre de archivo PDF, Word, TXT, Markdown o JSON sin rutas."
+        )
 
 
 def _has_live_content(document: KnowledgeBaseDocumentModel) -> bool:
@@ -122,11 +130,17 @@ async def get_upload_url(
             from api.services.abera.storage_upload import create_upload_url
 
             if request.file_size_bytes is None:
-                raise HTTPException(422, "Indica el tamaño del archivo para autorizar la carga.")
-            upload_url = await create_upload_url(s3_key, request.file_size_bytes, request.mime_type)
+                raise HTTPException(
+                    422, "Indica el tamaño del archivo para autorizar la carga."
+                )
+            upload_url = await create_upload_url(
+                s3_key, request.file_size_bytes, request.mime_type
+            )
         else:
             upload_url = await storage_fs.aget_presigned_put_url(
-                file_path=s3_key, expiration=1800, content_type=request.mime_type,
+                file_path=s3_key,
+                expiration=1800,
+                content_type=request.mime_type,
                 max_size=MAX_FILE_SIZE_BYTES,
             )
 
@@ -185,10 +199,15 @@ async def process_document(
     try:
         document_uuid = str(uuid.UUID(request.document_uuid))
     except ValueError:
-        raise HTTPException(422, "El identificador del documento no es válido.") from None
+        raise HTTPException(
+            422, "El identificador del documento no es válido."
+        ) from None
     filename = request.s3_key.split("/")[-1]
     _validate_filename(filename)
-    if request.s3_key != f"knowledge_base/{user.selected_organization_id}/{document_uuid}/{filename}":
+    if (
+        request.s3_key
+        != f"knowledge_base/{user.selected_organization_id}/{document_uuid}/{filename}"
+    ):
         raise HTTPException(403, "El archivo no pertenece a esta organización.")
     try:
         # Extract filename from s3_key
@@ -538,7 +557,10 @@ async def search_chunks(
             )
 
         if not embeddings_api_key:
-            raise HTTPException(422, "Configura una API key de embeddings en Modelos para buscar por fragmentos.")
+            raise HTTPException(
+                422,
+                "Configura una API key de embeddings en Modelos para buscar por fragmentos.",
+            )
 
         # Manual search runs outside any workflow run, so resolve the MPS
         # correlation id here.

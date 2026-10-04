@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 
 import { PostHogEvent } from "@/constants/posthog-events";
-import { captureAnalyticsEvent } from "@/lib/analytics";
 import { useCopy } from "@/i18n/LocaleProvider";
+import { captureAnalyticsEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
 

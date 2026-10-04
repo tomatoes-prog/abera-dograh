@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
 from pydantic import BaseModel, Field, ValidationError
 
+from api import constants
 from api.constants import (
     DEFAULT_CAMPAIGN_RETRY_CONFIG,
     DEFAULT_ORG_CONCURRENCY_LIMIT,
@@ -83,7 +84,6 @@ from api.services.configuration.registry import (
 )
 from api.services.mps_billing import ensure_hosted_mps_billing_account_v2
 from api.services.mps_service_key_client import mps_service_key_client
-from api import constants
 from api.services.observability.call_events.configuration import (
     check_connection,
     resolve_settings,

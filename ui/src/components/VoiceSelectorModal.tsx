@@ -22,9 +22,9 @@ import type { UiLocale } from "@/i18n/config";
 import { languageDisplayName } from "@/i18n/format";
 import { useUiLocale } from "@/i18n/LocaleProvider";
 import { useCopy } from "@/i18n/LocaleProvider";
-import { cn } from "@/lib/utils";
-import { useAuth } from "@/lib/auth";
 import { detailFromError } from "@/lib/apiError";
+import { useAuth } from "@/lib/auth";
+import { cn } from "@/lib/utils";
 
 
 const ALL_FILTER_VALUE = "__all__";

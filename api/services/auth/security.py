@@ -26,11 +26,15 @@ def validate_runtime_security() -> None:
         return
     secret = constants.OSS_JWT_SECRET
     if len(secret) < 32 or secret.lower().startswith("change-me"):
-        raise ValueError("OSS_JWT_SECRET must be a random secret of at least 32 characters")
+        raise ValueError(
+            "OSS_JWT_SECRET must be a random secret of at least 32 characters"
+        )
     if not constants.TELEPHONY_WS_TOKEN_SECRET:
         raise ValueError("Telephony media token secret is required")
     if not constants.TELEPHONY_WS_TOKEN_ENFORCE:
-        raise ValueError("TELEPHONY_WS_TOKEN_ENFORCE must be true for local authentication")
+        raise ValueError(
+            "TELEPHONY_WS_TOKEN_ENFORCE must be true for local authentication"
+        )
 
 
 async def throttle_login(request: Request, email: str) -> None:
@@ -45,9 +49,15 @@ async def throttle_login(request: Request, email: str) -> None:
     try:
         count = await _redis.eval(_ATTEMPT_SCRIPT, len(keys), *keys, _LOGIN_WINDOW)
     except Exception:
-        raise HTTPException(503, "Login protection is temporarily unavailable") from None
+        raise HTTPException(
+            503, "Login protection is temporarily unavailable"
+        ) from None
     if count > _LOGIN_LIMIT:
-        raise HTTPException(429, "Too many login attempts; try again later", headers={"Retry-After": str(_LOGIN_WINDOW)})
+        raise HTTPException(
+            429,
+            "Too many login attempts; try again later",
+            headers={"Retry-After": str(_LOGIN_WINDOW)},
+        )
 
 
 async def close_login_protection() -> None:

@@ -229,7 +229,9 @@ async def test_handler_allows_missing_token_when_enforcement_off(secret, handler
     get_run.assert_awaited_once()
 
 
-async def test_handler_rejects_missing_secret_under_enforcement(no_secret, handler, monkeypatch):
+async def test_handler_rejects_missing_secret_under_enforcement(
+    no_secret, handler, monkeypatch
+):
     monkeypatch.setattr(constants, "TELEPHONY_WS_TOKEN_ENFORCE", True)
     handle, get_run = handler
     ws = _FakeWebSocket()

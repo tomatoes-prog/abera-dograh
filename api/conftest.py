@@ -96,8 +96,10 @@ def mps_enabled(monkeypatch):
 
     monkeypatch.setattr(constants, "ENABLE_DOGRAH_MPS", True)
     for name in (
-        "api.services.organization_bootstrap", "api.services.quota_service",
-        "api.services.mps_billing", "api.services.workflow_run_billing",
+        "api.services.organization_bootstrap",
+        "api.services.quota_service",
+        "api.services.mps_billing",
+        "api.services.workflow_run_billing",
     ):
         module = sys.modules.get(name)
         if module is not None:

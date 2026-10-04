@@ -11,8 +11,8 @@ from api.schemas.service_key import (
     ServiceKeyResponse,
 )
 from api.services.auth.depends import get_user
-from api.services.mps_service_key_client import mps_service_key_client
 from api.services.model_services.policy import require_mps_enabled
+from api.services.mps_service_key_client import mps_service_key_client
 
 router = APIRouter(dependencies=[Depends(require_mps_enabled)])
 

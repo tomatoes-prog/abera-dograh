@@ -1341,11 +1341,17 @@ async def _run_pipeline_impl(
         user_provider_id = str(user_obj.provider_id) if user_obj else None
     from api.services.abera.bedrock import uses_managed_voice
     from api.services.abera.voice_minutes import ManagedVoiceSession
+
     voice_meter = None
     if uses_managed_voice(user_config):
+
         async def stop_managed_voice():
             from pipecat.utils.enums import EndTaskReason
-            await engine.end_call_with_reason(EndTaskReason.PIPELINE_ERROR.value, abort_immediately=True)
+
+            await engine.end_call_with_reason(
+                EndTaskReason.PIPELINE_ERROR.value, abort_immediately=True
+            )
+
         voice_meter = ManagedVoiceSession(workflow_run_id, stop_managed_voice)
     in_memory_audio_buffer = register_event_handlers(
         task,

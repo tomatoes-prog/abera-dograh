@@ -7,7 +7,6 @@ from fastapi import HTTPException
 from loguru import logger
 
 from api.constants import MPS_API_URL
-from api.services.model_services.policy import require_mps_enabled
 from api.errors.failure import (
     ErrorSource,
     annotate_failure_metadata,
@@ -24,6 +23,7 @@ from api.services.configuration.registry import (
     HOPPER_API_BASE_URL,
     ServiceProviders,
 )
+from api.services.model_services.policy import require_mps_enabled
 from api.services.pipecat.gemini_json_schema_adapter import (
     DograhGeminiJSONSchemaAdapter,
 )

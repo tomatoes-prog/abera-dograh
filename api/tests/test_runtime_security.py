@@ -41,9 +41,13 @@ async def test_login_throttle_and_redis_failure(monkeypatch):
 
 async def test_explicit_local_url_never_queries_tunnel(monkeypatch):
     from api.utils import common
+
     monkeypatch.setattr(common, "BACKEND_API_ENDPOINT", "http://localhost:8000")
     monkeypatch.setattr(common, "ENABLE_CLOUDFLARE_TUNNEL", False)
     tunnel = AsyncMock()
     monkeypatch.setattr(common.TunnelURLProvider, "get_tunnel_urls", tunnel)
-    assert await common.get_backend_endpoints() == ("http://localhost:8000", "ws://localhost:8000")
+    assert await common.get_backend_endpoints() == (
+        "http://localhost:8000",
+        "ws://localhost:8000",
+    )
     tunnel.assert_not_awaited()

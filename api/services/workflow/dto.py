@@ -1102,7 +1102,9 @@ class ReactFlowDTO(BaseModel):
                     line_errors.append(
                         dict(
                             loc=("edges", idx),
-                            type=PydanticCustomError("missing_node", "Edge references missing node"),
+                            type=PydanticCustomError(
+                                "missing_node", "Edge references missing node"
+                            ),
                             msg="Edge references missing node",
                             input=edge.model_dump(mode="python"),
                             ctx={"edge_id": edge.id, "endpoint": endpoint},

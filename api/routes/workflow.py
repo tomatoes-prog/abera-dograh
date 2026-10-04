@@ -619,7 +619,10 @@ async def create_workflow_from_template(
     except HTTPException:
         raise
     except ValueError:
-        raise HTTPException(422, "No se pudo crear un borrador válido. Ajusta la descripción e inténtalo de nuevo.") from None
+        raise HTTPException(
+            422,
+            "No se pudo crear un borrador válido. Ajusta la descripción e inténtalo de nuevo.",
+        ) from None
     except AgentLimitExceeded:
         raise
     except Exception as e:
@@ -1754,11 +1757,15 @@ async def get_ambient_noise_upload_url(
     if DEPLOYMENT_MODE == "abera":
         from api.services.abera.storage_upload import create_upload_url
 
-        upload_url = await create_upload_url(storage_key, request.file_size, request.mime_type)
+        upload_url = await create_upload_url(
+            storage_key, request.file_size, request.mime_type
+        )
     else:
         upload_url = await storage_fs.aget_presigned_put_url(
-            file_path=storage_key, expiration=1800,
-            content_type=request.mime_type, max_size=request.file_size,
+            file_path=storage_key,
+            expiration=1800,
+            content_type=request.mime_type,
+            max_size=request.file_size,
         )
     if not upload_url:
         raise HTTPException(status_code=500, detail="Failed to generate upload URL")

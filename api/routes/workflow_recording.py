@@ -29,7 +29,10 @@ router = APIRouter(prefix="/workflow-recordings", tags=["workflow-recordings"])
 
 def _validate_audio_filename(filename: str) -> None:
     if (
-        not filename or len(filename) > 500 or "/" in filename or "\\" in filename
+        not filename
+        or len(filename) > 500
+        or "/" in filename
+        or "\\" in filename
         or any(ord(character) < 32 for character in filename)
     ):
         raise HTTPException(422, "Usa un nombre de archivo de audio sin rutas.")
@@ -99,11 +102,15 @@ async def get_upload_urls(
             if DEPLOYMENT_MODE == "abera":
                 from api.services.abera.storage_upload import create_upload_url
 
-                upload_url = await create_upload_url(storage_key, fd.file_size, fd.mime_type)
+                upload_url = await create_upload_url(
+                    storage_key, fd.file_size, fd.mime_type
+                )
             else:
                 upload_url = await storage_fs.aget_presigned_put_url(
-                    file_path=storage_key, expiration=1800,
-                    content_type=fd.mime_type, max_size=fd.file_size,
+                    file_path=storage_key,
+                    expiration=1800,
+                    content_type=fd.mime_type,
+                    max_size=fd.file_size,
                 )
 
             if not upload_url:
@@ -153,7 +160,10 @@ async def create_recordings(
         filename = rec_req.storage_key.split("/")[-1]
         _validate_audio_filename(filename)
         expected_key = f"recordings/{user.selected_organization_id}/{rec_req.recording_id}/{filename}"
-        if not re.fullmatch(r"[a-zA-Z0-9_-]{1,64}", rec_req.recording_id) or rec_req.storage_key != expected_key:
+        if (
+            not re.fullmatch(r"[a-zA-Z0-9_-]{1,64}", rec_req.recording_id)
+            or rec_req.storage_key != expected_key
+        ):
             raise HTTPException(403, "El audio no pertenece a esta organización.")
     try:
         backend = StorageBackend.get_current_backend()
@@ -350,7 +360,8 @@ async def transcribe_audio(
         if not user.selected_organization_id:
             raise HTTPException(400, "Selecciona una organización.")
         return await transcribe_uploaded_audio(
-            file=file, language=language,
+            file=file,
+            language=language,
             organization_id=user.selected_organization_id,
         )
     except HTTPException:
@@ -358,5 +369,6 @@ async def transcribe_audio(
     except Exception as exc:
         logger.error("Failed to transcribe audio: {}", type(exc).__name__)
         raise HTTPException(
-            status_code=502, detail="El proveedor no pudo transcribir el audio. Inténtalo de nuevo."
+            status_code=502,
+            detail="El proveedor no pudo transcribir el audio. Inténtalo de nuevo.",
         ) from exc

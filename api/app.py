@@ -33,9 +33,9 @@ from loguru import logger
 from api.constants import REDIS_URL
 from api.errors.abera import AgentLimitExceeded
 from api.errors.mps import MPS_UNAVAILABLE_PUBLIC_MESSAGE, MPSUnavailableError
-from api.services.model_services.policy import MPSDisabledError
 from api.mcp_server import mcp
 from api.routes.main import router as main_router
+from api.services.model_services.policy import MPSDisabledError
 from api.services.pipecat.tracing_config import (
     handle_langfuse_sync,
     load_all_org_langfuse_credentials,
@@ -55,7 +55,11 @@ mcp_app = mcp.http_app(path="/", stateless_http=True)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from api.services.auth.security import validate_runtime_security, close_login_protection
+    from api.services.auth.security import (
+        close_login_protection,
+        validate_runtime_security,
+    )
+
     validate_runtime_security()
     async with mcp_app.lifespan(app):
         # warmup arq pool
@@ -119,9 +123,13 @@ app = FastAPI(
 
 from api.services.filesystem.quota import StorageQuotaExceeded, StorageQuotaUnavailable
 
+
 @app.exception_handler(StorageQuotaExceeded)
 async def handle_storage_limit(_request: Request, exc: StorageQuotaExceeded):
-    return JSONResponse(status_code=413, content={"code": "STORAGE_LIMIT_EXCEEDED", "detail": str(exc)})
+    return JSONResponse(
+        status_code=413, content={"code": "STORAGE_LIMIT_EXCEEDED", "detail": str(exc)}
+    )
+
 
 @app.exception_handler(StorageQuotaUnavailable)
 async def handle_storage_busy(_request: Request, exc: StorageQuotaUnavailable):

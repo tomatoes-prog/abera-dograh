@@ -261,7 +261,10 @@ async def test_abera_pro_uploads_files_and_cleans_them_up(monkeypatch):
     uploads = await _run_pipeline_finished(monkeypatch, recording_upload_enabled=True)
     assert uploads["temporary_files_existed_during_upload"]
     assert all(
-        uploads[f"{track}_audio_path"] and not os.path.exists(uploads[f"{track}_audio_path"])
+        uploads[f"{track}_audio_path"]
+        and not os.path.exists(uploads[f"{track}_audio_path"])
         for track in ("mixed", "user", "bot")
     )
-    assert all(uploads[f"{track}_audio_wav"] is None for track in ("mixed", "user", "bot"))
+    assert all(
+        uploads[f"{track}_audio_wav"] is None for track in ("mixed", "user", "bot")
+    )

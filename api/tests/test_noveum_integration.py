@@ -216,9 +216,7 @@ def test_create_runtime_sessions_does_not_record_audio_by_default():
 
 
 def test_create_runtime_sessions_records_audio_only_when_enabled():
-    context = _runtime_context(
-        [_graph_node(_node_data(noveum_record_audio=True))]
-    )
+    context = _runtime_context([_graph_node(_node_data(noveum_record_audio=True))])
 
     with patch(
         "api.services.integrations.noveum.runtime.build_deferred_observer"

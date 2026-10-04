@@ -14,8 +14,8 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useCopy } from "@/i18n/LocaleProvider";
-import logger from '@/lib/logger';
 import { detailFromError } from '@/lib/apiError';
+import logger from '@/lib/logger';
 
 import ExternalProcessingNotice from './ExternalProcessingNotice';
 

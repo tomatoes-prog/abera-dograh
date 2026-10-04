@@ -14,14 +14,24 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-
-UNITS = {"B": 1, "kB": 1000, "MB": 1000**2, "GB": 1000**3,
-         "KiB": 1024, "MiB": 1024**2, "GiB": 1024**3}
+UNITS = {
+    "B": 1,
+    "kB": 1000,
+    "MB": 1000**2,
+    "GB": 1000**3,
+    "KiB": 1024,
+    "MiB": 1024**2,
+    "GiB": 1024**3,
+}
 
 
 def docker(*args: str) -> str:
     return subprocess.run(
-        ["docker", *args], check=True, capture_output=True, text=True, timeout=30,
+        ["docker", *args],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=30,
     ).stdout.strip()
 
 
@@ -37,27 +47,37 @@ def snapshot(names: list[str]) -> list[dict]:
     rows = []
     for line in raw.splitlines():
         item = json.loads(line)
-        rows.append({
-            "name": item["Name"],
-            "cpu_percent_of_one_core": float(item["CPUPerc"].rstrip("%")),
-            "memory_bytes": bytes_used(item["MemUsage"]),
-            "memory_limit": item["MemUsage"].split("/")[1].strip(),
-            "pids": int(item["PIDs"]),
-            "network_io": item["NetIO"],
-        })
+        rows.append(
+            {
+                "name": item["Name"],
+                "cpu_percent_of_one_core": float(item["CPUPerc"].rstrip("%")),
+                "memory_bytes": bytes_used(item["MemUsage"]),
+                "memory_limit": item["MemUsage"].split("/")[1].strip(),
+                "pids": int(item["PIDs"]),
+                "network_io": item["NetIO"],
+            }
+        )
     if {row["name"] for row in rows} != set(names):
         raise RuntimeError("Docker stats did not return every requested container")
     return rows
 
 
 def container_state(names: list[str]) -> dict:
-    raw = docker("inspect", "--format",
-                 "{{.Name}}|{{.State.Running}}|{{.State.OOMKilled}}|{{.RestartCount}}",
-                 *names)
-    return {parts[0].lstrip("/"): {
-        "running": parts[1] == "true", "oom_killed": parts[2] == "true",
-        "restart_count": int(parts[3]),
-    } for line in raw.splitlines() if (parts := line.split("|"))}
+    raw = docker(
+        "inspect",
+        "--format",
+        "{{.Name}}|{{.State.Running}}|{{.State.OOMKilled}}|{{.RestartCount}}",
+        *names,
+    )
+    return {
+        parts[0].lstrip("/"): {
+            "running": parts[1] == "true",
+            "oom_killed": parts[2] == "true",
+            "restart_count": int(parts[3]),
+        }
+        for line in raw.splitlines()
+        if (parts := line.split("|"))
+    }
 
 
 def main() -> int:
@@ -66,8 +86,11 @@ def main() -> int:
     parser.add_argument("--duration", type=int, required=True)
     parser.add_argument("--interval", type=int, default=10)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--allow-uncapped", action="store_true",
-                        help="Collect diagnostics only; these are not t3a.medium-equivalent")
+    parser.add_argument(
+        "--allow-uncapped",
+        action="store_true",
+        help="Collect diagnostics only; these are not t3a.medium-equivalent",
+    )
     args = parser.parse_args()
     if args.duration < 30 or args.interval < 2:
         parser.error("duration must be >=30 seconds and interval >=2 seconds")
@@ -75,7 +98,9 @@ def main() -> int:
     capacity = {"cpus": int(cpus), "memory_bytes": int(memory)}
     comparable = capacity["cpus"] <= 2 and capacity["memory_bytes"] <= 4 * 1024**3
     if not comparable and not args.allow_uncapped:
-        parser.error("Docker has more than 2 CPUs or 4 GiB; cap Docker Desktop or use --allow-uncapped")
+        parser.error(
+            "Docker has more than 2 CPUs or 4 GiB; cap Docker Desktop or use --allow-uncapped"
+        )
     before = container_state(args.containers)
     names = list(before)
     if len(names) != len(args.containers):
@@ -99,11 +124,16 @@ def main() -> int:
                 time.sleep(min(args.interval, max(0, deadline - time.monotonic())))
                 continue
             failures = 0
-            samples.append({
-                "at": at, "containers": rows,
-                "total_cpu_percent_of_one_core": round(sum(r["cpu_percent_of_one_core"] for r in rows), 2),
-                "total_memory_bytes": sum(r["memory_bytes"] for r in rows),
-            })
+            samples.append(
+                {
+                    "at": at,
+                    "containers": rows,
+                    "total_cpu_percent_of_one_core": round(
+                        sum(r["cpu_percent_of_one_core"] for r in rows), 2
+                    ),
+                    "total_memory_bytes": sum(r["memory_bytes"] for r in rows),
+                }
+            )
             time.sleep(min(args.interval, max(0, deadline - time.monotonic())))
     except KeyboardInterrupt:
         pass
@@ -112,13 +142,18 @@ def main() -> int:
     except Exception as error:
         state_after = {"error": f"{type(error).__name__}"}
     result = {
-        "docker_capacity": capacity, "comparable_to_t3a_medium_resources": comparable,
-        "container_state_before": before, "container_state_after": state_after,
-        "samples": samples, "snapshot_errors": errors,
+        "docker_capacity": capacity,
+        "comparable_to_t3a_medium_resources": comparable,
+        "container_state_before": before,
+        "container_state_after": state_after,
+        "samples": samples,
+        "snapshot_errors": errors,
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2), encoding="utf-8")
-    print(f"{len(samples)} samples written to {args.output}; 2-vCPU/4-GiB comparable: {comparable}")
+    print(
+        f"{len(samples)} samples written to {args.output}; 2-vCPU/4-GiB comparable: {comparable}"
+    )
     return 0
 
 

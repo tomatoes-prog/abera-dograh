@@ -64,7 +64,9 @@ async def agent_stream_websocket(
         await websocket.close(code=4401, reason="Provider authentication unavailable")
         return
     try:
-        if not await authenticate(websocket, organization_id=workflow.organization_id, workflow_id=workflow.id):
+        if not await authenticate(
+            websocket, organization_id=workflow.organization_id, workflow_id=workflow.id
+        ):
             return
     except Exception:
         await websocket.close(code=4401, reason="Provider authentication failed")

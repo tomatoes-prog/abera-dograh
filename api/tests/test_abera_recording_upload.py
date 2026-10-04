@@ -21,7 +21,9 @@ async def test_file_backed_recordings_upload_without_byte_copy(monkeypatch):
         "get_current_storage_backend",
         lambda: SimpleNamespace(name="S3", value="1"),
     )
-    monkeypatch.setattr(workflow_run_artifacts.db_client, "update_workflow_run", update_run)
+    monkeypatch.setattr(
+        workflow_run_artifacts.db_client, "update_workflow_run", update_run
+    )
 
     await workflow_run_artifacts.upload_workflow_run_artifacts(
         88,

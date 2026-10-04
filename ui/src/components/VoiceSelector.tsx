@@ -13,9 +13,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { languageDisplayName } from "@/i18n/format";
 import { useCopy, useUiLocale } from "@/i18n/LocaleProvider";
-import { cn } from "@/lib/utils";
-import { useAuth } from "@/lib/auth";
 import { detailFromError } from "@/lib/apiError";
+import { useAuth } from "@/lib/auth";
+import { cn } from "@/lib/utils";
 
 
 // Providers with voice catalogs available through the backend.

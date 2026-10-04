@@ -83,6 +83,9 @@ jobs:
       - name: Install api and pipecat dependencies
         run: ./scripts/setup_requirements.sh --dev
 
+      - name: Install audio tools for file transcription tests
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+
       - name: Install ts_validator npm deps
         working-directory: api/mcp_server/ts_validator
         run: npm ci

@@ -7,8 +7,8 @@ embedding requests use the organization's explicitly configured provider.
 import os
 import tempfile
 
-from loguru import logger
 from arq import Retry
+from loguru import logger
 
 from api.db import db_client
 from api.db.models import KnowledgeBaseChunkModel
@@ -65,12 +65,15 @@ async def process_knowledge_base_document(
 
     temp_file_path = None
     document = await db_client.get_document_by_id(
-        document_id, organization_id=organization_id,
+        document_id,
+        organization_id=organization_id,
     )
     if (
         not document
         or (document.custom_metadata or {}).get("s3_key") != s3_key
-        or not s3_key.startswith(f"knowledge_base/{organization_id}/{document.document_uuid}/")
+        or not s3_key.startswith(
+            f"knowledge_base/{organization_id}/{document.document_uuid}/"
+        )
     ):
         # Do not download, parse, or update a document owned by another tenant.
         raise ValueError("El documento no pertenece a esta organización.")
@@ -86,7 +89,9 @@ async def process_knowledge_base_document(
         temp_file.close()
 
         logger.info(f"Downloading file from S3: {s3_key}")
-        download_success = await storage_fs.adownload_file(s3_key, temp_file_path, max_size=MAX_FILE_SIZE_BYTES)
+        download_success = await storage_fs.adownload_file(
+            s3_key, temp_file_path, max_size=MAX_FILE_SIZE_BYTES
+        )
         if not download_success:
             raise Exception(f"Failed to download file from S3: {s3_key}")
         if not os.path.exists(temp_file_path):

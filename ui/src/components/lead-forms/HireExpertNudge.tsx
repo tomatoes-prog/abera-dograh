@@ -5,8 +5,8 @@ import { useEffect, useRef, useState } from "react";
 
 import { PostHogEvent } from "@/constants/posthog-events";
 import { useLeadForms } from "@/context/LeadFormsContext";
-import { captureAnalyticsEvent } from "@/lib/analytics";
 import { useCopy } from "@/i18n/LocaleProvider";
+import { captureAnalyticsEvent } from "@/lib/analytics";
 
 interface HireExpertNudgeProps {
   workflowId: number;

@@ -22,9 +22,10 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from loguru import logger
+
 from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.services.openai.realtime.events import (
     ConversationItem,
@@ -98,15 +99,16 @@ async def summarize_turns(
     skip deletion instead of losing history.
     """
     body = "\n".join(
-        f"usuario: {turn.user_text}\nasistente: {turn.assistant_text}"
-        for turn in turns
+        f"usuario: {turn.user_text}\nasistente: {turn.assistant_text}" for turn in turns
     )
     if len(body) > SUMMARY_INPUT_CHAR_BUDGET:
         # Preserve the cumulative summary; truncating only the tail would lose
         # everything summarized during earlier cycles.
-        previous = next((turn.assistant_text for turn in turns if turn.turn_id == 0), "")
+        previous = next(
+            (turn.assistant_text for turn in turns if turn.turn_id == 0), ""
+        )
         prefix = f"Resumen anterior: {previous[:2000]}\n" if previous else ""
-        body = prefix + body[-(SUMMARY_INPUT_CHAR_BUDGET - len(prefix)):]
+        body = prefix + body[-(SUMMARY_INPUT_CHAR_BUDGET - len(prefix)) :]
     instruction = SUMMARY_INSTRUCTIONS.get(language, SUMMARY_INSTRUCTIONS["es"])
     context = LLMContext()
     context.set_messages([{"role": "user", "content": body}])
@@ -184,9 +186,7 @@ class RealtimeHistoryCompactor:
         self._service = service
         if is_active is not None:
             self._is_active = is_active
-        service.add_event_handler(
-            "on_conversation_item_created", self._on_item_created
-        )
+        service.add_event_handler("on_conversation_item_created", self._on_item_created)
         return self
 
     async def _on_item_created(self, service, item_id: str, item: object) -> None:
@@ -210,7 +210,9 @@ class RealtimeHistoryCompactor:
         self._completed_turns += 1
         self._turns.append(
             _CompletedTurn(
-                turn_id=turn_id, user_text=user_text or "", assistant_text=assistant_text
+                turn_id=turn_id,
+                user_text=user_text or "",
+                assistant_text=assistant_text,
             )
         )
         if self._completed_turns % self._every_n_turns == 0:
@@ -291,14 +293,20 @@ class RealtimeHistoryCompactor:
                 try:
                     await self._service.delete_conversation_item_confirmed(item_id)
                     del self._pending_deletions[item_id]
-                    self._items = [item for item in self._items if item.item_id != item_id]
+                    self._items = [
+                        item for item in self._items if item.item_id != item_id
+                    ]
                     self._summary_item_ids.discard(item_id)
                 except Exception:
                     continue
             if self._pending_deletions:
                 result.skipped_reason = "deletion confirmation pending"
                 return result
-        horizon = self._turns[-self._keep_last_turns - 1].turn_id if len(self._turns) > self._keep_last_turns else 0
+        horizon = (
+            self._turns[-self._keep_last_turns - 1].turn_id
+            if len(self._turns) > self._keep_last_turns
+            else 0
+        )
         pending = [
             turn
             for turn in self._turns
@@ -313,8 +321,14 @@ class RealtimeHistoryCompactor:
             return result
         inputs = pending
         if self._summary_text:
-            inputs = [_CompletedTurn(0, "Resumen anterior", self._summary_text)] + pending
-        summary = self._pending_summary[1] if self._pending_summary else await self._summarize(inputs)
+            inputs = [
+                _CompletedTurn(0, "Resumen anterior", self._summary_text)
+            ] + pending
+        summary = (
+            self._pending_summary[1]
+            if self._pending_summary
+            else await self._summarize(inputs)
+        )
         if not summary:
             result.skipped_reason = "summary failed"
             logger.warning(
@@ -330,10 +344,14 @@ class RealtimeHistoryCompactor:
             self._pending_summary = (note_id, summary, pending, delete, old_summaries)
             try:
                 await self._service.send_client_event(
-                    ConversationItemCreateEvent(item=ConversationItem(
-                        id=note_id, type="message", role="system",
-                        content=[ItemContent(type="input_text", text=note)],
-                    ))
+                    ConversationItemCreateEvent(
+                        item=ConversationItem(
+                            id=note_id,
+                            type="message",
+                            role="system",
+                            content=[ItemContent(type="input_text", text=note)],
+                        )
+                    )
                 )
             except Exception as exc:
                 result.skipped_reason = f"summary insert failed: {type(exc).__name__}"
@@ -343,15 +361,22 @@ class RealtimeHistoryCompactor:
         try:
             await self._service.confirm_conversation_item(note_id)
         except Exception as exc:
-            from api.services.pipecat.realtime.openai_realtime import RealtimeItemMissing
+            from api.services.pipecat.realtime.openai_realtime import (
+                RealtimeItemMissing,
+            )
+
             if isinstance(exc, RealtimeItemMissing):
                 self._pending_summary = None
-            result.skipped_reason = f"summary confirmation pending: {type(exc).__name__}"
+            result.skipped_reason = (
+                f"summary confirmation pending: {type(exc).__name__}"
+            )
             return result
         self._pending_summary = None
         self._summary_text = summary
         self._summary_item_ids.add(note_id)
-        delete.extend(_TrackedItem(item_id, "message", role="system") for item_id in old_summaries)
+        delete.extend(
+            _TrackedItem(item_id, "message", role="system") for item_id in old_summaries
+        )
         deleted_ids: set[str] = set()
         for item in delete:
             try:
@@ -364,18 +389,14 @@ class RealtimeHistoryCompactor:
                 )
         # Only drop ids we actually deleted; failures stay tracked so a
         # later cycle retries them instead of re-summarizing.
-        self._items = [
-            item for item in self._items if item.item_id not in deleted_ids
-        ]
+        self._items = [item for item in self._items if item.item_id not in deleted_ids]
         self._summary_item_ids.difference_update(deleted_ids)
         deleted = len(deleted_ids)
         self._compacted_through_turn = max(
             self._compacted_through_turn, max(turn.turn_id for turn in pending)
         )
         self._turns = [
-            turn
-            for turn in self._turns
-            if turn.turn_id > self._compacted_through_turn
+            turn for turn in self._turns if turn.turn_id > self._compacted_through_turn
         ]
         result.turns_compacted = len(pending)
         result.items_deleted = deleted

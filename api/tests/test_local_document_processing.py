@@ -11,7 +11,7 @@ from arq import Retry
 from docx import Document
 from PIL import Image, ImageDraw, ImageFont
 from pypdf import PdfWriter
-from pypdf.generic import DictionaryObject, NameObject, DecodedStreamObject
+from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
 
 from api.services.knowledge_base import processing
 
@@ -19,15 +19,25 @@ from api.services.knowledge_base import processing
 def _text_pdf(path: Path):
     writer = PdfWriter()
     page = writer.add_blank_page(width=600, height=800)
-    font = DictionaryObject({
-        NameObject("/Type"): NameObject("/Font"), NameObject("/Subtype"): NameObject("/Type1"),
-        NameObject("/BaseFont"): NameObject("/Helvetica"), NameObject("/Encoding"): NameObject("/WinAnsiEncoding"),
-    })
-    page[NameObject("/Resources")] = DictionaryObject({
-        NameObject("/Font"): DictionaryObject({NameObject("/F1"): writer._add_object(font)})
-    })
+    font = DictionaryObject(
+        {
+            NameObject("/Type"): NameObject("/Font"),
+            NameObject("/Subtype"): NameObject("/Type1"),
+            NameObject("/BaseFont"): NameObject("/Helvetica"),
+            NameObject("/Encoding"): NameObject("/WinAnsiEncoding"),
+        }
+    )
+    page[NameObject("/Resources")] = DictionaryObject(
+        {
+            NameObject("/Font"): DictionaryObject(
+                {NameObject("/F1"): writer._add_object(font)}
+            )
+        }
+    )
     content = DecodedStreamObject()
-    content.set_data(b"BT /F1 18 Tf 40 700 Td (Colombia: atenci\xf3n al cliente, precio 25000 pesos.) Tj ET")
+    content.set_data(
+        b"BT /F1 18 Tf 40 700 Td (Colombia: atenci\xf3n al cliente, precio 25000 pesos.) Tj ET"
+    )
     page[NameObject("/Contents")] = writer._add_object(content)
     writer.write(path)
 
@@ -37,7 +47,12 @@ def _text_pdf(path: Path):
 def test_text_formats_preserve_spanish_and_retrieval_modes(tmp_path, extension, mode):
     text = "Bogotá: atención, envío y devolución. 😊\n" * 50
     path = tmp_path / ("catálogo" + extension)
-    path.write_text(json.dumps({"productos": text}, ensure_ascii=False) if extension == ".json" else text, encoding="utf-8")
+    path.write_text(
+        json.dumps({"productos": text}, ensure_ascii=False)
+        if extension == ".json"
+        else text,
+        encoding="utf-8",
+    )
     result = processing.process_document(path, path.name, mode, 32)
     assert "Bogotá" in result["full_text"]
     assert "devolución" in result["full_text"]
@@ -45,7 +60,10 @@ def test_text_formats_preserve_spanish_and_retrieval_modes(tmp_path, extension, 
     if mode == "full_document":
         assert result["chunks"] == []
     else:
-        assert "".join(chunk["chunk_text"] for chunk in result["chunks"]) == result["full_text"]
+        assert (
+            "".join(chunk["chunk_text"] for chunk in result["chunks"])
+            == result["full_text"]
+        )
         assert all(0 < chunk["token_count"] <= 32 for chunk in result["chunks"])
         assert "�" not in "".join(chunk["chunk_text"] for chunk in result["chunks"])
 
@@ -84,8 +102,18 @@ def test_pdf_text_and_ocr(tmp_path):
 
     image = Image.new("RGB", (1200, 400), "white")
     draw = ImageDraw.Draw(image)
-    draw.text((60, 60), "Colombia - pedidos y soporte", font=ImageFont.load_default(size=40), fill="black")
-    draw.text((60, 140), "Precio: 25000 pesos", font=ImageFont.load_default(size=40), fill="black")
+    draw.text(
+        (60, 60),
+        "Colombia - pedidos y soporte",
+        font=ImageFont.load_default(size=40),
+        fill="black",
+    )
+    draw.text(
+        (60, 140),
+        "Precio: 25000 pesos",
+        font=ImageFont.load_default(size=40),
+        fill="black",
+    )
     scan_path = tmp_path / "escaneado.pdf"
     image.save(scan_path, "PDF")
     text, metadata = processing.extract_document(scan_path, scan_path.name)
@@ -121,21 +149,39 @@ async def test_subprocess_runs_offline_and_preserves_unicode(tmp_path, monkeypat
     path = tmp_path / "local.txt"
     path.write_text("Atención en Bogotá 😊\n" * 100, encoding="utf-8")
     result = await processing.process_document_locally(
-        file_path=str(path), filename=path.name, retrieval_mode="chunked", max_tokens=32,
+        file_path=str(path),
+        filename=path.name,
+        retrieval_mode="chunked",
+        max_tokens=32,
     )
-    assert "".join(chunk["chunk_text"] for chunk in result["chunks"]) == path.read_text(encoding="utf-8")
+    assert "".join(chunk["chunk_text"] for chunk in result["chunks"]) == path.read_text(
+        encoding="utf-8"
+    )
 
 
 @pytest.mark.asyncio
 async def test_ocr_runs_inside_the_real_bounded_child(tmp_path):
     image = Image.new("RGB", (1200, 400), "white")
     draw = ImageDraw.Draw(image)
-    draw.text((60, 60), "Colombia - pedidos y soporte", font=ImageFont.load_default(size=40), fill="black")
-    draw.text((60, 140), "Precio: 25000 pesos", font=ImageFont.load_default(size=40), fill="black")
+    draw.text(
+        (60, 60),
+        "Colombia - pedidos y soporte",
+        font=ImageFont.load_default(size=40),
+        fill="black",
+    )
+    draw.text(
+        (60, 140),
+        "Precio: 25000 pesos",
+        font=ImageFont.load_default(size=40),
+        fill="black",
+    )
     path = tmp_path / "escaneado.pdf"
     image.save(path, "PDF")
     result = await processing.process_document_locally(
-        file_path=str(path), filename=path.name, retrieval_mode="chunked", max_tokens=32,
+        file_path=str(path),
+        filename=path.name,
+        retrieval_mode="chunked",
+        max_tokens=32,
     )
     assert "Colombia" in result["full_text"] and "25000" in result["full_text"]
     assert result["docling_metadata"]["ocr_pages"] == [1]
@@ -163,10 +209,17 @@ async def test_timeout_kills_reader_process_group(monkeypatch):
     process.returncode = None
     process.pid = 999999
     process.communicate.side_effect = asyncio.TimeoutError
-    monkeypatch.setattr(asyncio, "create_subprocess_exec", AsyncMock(return_value=process))
+    monkeypatch.setattr(
+        asyncio, "create_subprocess_exec", AsyncMock(return_value=process)
+    )
     calls = []
     monkeypatch.setattr(processing.os, "killpg", lambda *args: calls.append(args))
     with pytest.raises(asyncio.TimeoutError):
-        await processing.process_document_locally(file_path="file", filename="file.txt", retrieval_mode="full_document", max_tokens=32)
+        await processing.process_document_locally(
+            file_path="file",
+            filename="file.txt",
+            retrieval_mode="full_document",
+            max_tokens=32,
+        )
     assert calls == [(process.pid, processing.signal.SIGKILL)]
     process.wait.assert_awaited_once()

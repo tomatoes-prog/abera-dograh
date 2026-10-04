@@ -97,9 +97,13 @@ async def upload_workflow_run_artifacts(
             f"Uploading mixed audio to {storage_backend.name} - workflow_run_id: {workflow_run_id}"
         )
         if await (
-            _upload_file(workflow_run_id, mixed_audio_path, recording_url, "mixed audio")
+            _upload_file(
+                workflow_run_id, mixed_audio_path, recording_url, "mixed audio"
+            )
             if mixed_audio_path
-            else _upload_bytes(workflow_run_id, mixed_audio_wav, recording_url, "mixed audio")
+            else _upload_bytes(
+                workflow_run_id, mixed_audio_wav, recording_url, "mixed audio"
+            )
         ):
             recordings_metadata["mixed"] = _recording_metadata(
                 recording_url, storage_backend.value, "mixed"
@@ -116,9 +120,13 @@ async def upload_workflow_run_artifacts(
             f"Uploading user audio to {storage_backend.name} - workflow_run_id: {workflow_run_id}"
         )
         if await (
-            _upload_file(workflow_run_id, user_audio_path, user_recording_url, "user audio")
+            _upload_file(
+                workflow_run_id, user_audio_path, user_recording_url, "user audio"
+            )
             if user_audio_path
-            else _upload_bytes(workflow_run_id, user_audio_wav, user_recording_url, "user audio")
+            else _upload_bytes(
+                workflow_run_id, user_audio_wav, user_recording_url, "user audio"
+            )
         ):
             recordings_metadata["user"] = _recording_metadata(
                 user_recording_url, storage_backend.value, "user"
@@ -130,9 +138,13 @@ async def upload_workflow_run_artifacts(
             f"Uploading bot audio to {storage_backend.name} - workflow_run_id: {workflow_run_id}"
         )
         if await (
-            _upload_file(workflow_run_id, bot_audio_path, bot_recording_url, "bot audio")
+            _upload_file(
+                workflow_run_id, bot_audio_path, bot_recording_url, "bot audio"
+            )
             if bot_audio_path
-            else _upload_bytes(workflow_run_id, bot_audio_wav, bot_recording_url, "bot audio")
+            else _upload_bytes(
+                workflow_run_id, bot_audio_wav, bot_recording_url, "bot audio"
+            )
         ):
             recordings_metadata["bot"] = _recording_metadata(
                 bot_recording_url, storage_backend.value, "bot"

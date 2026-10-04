@@ -41,14 +41,18 @@ def require_new_key_for_changed_embedding_url(incoming: dict, existing: dict) ->
     """Never send a stored, hidden credential to a newly selected endpoint."""
     if (
         existing.get("provider") != ServiceProviders.OPENAI_COMPATIBLE
-        or incoming.get("provider", existing.get("provider")) != ServiceProviders.OPENAI_COMPATIBLE
+        or incoming.get("provider", existing.get("provider"))
+        != ServiceProviders.OPENAI_COMPATIBLE
         or not incoming.get("base_url")
-        or incoming["base_url"].strip().rstrip("/") == (existing.get("base_url") or "").strip().rstrip("/")
+        or incoming["base_url"].strip().rstrip("/")
+        == (existing.get("base_url") or "").strip().rstrip("/")
     ):
         return
     key = incoming.get("api_key")
     if not key or contains_masked_key(key):
-        raise ValueError("Al cambiar la URL del proveedor de embeddings, vuelve a ingresar la API key.")
+        raise ValueError(
+            "Al cambiar la URL del proveedor de embeddings, vuelve a ingresar la API key."
+        )
 
 
 def check_for_masked_keys(config: "EffectiveAIModelConfiguration") -> None:
