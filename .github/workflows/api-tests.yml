@@ -83,8 +83,11 @@ jobs:
       - name: Install api and pipecat dependencies
         run: ./scripts/setup_requirements.sh --dev
 
-      - name: Install audio tools for file transcription tests
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: Install runtime audio and document tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ffmpeg poppler-utils antiword tesseract-ocr tesseract-ocr-spa tesseract-ocr-eng
 
       - name: Install ts_validator npm deps
         working-directory: api/mcp_server/ts_validator
@@ -92,7 +95,7 @@ jobs:
 
       - name: Run pytest
         working-directory: api
-        run: pytest tests/ -xvs
+        run: pytest tests/ -q --tb=short
 
   notify-slack-failure:
     needs: pytest
