@@ -6,13 +6,13 @@
 // feed the Razorpay seam in @/lib/billing/topup, which currently throws "not
 // wired yet"; we surface that as a calm inline note rather than an error toast.
 
-import posthog from "posthog-js";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { PostHogEvent } from "@/constants/posthog-events";
+import { captureAnalyticsEvent } from "@/lib/analytics";
 import { MAX_TOPUP_USD, MIN_TOPUP_USD, startTopUp, TOPUP_PRESETS } from "@/lib/billing/topup";
 import { cn } from "@/lib/utils";
 
@@ -40,7 +40,7 @@ export function BuyCreditsControl({ className }: { className?: string }) {
     setSelected(value);
     setCustom("");
     setError(null);
-    posthog.capture(PostHogEvent.BUY_CREDITS_AMOUNT_SELECTED, { amount: value });
+    captureAnalyticsEvent(PostHogEvent.BUY_CREDITS_AMOUNT_SELECTED, { amount: value });
   };
 
   const onCustomChange = (raw: string) => {
@@ -49,7 +49,7 @@ export function BuyCreditsControl({ className }: { className?: string }) {
     setError(null);
     const parsed = parseAmount(raw);
     if (parsed != null && parsed >= MIN_TOPUP_USD && parsed <= MAX_TOPUP_USD) {
-      posthog.capture(PostHogEvent.BUY_CREDITS_AMOUNT_SELECTED, { amount: parsed });
+      captureAnalyticsEvent(PostHogEvent.BUY_CREDITS_AMOUNT_SELECTED, { amount: parsed });
     }
   };
 
@@ -57,7 +57,7 @@ export function BuyCreditsControl({ className }: { className?: string }) {
     if (!valid || amount == null) return;
     setBusy(true);
     setError(null);
-    posthog.capture(PostHogEvent.BUY_CREDITS_CLICKED, { amount });
+    captureAnalyticsEvent(PostHogEvent.BUY_CREDITS_CLICKED, { amount });
     try {
       await startTopUp(amount);
     } catch {

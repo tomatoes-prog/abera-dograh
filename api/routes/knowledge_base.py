@@ -194,7 +194,6 @@ async def process_document(
             properties={
                 "document_id": document.id,
                 "document_uuid": str(request.document_uuid),
-                "filename": filename,
                 "retrieval_mode": request.retrieval_mode,
                 "organization_id": user.selected_organization_id,
             },

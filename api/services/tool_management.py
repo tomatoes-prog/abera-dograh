@@ -214,7 +214,6 @@ async def create_tool_for_user(
         distinct_id=str(user.provider_id),
         event=PostHogEvent.TOOL_CREATED,
         properties={
-            "tool_name": request.name,
             "tool_category": request.category,
             "source": source,
             "organization_id": user.selected_organization_id,

@@ -96,10 +96,10 @@ class NoveumNodeData(BaseNodeData):
         description="Environment label stamped on exported traces (e.g. production, staging).",
     )
     noveum_record_audio: bool = spec_field(
-        default=True,
+        default=False,
         ui_type=PropertyType.boolean,
         display_name="Record audio",
-        description="Capture per-segment STT/TTS audio and the full-conversation recording for audio evaluation on Noveum.",
+        description="When enabled, send per-segment STT/TTS audio and the full-conversation recording to Noveum.",
     )
 
     @model_validator(mode="after")

@@ -6,11 +6,16 @@
 */
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
+  const enabled = process.env.ENABLE_TELEMETRY === 'true';
   return NextResponse.json({
-    enabled: process.env.ENABLE_TELEMETRY === 'true',
-    key: process.env.POSTHOG_KEY || '',
-    host: process.env.POSTHOG_HOST || '/ingest',
-    uiHost: process.env.POSTHOG_UI_HOST || 'https://us.posthog.com',
+    enabled,
+    key: enabled ? process.env.POSTHOG_KEY || '' : '',
+    host: enabled ? process.env.POSTHOG_HOST || 'https://us.i.posthog.com' : '',
+    uiHost: enabled ? process.env.POSTHOG_UI_HOST || 'https://us.posthog.com' : '',
+  }, {
+    headers: { 'Cache-Control': 'no-store' },
   });
 }

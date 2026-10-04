@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import posthog from 'posthog-js';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -34,6 +33,7 @@ import { ConversationRailFrame, RealtimeFeedback, WorkflowRunLogs } from '@/comp
 import { PostHogEvent } from '@/constants/posthog-events';
 import { WORKFLOW_RUN_MODES } from '@/constants/workflowRunModes';
 import { useOrganizationTimezone } from '@/hooks/useOrganizationTimezone';
+import { captureAnalyticsEvent } from '@/lib/analytics';
 import { useAuth } from '@/lib/auth';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { formatDateTime } from '@/lib/dateTime';
@@ -667,9 +667,8 @@ export default function WorkflowRunPage() {
                     annotations: runResponse.data?.annotations as Record<string, unknown> | null ?? null,
                 };
                 setWorkflowRun(runData);
-                posthog.capture(PostHogEvent.WORKFLOW_RUN_DETAILS_VIEWED, {
+                captureAnalyticsEvent(PostHogEvent.WORKFLOW_RUN_DETAILS_VIEWED, {
                     workflow_id: workflowId,
-                    workflow_name: workflowResponse.data?.name ?? null,
                     run_id: runId,
                     is_completed: runData.is_completed,
                     has_recording: !!runData.recording_url,

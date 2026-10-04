@@ -105,7 +105,7 @@ fi
 FORCE_TURN_RELAY="${FORCE_TURN_RELAY:-false}"
 
 # Telemetry opt-out (default: true)
-ENABLE_TELEMETRY="${ENABLE_TELEMETRY:-true}"
+ENABLE_TELEMETRY="${ENABLE_TELEMETRY:-false}"
 
 # Container registry (defaults to the public OSS registry)
 REGISTRY="${REGISTRY:-ghcr.io/dograh-hq}"

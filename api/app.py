@@ -4,7 +4,6 @@ import sentry_sdk
 
 from api.constants import (
     CORS_ALLOWED_ORIGINS,
-    DEPLOYMENT_MODE,
     ENABLE_TELEMETRY,
     SENTRY_DSN,
 )
@@ -14,12 +13,10 @@ from api.logging_config import ENVIRONMENT, setup_logging
 setup_logging()
 
 
-if SENTRY_DSN and (
-    DEPLOYMENT_MODE != "oss" or (DEPLOYMENT_MODE == "oss" and ENABLE_TELEMETRY)
-):
+if ENABLE_TELEMETRY and SENTRY_DSN:
     sentry_sdk.init(
         dsn=SENTRY_DSN,
-        send_default_pii=True,
+        send_default_pii=False,
         environment=ENVIRONMENT,
     )
     print(f"Sentry initialized in environment: {ENVIRONMENT}")

@@ -1,6 +1,5 @@
 "use client";
 
-import posthog from "posthog-js";
 import { createContext, type ReactNode,useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 import { getWorkflowCountApiV1WorkflowCountGet } from "@/client/sdk.gen";
@@ -10,6 +9,7 @@ import type { LeadSource } from "@/components/lead-forms/leadFieldOptions";
 import { OnboardingModal } from "@/components/lead-forms/OnboardingModal";
 import { PostHogEvent } from "@/constants/posthog-events";
 import { useOnboarding } from "@/context/OnboardingContext";
+import { captureAnalyticsEvent } from "@/lib/analytics";
 import { useAuth } from "@/lib/auth";
 import { trackMetaCompleteRegistration } from "@/lib/metaPixel";
 
@@ -71,7 +71,7 @@ export function LeadFormsProvider({ children }: { children: ReactNode }) {
         // tab) may have stamped it while the count was in flight.
         if (res.data?.total === 0 && !onboardingDoneRef.current) {
           setOnboardingOpen(true);
-          posthog.capture(PostHogEvent.ONBOARDING_SHOWN);
+          captureAnalyticsEvent(PostHogEvent.ONBOARDING_SHOWN);
           // Brand-new user detected (0 workflows, onboarding not yet done) — the
           // app's canonical "just registered" signal. Meta standard event.
           trackMetaCompleteRegistration();
@@ -95,14 +95,14 @@ export function LeadFormsProvider({ children }: { children: ReactNode }) {
     hasOpenedHireRef.current = true;
     setHireSource(source);
     setHireOpen(true);
-    posthog.capture(PostHogEvent.HIRE_EXPERT_OPENED, { source });
+    captureAnalyticsEvent(PostHogEvent.HIRE_EXPERT_OPENED, { source });
   }, []);
 
   const openEnterprise = useCallback((source: LeadSource, prefill?: { company?: string }) => {
     setEnterpriseSource(source);
     setEnterprisePrefill(prefill);
     setEnterpriseOpen(true);
-    posthog.capture(PostHogEvent.ENTERPRISE_LEAD_OPENED, { source });
+    captureAnalyticsEvent(PostHogEvent.ENTERPRISE_LEAD_OPENED, { source });
   }, []);
 
   const value = useMemo(

@@ -1,16 +1,15 @@
 // Submission seam for the post-signup onboarding form.
-// Fires a PostHog capture AND POSTs the answers to the separate, PUBLIC
-// user_onboarding service (best-effort). The "show once per user" flag is stamped
-// on the server-backed onboarding state by the caller, not here.
+// Sends minimal optional analytics metadata and POSTs the answers only to the
+// separately configured user_onboarding service (best-effort). The "show once per
+// user" flag is stamped on the server-backed onboarding state by the caller.
 //
 // No auth token. The logged-in user's email is passed in from the modal (available in
 // the frontend session for both cloud and OSS) and sent in the body — there is no
 // visible email field. `country` is detected silently and sent too. Onboarding is now
 // COMPULSORY (no skip).
 
-import posthog from "posthog-js";
-
 import { PostHogEvent } from "@/constants/posthog-events";
+import { captureAnalyticsEvent } from "@/lib/analytics";
 import { trackMetaLead } from "@/lib/metaPixel";
 
 import { detectCountry } from "./detectCountry";
@@ -38,7 +37,7 @@ export async function submitOnboarding(
   origin: LeadOrigin,
   email?: string,
 ): Promise<void> {
-  posthog.capture(PostHogEvent.ONBOARDING_SUBMITTED, { ...answers, origin });
+  captureAnalyticsEvent(PostHogEvent.ONBOARDING_SUBMITTED, { origin });
   trackMetaLead({ content_name: "onboarding", origin });
   await postOnboardingToService({
     source: "onboarding",

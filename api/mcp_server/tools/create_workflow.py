@@ -178,7 +178,6 @@ async def create_workflow(code: str) -> dict[str, Any]:
         event=PostHogEvent.WORKFLOW_CREATED,
         properties={
             "workflow_id": workflow.id,
-            "workflow_name": workflow.name,
             "source": "mcp",
             "organization_id": user.selected_organization_id,
         },

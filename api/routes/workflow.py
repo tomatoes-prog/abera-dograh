@@ -505,7 +505,6 @@ async def create_workflow(
         event=PostHogEvent.WORKFLOW_CREATED,
         properties={
             "workflow_id": workflow.id,
-            "workflow_name": workflow.name,
             "source": "direct",
             "organization_id": user.selected_organization_id,
         },
@@ -603,7 +602,6 @@ async def create_workflow_from_template(
             event=PostHogEvent.WORKFLOW_CREATED,
             properties={
                 "workflow_id": workflow.id,
-                "workflow_name": workflow.name,
                 "source": "template",
                 "call_type": request.call_type,
                 "use_case": request.use_case,
@@ -1376,7 +1374,6 @@ async def duplicate_workflow_endpoint(
             event=PostHogEvent.WORKFLOW_DUPLICATED,
             properties={
                 "workflow_id": workflow.id,
-                "workflow_name": workflow.name,
                 "source_workflow_id": workflow_id,
                 "organization_id": user.selected_organization_id,
             },

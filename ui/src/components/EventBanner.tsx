@@ -1,10 +1,10 @@
 "use client";
 
-import posthog from "posthog-js";
 import { useEffect, useRef, useSyncExternalStore } from "react";
 
 import { BrandLogo } from "@/components/BrandLogo";
 import { type EventBannerEvent, events } from "@/config/event-banner.config";
+import { captureAnalyticsEvent } from "@/lib/analytics";
 
 // Site-wide event announcement bar, ported from the dograh.com landing page.
 // Sits ABOVE the app chrome in the root layout and is sticky at top-0, so the
@@ -120,7 +120,7 @@ export function EventBanner() {
         target="_blank"
         rel="noopener noreferrer"
         onClick={() =>
-          posthog.capture("event_banner_clicked", { event: event.analyticsId })
+          captureAnalyticsEvent("event_banner_clicked", { event: event.analyticsId })
         }
         aria-label={`${event.cta}: ${event.title} ${event.subtitle} (opens in a new tab)`}
         className="group mx-auto flex h-12 max-w-7xl items-center gap-2.5 pr-9 pl-4 transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-cta sm:h-[41px] sm:gap-4 sm:pr-12 sm:pl-6 md:justify-center md:gap-5 lg:pr-14 lg:pl-8"

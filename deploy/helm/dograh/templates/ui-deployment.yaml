@@ -65,6 +65,14 @@ spec:
               value: {{ .Values.config.posthogApiKey | quote }}
             - name: POSTHOG_HOST
               value: {{ .Values.config.posthogHost | quote }}
+            - name: SENTRY_DSN
+              value: {{ .Values.config.sentryDsn | quote }}
+            - name: CHATWOOT_URL
+              value: {{ .Values.ui.chatwootUrl | quote }}
+            - name: CHATWOOT_WEBSITE_TOKEN
+              value: {{ .Values.ui.chatwootWebsiteToken | quote }}
+            - name: ONBOARDING_API_URL
+              value: {{ .Values.ui.onboardingApiUrl | quote }}
           livenessProbe:
             {{- toYaml .Values.ui.livenessProbe | nindent 12 }}
           readinessProbe:

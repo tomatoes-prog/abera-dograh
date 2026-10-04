@@ -23,9 +23,6 @@ declare global {
   }
 }
 
-const CHATWOOT_BASE_URL = process.env.NEXT_PUBLIC_CHATWOOT_URL;
-const CHATWOOT_WEBSITE_TOKEN = process.env.NEXT_PUBLIC_CHATWOOT_TOKEN;
-
 // Hide the support bubble only on the workflow builder (/workflow/<id> and its
 // sub-routes), where the in-app chat tester occupies the same bottom-right
 // corner. It stays visible everywhere else, including the /workflow list and
@@ -36,53 +33,59 @@ const isBuilderPath = (pathname: string) =>
 export default function ChatwootWidget() {
   const pathname = usePathname();
 
-  // Load the Chatwoot SDK exactly once for the lifetime of the app.
+  // The support widget is an optional external script. Load it only when an
+  // operator explicitly configures it on the server.
   useEffect(() => {
-    // Don't initialize if environment variables are not set
-    if (!CHATWOOT_BASE_URL || !CHATWOOT_WEBSITE_TOKEN) {
-      console.warn("Chatwoot not configured: Missing NEXT_PUBLIC_CHATWOOT_URL or NEXT_PUBLIC_CHATWOOT_TOKEN");
-      return;
-    }
+    let cancelled = false;
+    const loadChatwoot = async () => {
+      try {
+        const response = await fetch("/api/config/chatwoot", { cache: "no-store" });
+        if (!response.ok) return;
+        const config = await response.json();
+        if (
+          cancelled ||
+          config.enabled !== true ||
+          !config.baseUrl ||
+          !config.websiteToken
+        ) {
+          return;
+        }
 
-    // Prevent duplicate initialization
-    if (window.chatwootSettings) {
-      return;
-    }
+        const start = () => {
+          if (window.chatwootSettings) return;
+          window.chatwootSettings = {
+            position: "right",
+            type: "standard",
+            launcherTitle: "Chat with us",
+          };
+          window.chatwootSDK?.run({
+            websiteToken: config.websiteToken,
+            baseUrl: config.baseUrl,
+          });
+        };
 
-    // Configure Chatwoot widget settings
-    window.chatwootSettings = {
-      position: "right",
-      type: "standard",
-      launcherTitle: "Chat with us",
+        const scriptUrl = `${config.baseUrl}/packs/js/sdk.js`;
+        const existingScript = document.querySelector(`script[src="${scriptUrl}"]`);
+        if (existingScript) {
+          start();
+          return;
+        }
+
+        const script = document.createElement("script");
+        script.src = scriptUrl;
+        script.async = true;
+        script.defer = true;
+        script.onload = start;
+        document.body.appendChild(script);
+      } catch {
+        // Support integration is optional and must never block the application.
+      }
     };
 
-    // Check if script is already loaded
-    const existingScript = document.querySelector(
-      `script[src="${CHATWOOT_BASE_URL}/packs/js/sdk.js"]`
-    );
-
-    if (existingScript) {
-      // Script already exists, just initialize if SDK is available
-      window.chatwootSDK?.run({
-        websiteToken: CHATWOOT_WEBSITE_TOKEN,
-        baseUrl: CHATWOOT_BASE_URL,
-      });
-      return;
-    }
-
-    // Create and inject the Chatwoot SDK script
-    const script = document.createElement("script");
-    script.src = `${CHATWOOT_BASE_URL}/packs/js/sdk.js`;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      window.chatwootSDK?.run({
-        websiteToken: CHATWOOT_WEBSITE_TOKEN,
-        baseUrl: CHATWOOT_BASE_URL,
-      });
+    void loadChatwoot();
+    return () => {
+      cancelled = true;
     };
-
-    document.body.appendChild(script);
   }, []);
 
   // Show/hide the bubble per route using Chatwoot's native API. We never tear

@@ -15,6 +15,7 @@ data:
   ENABLE_TELEMETRY: {{ .Values.config.enableTelemetry | quote }}
   POSTHOG_HOST: {{ .Values.config.posthogHost | quote }}
   POSTHOG_API_KEY: {{ .Values.config.posthogApiKey | quote }}
+  SENTRY_DSN: {{ .Values.config.sentryDsn | quote }}
   FORCE_TURN_RELAY: {{ .Values.config.forceTurnRelay | quote }}
   ENABLE_COTURN: {{ .Values.coturn.enabled | quote }}
   TURN_HOST: {{ .Values.config.turnHost | quote }}

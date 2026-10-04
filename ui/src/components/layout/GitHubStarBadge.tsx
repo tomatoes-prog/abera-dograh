@@ -1,9 +1,9 @@
 "use client";
 
-import posthog from "posthog-js";
 import { useEffect, useState } from "react";
 
 import { PostHogEvent } from "@/constants/posthog-events";
+import { captureAnalyticsEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
 interface GitHubStarBadgeProps {
@@ -36,7 +36,7 @@ export function GitHubStarBadge({ className, label, showCount, source }: GitHubS
       href="https://github.com/dograh-hq/dograh"
       target="_blank"
       rel="noopener noreferrer"
-      onClick={() => posthog.capture(PostHogEvent.GITHUB_STAR_CLICKED, { source })}
+      onClick={() => captureAnalyticsEvent(PostHogEvent.GITHUB_STAR_CLICKED, { source })}
       className={cn(
         "inline-flex items-center rounded-md border text-sm leading-none hover:opacity-80 transition-opacity",
         className

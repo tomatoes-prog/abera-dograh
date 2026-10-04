@@ -123,7 +123,7 @@ def create_runtime_sessions(
         return []
 
     record_audio = any(
-        getattr(node.data, "noveum_record_audio", True) for node in noveum_nodes
+        getattr(node.data, "noveum_record_audio", False) for node in noveum_nodes
     )
 
     manifest: list[dict[str, Any]] = []

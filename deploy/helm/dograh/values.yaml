@@ -111,9 +111,10 @@ config:
   minioPublicEndpoint: ""  # browser-visible endpoint (auto-set when ingress/gateway path exposes MinIO)
   minioSecure: false
   enableAwsS3: false
-  enableTelemetry: true
+  enableTelemetry: false
   posthogHost: https://us.i.posthog.com
-  posthogApiKey: phc_ItizB1dP6yv7ZYobbcqrpxTdbomDA8hJFSEmAMdYvIr
+  posthogApiKey: ""
+  sentryDsn: ""
   forceTurnRelay: false
   turnHost: ""  # public hostname/IP of coturn (the LoadBalancer address)
   fastapiWorkers: 1  # informational only; web tier scales by pod, not in-pod workers
@@ -400,6 +401,9 @@ ui:
 
   # Server-side (SSR) URL. Defaults to the in-cluster web Service.
   backendUrl: ""  # auto-set in template when empty
+  chatwootUrl: ""  # optional; blank disables the external support widget
+  chatwootWebsiteToken: ""  # optional; blank disables the external support widget
+  onboardingApiUrl: ""  # optional; blank disables remote form submissions
 
   resources:
     requests:

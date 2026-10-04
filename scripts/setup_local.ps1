@@ -200,7 +200,7 @@ if ($UseCoturn) {
     }
 }
 
-$EnableTelemetry = if ([string]::IsNullOrEmpty($env:ENABLE_TELEMETRY)) { 'true' } else { $env:ENABLE_TELEMETRY }
+$EnableTelemetry = if ([string]::IsNullOrEmpty($env:ENABLE_TELEMETRY)) { 'false' } else { $env:ENABLE_TELEMETRY }
 $Registry = if ([string]::IsNullOrEmpty($env:REGISTRY)) { 'ghcr.io/dograh-hq' } else { $env:REGISTRY }
 
 Write-Host ''
@@ -296,7 +296,7 @@ Write-Success '╔════════════════════�
 Write-Success '║                    Setup Complete!                           ║'
 Write-Success '╚══════════════════════════════════════════════════════════════╝'
 Write-Host ''
-Write-Host "Files created in $CurrentDir:" -ForegroundColor Blue
+Write-Host "Files created in ${CurrentDir}:" -ForegroundColor Blue
 Write-Host '  - docker-compose.yaml'
 Write-Host '  - .env'
 if ($UseCoturn) {

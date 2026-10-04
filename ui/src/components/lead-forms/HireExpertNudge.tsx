@@ -1,11 +1,11 @@
 "use client";
 
 import { UserRound, X } from "lucide-react";
-import posthog from "posthog-js";
 import { useEffect, useRef, useState } from "react";
 
 import { PostHogEvent } from "@/constants/posthog-events";
 import { useLeadForms } from "@/context/LeadFormsContext";
+import { captureAnalyticsEvent } from "@/lib/analytics";
 
 interface HireExpertNudgeProps {
   workflowId: number;
@@ -34,11 +34,11 @@ export function HireExpertNudge({ workflowId }: HireExpertNudgeProps) {
       if (hasOpenedHireRef.current) return; // they engaged elsewhere; don't nag
       if (localStorage.getItem(nudgeDoneKey(workflowId))) return;
       setVisible(true);
-      posthog.capture(PostHogEvent.HIRE_NUDGE_SHOWN, { workflowId });
+      captureAnalyticsEvent(PostHogEvent.HIRE_NUDGE_SHOWN, { workflowId });
       // Auto-fade after 30s. Auto-expiry does NOT mark done (per spec).
       fadeTimer.current = setTimeout(() => {
         setVisible(false);
-        posthog.capture(PostHogEvent.HIRE_NUDGE_EXPIRED, { workflowId });
+        captureAnalyticsEvent(PostHogEvent.HIRE_NUDGE_EXPIRED, { workflowId });
       }, AUTO_FADE_MS);
     }, SHOW_DELAY_MS);
 
@@ -57,13 +57,13 @@ export function HireExpertNudge({ workflowId }: HireExpertNudgeProps) {
   };
 
   const handleClick = () => {
-    posthog.capture(PostHogEvent.HIRE_NUDGE_CLICKED, { workflowId });
+    captureAnalyticsEvent(PostHogEvent.HIRE_NUDGE_CLICKED, { workflowId });
     markDone();
     openHireExpert("builder_nudge");
   };
 
   const handleDismiss = () => {
-    posthog.capture(PostHogEvent.HIRE_NUDGE_DISMISSED, { workflowId });
+    captureAnalyticsEvent(PostHogEvent.HIRE_NUDGE_DISMISSED, { workflowId });
     markDone();
   };
 

@@ -3,7 +3,7 @@ set -e
 
 ENV_FILE=".env"
 REGISTRY="${REGISTRY:-ghcr.io/dograh-hq}"
-ENABLE_TELEMETRY="${ENABLE_TELEMETRY:-true}"
+ENABLE_TELEMETRY="${ENABLE_TELEMETRY:-false}"
 
 fail() {
     echo "Error: $*" >&2

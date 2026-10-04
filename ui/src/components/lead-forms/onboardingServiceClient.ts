@@ -1,16 +1,28 @@
-// Thin client for the SEPARATE user_onboarding service (its own base URL).
-// Not part of the generated Dograh SDK — a different host. All endpoints are PUBLIC
-// (no auth token); identity is the email carried in the body. Every call is
-// BEST-EFFORT: failures are swallowed so a down/erroring service never blocks the user.
+// Thin client for the optional, separately configured user_onboarding service.
+// Its public endpoints use the email in the request body, so the remote service
+// must be explicitly configured by the operator. Calls are best-effort.
 
-// Base URL of the user_onboarding service. Unset (the default for self-hosted OSS —
-// .env.example ships this commented out) → fall back to our cloud leads backend so we
-// still receive OSS form submissions. Override the env var to point elsewhere (or to a
-// local backend) to stop sending leads to us.
-const BASE_URL = process.env.NEXT_PUBLIC_ONBOARDING_API_URL || "https://api-leads.dograh.com";
+// The external form service is opt-in. Self-hosted installations that do not
+// configure a URL keep submissions local to the browser and send nothing.
+let baseUrlPromise: Promise<string | null> | null = null;
+
+async function getBaseUrl(): Promise<string | null> {
+  if (!baseUrlPromise) {
+    baseUrlPromise = fetch("/api/config/onboarding", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        const config = await response.json();
+        return config.enabled === true && typeof config.baseUrl === "string"
+          ? config.baseUrl
+          : null;
+      })
+      .catch(() => null);
+  }
+  return baseUrlPromise;
+}
 
 // Bound every call so a slow/hung service can never freeze the UI. Best-effort:
-// failures are surfaced via console.error (Sentry breadcrumbs) but never thrown.
+// failures are logged locally but never thrown.
 const TIMEOUT_MS = 6000;
 
 // Shape the lead endpoints return: ok + the server's calendar verdict. The decision is
@@ -24,10 +36,13 @@ export type LeadResult = {
 // POST a JSON body to the onboarding service (public — no auth header). Returns the parsed
 // body on success, or null on a non-2xx / network error / timeout (best-effort, never throws).
 async function post(path: string, body: unknown): Promise<LeadResult | null> {
+  const baseUrl = await getBaseUrl();
+  if (!baseUrl) return null;
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    const res = await fetch(`${BASE_URL}${path}`, {
+    const res = await fetch(`${baseUrl}${path}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),

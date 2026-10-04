@@ -8,19 +8,19 @@
 // token-gated /leads/enterprise. Shared by the Stack Auth handler and the
 // local/OSS auth pages.
 
-import posthog from "posthog-js";
 import { useState } from "react";
 
 import { EnterpriseModal } from "@/components/lead-forms/EnterpriseModal";
 import { Button } from "@/components/ui/button";
 import { PostHogEvent } from "@/constants/posthog-events";
+import { captureAnalyticsEvent } from "@/lib/analytics";
 
 export function AuthEnterpriseCTA() {
   const [open, setOpen] = useState(false);
 
   const openModal = () => {
     setOpen(true);
-    posthog.capture(PostHogEvent.ENTERPRISE_LEAD_OPENED, { source: "auth_page" });
+    captureAnalyticsEvent(PostHogEvent.ENTERPRISE_LEAD_OPENED, { source: "auth_page" });
   };
 
   return (

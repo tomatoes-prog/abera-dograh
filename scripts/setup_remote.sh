@@ -201,7 +201,7 @@ if [[ "$DEPLOY_MODE" == "build" ]]; then
     fi
 fi
 
-ENABLE_TELEMETRY="${ENABLE_TELEMETRY:-true}"
+ENABLE_TELEMETRY="${ENABLE_TELEMETRY:-false}"
 FASTAPI_WORKERS="${FASTAPI_WORKERS:-}"
 
 if [[ -z "$FASTAPI_WORKERS" ]]; then

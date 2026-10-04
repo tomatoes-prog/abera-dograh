@@ -76,13 +76,13 @@
 ##### 在本地机器下载并部署 Dograh
 
 > **提示**
-> 我们会收集匿名使用数据以改进产品。如需关闭,请在下面的命令中将 `ENABLE_TELEMETRY` 设为 `false`。
+> 使用情况分析和错误报告是可选的，默认关闭。如需启用，请在启动命令中将 `ENABLE_TELEMETRY` 设为 `true`。
 
 > **提示**
 > 如果希望在远程服务器上运行该平台,请参考[文档](https://docs.dograh.com/deployment/docker#option-2:-remote-server-deployment)。
 
 ```bash
-curl -o docker-compose.yaml https://raw.githubusercontent.com/dograh-hq/dograh/main/docker-compose.yaml && REGISTRY=ghcr.io/dograh-hq ENABLE_TELEMETRY=true docker compose up --pull always
+curl -o docker-compose.yaml https://raw.githubusercontent.com/dograh-hq/dograh/main/docker-compose.yaml && REGISTRY=ghcr.io/dograh-hq docker compose up --pull always
 ```
 
 > **⚡ 想让 AI 智能体帮你完成部署?**

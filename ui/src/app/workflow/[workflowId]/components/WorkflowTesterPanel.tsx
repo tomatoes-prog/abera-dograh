@@ -1,7 +1,6 @@
 "use client";
 
 import { Loader2, MessageSquareText, Mic, Phone, RefreshCw, X } from "lucide-react";
-import posthog from "posthog-js";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -13,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PostHogEvent } from "@/constants/posthog-events";
 import { WORKFLOW_RUN_MODES } from "@/constants/workflowRunModes";
 import { useOnboarding } from "@/context/OnboardingContext";
+import { captureAnalyticsEvent } from "@/lib/analytics";
 import { useAuth } from "@/lib/auth";
 import { cn, getRandomId } from "@/lib/utils";
 
@@ -113,7 +113,7 @@ export function WorkflowTesterPanel({
             }
 
             markActionCompleted("web_call_started");
-            posthog.capture(PostHogEvent.WEB_CALL_INITIATED, {
+            captureAnalyticsEvent(PostHogEvent.WEB_CALL_INITIATED, {
                 workflow_id: workflowId,
                 workflow_run_id: response.data.id,
                 source: "workflow_editor",

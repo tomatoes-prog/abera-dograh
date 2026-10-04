@@ -1,14 +1,12 @@
 /**
  * Meta (Facebook) Pixel — thin, guarded tracking seam.
  *
- * This repo calls PostHog directly (see constants/posthog-events.ts); there is no
- * central analytics wrapper. We mirror that convention: call these helpers at the
- * same sites we already `posthog.capture(...)`.
+ * These helpers run only when the root layout loads Meta Pixel under the explicit
+ * telemetry opt-in. Otherwise `window.fbq` is absent and each call is a no-op.
  *
  * Every helper is a no-op unless the Pixel is actually loaded (i.e. `window.fbq`
- * exists). The Pixel only loads on Cloud, where NEXT_PUBLIC_META_PIXEL_ID is set
- * at build time (see components/MetaPixel.tsx + app/layout.tsx). OSS self-hosters
- * and local dev leave the var blank, so `fbq` never loads and nothing is sent.
+ * exists). A configured pixel ID alone does not activate it: ENABLE_TELEMETRY
+ * must also be true (see app/layout.tsx).
  */
 
 declare global {

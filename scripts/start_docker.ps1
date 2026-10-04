@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 
 $EnvFile = '.env'
 $Registry = if ([string]::IsNullOrEmpty($env:REGISTRY)) { 'ghcr.io/dograh-hq' } else { $env:REGISTRY }
-$EnableTelemetry = if ([string]::IsNullOrEmpty($env:ENABLE_TELEMETRY)) { 'true' } else { $env:ENABLE_TELEMETRY }
+$EnableTelemetry = if ([string]::IsNullOrEmpty($env:ENABLE_TELEMETRY)) { 'false' } else { $env:ENABLE_TELEMETRY }
 $Utf8NoBom = [System.Text.UTF8Encoding]::new($false)
 
 function New-HexSecret {

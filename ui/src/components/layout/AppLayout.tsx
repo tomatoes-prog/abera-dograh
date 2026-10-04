@@ -3,7 +3,6 @@
 import { AlertTriangle, Menu, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import posthog from "posthog-js";
 import React, { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -11,6 +10,7 @@ import { SidebarInset, SidebarProvider, useSidebar } from "@/components/ui/sideb
 import { PostHogEvent } from "@/constants/posthog-events";
 import { useAppConfig } from "@/context/AppConfigContext";
 import { LeadFormsProvider } from "@/context/LeadFormsContext";
+import { captureAnalyticsEvent } from "@/lib/analytics";
 
 import { AppSidebar } from "./AppSidebar";
 import { GitHubStarBadge } from "./GitHubStarBadge";
@@ -32,7 +32,7 @@ function AppHeader() {
             href="https://join.slack.com/t/dograh-community/shared_invite/zt-4anp45mlu-ukR3jTqwdDFMEpqeBhKn6g"
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => posthog.capture(PostHogEvent.SLACK_COMMUNITY_CLICKED, { source: "app_header" })}
+            onClick={() => captureAnalyticsEvent(PostHogEvent.SLACK_COMMUNITY_CLICKED, { source: "app_header" })}
             className="flex items-center gap-2"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
