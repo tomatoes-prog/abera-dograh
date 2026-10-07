@@ -40,7 +40,9 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { useUserConfig } from "@/context/UserConfigContext";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { detailFromError } from "@/lib/apiError";
+
 
 interface PhoneCallDialogProps {
     open: boolean;
@@ -66,6 +68,7 @@ export const PhoneCallDialog = ({
     workflowId,
     user,
 }: PhoneCallDialogProps) => {
+    const copy = useCopy();
     const router = useRouter();
     const { refreshConfig } = useUserConfig();
     const [preferences, setPreferences] = useState<OrganizationPreferences>({});
@@ -88,10 +91,10 @@ export const PhoneCallDialog = ({
         const result =
             await getPreferencesApiV1OrganizationsPreferencesGet();
         if (result.error) {
-            throw new Error(detailFromError(result.error, "Failed to load phone preferences"));
+            throw new Error(copy(detailFromError(result.error, "Failed to load phone preferences")));
         }
         return result.data || {};
-    }, []);
+    }, [copy]);
 
     const applyPreferences = useCallback((nextPreferences: OrganizationPreferences) => {
         const saved = nextPreferences.test_phone_number || "";
@@ -264,7 +267,7 @@ export const PhoneCallDialog = ({
             });
 
         if (result.error) {
-            throw new Error(detailFromError(result.error, "Failed to save phone preferences"));
+            throw new Error(copy(detailFromError(result.error, "Failed to save phone preferences")));
         }
         if (!result.data) {
             throw new Error("Failed to save phone preferences");
@@ -341,7 +344,7 @@ export const PhoneCallDialog = ({
     const renderLoading = () => (
         <>
             <DialogHeader>
-                <DialogTitle>Phone Call</DialogTitle>
+                <DialogTitle>{copy("Phone Call")}</DialogTitle>
             </DialogHeader>
             <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -369,46 +372,30 @@ export const PhoneCallDialog = ({
         return (
             <>
                 <DialogHeader>
-                    <DialogTitle>Connect phone service</DialogTitle>
-                    <DialogDescription>
-                        Dograh doesn&apos;t sell phone numbers or minutes. Choose how
-                        this agent should place and receive calls.
-                    </DialogDescription>
+                    <DialogTitle>{copy("Connect phone service")}</DialogTitle>
+                    <DialogDescription>{copy("Dograh doesn't sell phone numbers or minutes. Choose how this agent should place and receive calls.")}</DialogDescription>
                 </DialogHeader>
 
                 <div className="flex flex-col gap-3">
                     <div className="rounded-lg border p-4 space-y-3">
                         <div className="space-y-1">
                             <div className="flex items-center gap-2">
-                                <h3 className="text-sm font-medium">
-                                    Use a telephony provider
-                                </h3>
-                                <span className="rounded-full bg-teal-600/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-teal-700 dark:text-teal-400">
-                                    Recommended
-                                </span>
+                                <h3 className="text-sm font-medium">{copy("Use a telephony provider")}</h3>
+                                <span className="rounded-full bg-teal-600/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-teal-700 dark:text-teal-400">{copy("Recommended")}</span>
                             </div>
-                            <p className="text-sm text-muted-foreground">
-                                Open an account with {joinNames(apiProviderNames)}, paste
-                                the credentials here, and call using their numbers.
-                                Quickest way to get started.
-                            </p>
+                            <p className="text-sm text-muted-foreground">{copy("Open an account with ")}{joinNames(apiProviderNames)}{copy(", paste the credentials here, and call using their numbers. Quickest way to get started.")}</p>
                         </div>
                         <Button
                             size="sm"
                             onClick={() => goToConfiguration({ add: true })}
-                        >
-                            Add provider
-                        </Button>
+                        >{copy("Add provider")}</Button>
                     </div>
 
                     <div className="rounded-lg border p-4 space-y-3">
                         <div className="space-y-1">
-                            <h3 className="text-sm font-medium">Bring your own SIP</h3>
-                            <p className="text-sm text-muted-foreground">
-                                Already have a SIP trunk or a PBX? Point it at Dograh and
-                                keep your existing carrier and numbers.
-                                {sipConfig
-                                    ? ` “${sipConfig.name}” is provisioned and waiting for your carrier details.`
+                            <h3 className="text-sm font-medium">{copy("Bring your own SIP")}</h3>
+                            <p className="text-sm text-muted-foreground">{copy("Already have a SIP trunk or a PBX? Point it at Dograh and keep your existing carrier and numbers.")}{sipConfig
+                                    ? copy(" “{value0}” is provisioned and waiting for your carrier details.", {value0: sipConfig.name})
                                     : ""}
                             </p>
                             {sipConfig && blockedReason && (
@@ -426,15 +413,13 @@ export const PhoneCallDialog = ({
                                 )
                             }
                         >
-                            {sipConfig ? "Set up SIP" : "Add SIP connection"}
+                            {sipConfig ? copy("Set up SIP") : copy("Add SIP connection")}
                         </Button>
                     </div>
                 </div>
 
                 <DialogFooter>
-                    <Button variant="ghost" onClick={() => onOpenChange(false)}>
-                        Do it Later
-                    </Button>
+                    <Button variant="ghost" onClick={() => onOpenChange(false)}>{copy("Do it Later")}</Button>
                 </DialogFooter>
             </>
         );
@@ -444,24 +429,22 @@ export const PhoneCallDialog = ({
     const renderPhoneCallForm = () => (
         <>
             <DialogHeader>
-                <DialogTitle>Phone Call</DialogTitle>
-                <DialogDescription>
-                    Enter the phone number or SIP endpoint to call. The number will be saved automatically.
-                </DialogDescription>
+                <DialogTitle>{copy("Phone Call")}</DialogTitle>
+                <DialogDescription>{copy("Enter the phone number or SIP endpoint to call. The number will be saved automatically.")}</DialogDescription>
             </DialogHeader>
             {telephonyConfigs.length > 0 && (
                 <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="telephony-config">Telephony configuration</Label>
+                    <Label htmlFor="telephony-config">{copy("Telephony configuration")}</Label>
                     <Select value={selectedConfigId} onValueChange={setSelectedConfigId}>
                         <SelectTrigger id="telephony-config" className="w-full">
-                            <SelectValue placeholder="Select a configuration" />
+                            <SelectValue placeholder={copy("Select a configuration")} />
                         </SelectTrigger>
                         <SelectContent>
                             {telephonyConfigs.map((config) => (
                                 <SelectItem key={config.id} value={String(config.id)}>
                                     {config.name} ({config.provider})
-                                    {config.is_default_outbound ? " - default" : ""}
-                                    {!isCallable(config) ? " - setup incomplete" : ""}
+                                    {config.is_default_outbound ? copy(" - default") : ""}
+                                    {!isCallable(config) ? copy(" - setup incomplete") : ""}
                                 </SelectItem>
                             ))}
                         </SelectContent>
@@ -469,9 +452,9 @@ export const PhoneCallDialog = ({
                     {selectedConfigBlocked && (
                         <p className="text-xs text-amber-600 dark:text-amber-500">
                             {selectedConfig?.inactive
-                                ? "This configuration is disabled after repeated connection failures."
+                                ? copy("This configuration is disabled after repeated connection failures.")
                                 : selectedConfig?.outbound_blocked_reason ??
-                                  "This configuration is not ready for outbound calls."}{" "}
+                                  copy("This configuration is not ready for outbound calls.")}{" "}
                             <button
                                 type="button"
                                 className="underline"
@@ -479,7 +462,7 @@ export const PhoneCallDialog = ({
                                     goToConfiguration({ configId: selectedConfig?.id })
                                 }
                             >
-                                {selectedConfig?.inactive ? "Open configuration" : "Finish setup"}
+                                {selectedConfig?.inactive ? copy("Open configuration") : copy("Finish setup")}
                             </button>
                         </p>
                     )}
@@ -487,25 +470,23 @@ export const PhoneCallDialog = ({
             )}
             {selectedConfigId && (
                 <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="from-phone-number">Caller ID (from)</Label>
+                    <Label htmlFor="from-phone-number">{copy("Caller ID (from)")}</Label>
                     {loadingPhoneNumbers ? (
                         <div className="flex items-center text-sm text-muted-foreground">
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            Loading phone numbers...
-                        </div>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />{copy("Loading phone numbers...")}</div>
                     ) : fromPhoneNumbers.length > 0 ? (
                         <Select
                             value={selectedFromPhoneNumberId}
                             onValueChange={setSelectedFromPhoneNumberId}
                         >
                             <SelectTrigger id="from-phone-number" className="w-full">
-                                <SelectValue placeholder="Select a phone number" />
+                                <SelectValue placeholder={copy("Select a phone number")} />
                             </SelectTrigger>
                             <SelectContent>
                                 {fromPhoneNumbers.map((phone) => (
                                     <SelectItem key={phone.id} value={String(phone.id)}>
-                                        {phone.label ? `${phone.label} - ${phone.address}` : phone.address}
-                                        {phone.is_default_caller_id ? " - default" : ""}
+                                        {phone.label ? copy("{value0} - {value1}", {value0: phone.label, value1: phone.address}) : phone.address}
+                                        {phone.is_default_caller_id ? copy(" - default") : ""}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -513,13 +494,9 @@ export const PhoneCallDialog = ({
                     ) : selectedConfigBlocked ? (
                         // Never claim a fallback here: providers that require a
                         // caller ID reject the call outright when none exists.
-                        <div className="text-xs text-amber-600 dark:text-amber-500">
-                            No phone numbers in this configuration.
-                        </div>
+                        <div className="text-xs text-amber-600 dark:text-amber-500">{copy("No phone numbers in this configuration.")}</div>
                     ) : (
-                        <div className="text-xs text-muted-foreground">
-                            No phone numbers in this configuration. The provider will pick one automatically.
-                        </div>
+                        <div className="text-xs text-muted-foreground">{copy("No phone numbers in this configuration. The provider will pick one automatically.")}</div>
                     )}
                 </div>
             )}
@@ -527,7 +504,7 @@ export const PhoneCallDialog = ({
                 <Input
                     value={phoneNumber}
                     onChange={(e) => handlePhoneInputChange(e.target.value)}
-                    placeholder="PJSIP/1234 or SIP/1234"
+                    placeholder={copy("PJSIP/1234 or SIP/1234")}
                 />
             ) : (
                 <PhoneInput
@@ -541,7 +518,7 @@ export const PhoneCallDialog = ({
                 className="text-xs text-muted-foreground hover:text-foreground underline"
                 onClick={() => { setSipMode(!sipMode); setPhoneNumber(""); setPhoneChanged(true); }}
             >
-                {sipMode ? "Use phone number instead" : "Use SIP endpoint instead"}
+                {sipMode ? copy("Use phone number instead") : copy("Use SIP endpoint instead")}
             </button>
             <DialogFooter className="flex-col sm:flex-row gap-2">
                 <Button
@@ -550,28 +527,22 @@ export const PhoneCallDialog = ({
                         onOpenChange(false);
                         router.push('/telephony-configurations');
                     }}
-                >
-                    Configure Telephony
-                </Button>
+                >{copy("Configure Telephony")}</Button>
                 <div className="flex gap-2 flex-1 justify-end">
                     <DialogClose asChild>
-                        <Button variant="outline">Cancel</Button>
+                        <Button variant="outline">{copy("Cancel")}</Button>
                     </DialogClose>
                     {!callSuccessMsg ? (
                         <Button
                             onClick={handleStartCall}
                             disabled={callLoading || !phoneNumber || selectedConfigBlocked}
                         >
-                            {callLoading ? "Calling..." : "Start Call"}
+                            {callLoading ? copy("Calling...") : copy("Start Call")}
                         </Button>
                     ) : (
                         <>
-                            <Button variant="outline" onClick={() => { setCallSuccessMsg(null); setCallError(null); }}>
-                                Call Again
-                            </Button>
-                            <Button onClick={() => onOpenChange(false)}>
-                                Close
-                            </Button>
+                            <Button variant="outline" onClick={() => { setCallSuccessMsg(null); setCallError(null); }}>{copy("Call Again")}</Button>
+                            <Button onClick={() => onOpenChange(false)}>{copy("Close")}</Button>
                         </>
                     )}
                 </div>

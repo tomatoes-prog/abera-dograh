@@ -2,7 +2,9 @@
 
 import { Loader2, Pencil, RotateCcw } from "lucide-react";
 
+import { useCopy } from "@/i18n/LocaleProvider";
 import { cn } from "@/lib/utils";
+
 
 interface TurnMessageActionsProps {
     disabled: boolean;
@@ -21,14 +23,15 @@ export function TurnMessageActions({
     onRewind,
     onEdit,
 }: TurnMessageActionsProps) {
+    const copy = useCopy();
     return (
         <>
             <button
                 type="button"
                 onClick={onRewind}
                 disabled={disabled}
-                aria-label="Rerun this turn"
-                title="Rerun this turn"
+                aria-label={copy("Rerun this turn")}
+                title={copy("Rerun this turn")}
                 className="inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
             >
                 {rewinding ? (
@@ -41,8 +44,8 @@ export function TurnMessageActions({
                 type="button"
                 onClick={onEdit}
                 disabled={disabled}
-                aria-label="Edit and rerun this turn"
-                title="Edit and rerun this turn"
+                aria-label={copy("Edit and rerun this turn")}
+                title={copy("Edit and rerun this turn")}
                 className={cn(
                     "inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50",
                     editing && "bg-muted text-foreground",

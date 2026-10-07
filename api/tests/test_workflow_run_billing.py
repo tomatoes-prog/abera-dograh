@@ -11,6 +11,8 @@ from api.services.workflow_run_billing import (
     report_workflow_run_platform_usage,
 )
 
+pytestmark = pytest.mark.usefixtures("mps_enabled")
+
 
 def _make_workflow_run():
     return SimpleNamespace(

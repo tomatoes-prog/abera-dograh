@@ -18,10 +18,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { apiErrorMessage } from "@/i18n/errors";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { useAuth } from '@/lib/auth';
 import logger from '@/lib/logger';
 
+
 export default function CreateWorkflowPage() {
+    const copy = useCopy();
     const router = useRouter();
     const { user, getAccessToken } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
@@ -35,12 +39,12 @@ export default function CreateWorkflowPage() {
 
     const handleCreateWorkflow = async () => {
         if (!useCase || !activityDescription) {
-            setError('Please fill in all fields');
+            setError(copy("Please fill in all fields"));
             return;
         }
 
         if (!user) {
-            setError('You must be logged in to create a workflow');
+            setError(copy("You must be logged in to create a workflow"));
             return;
         }
 
@@ -62,12 +66,16 @@ export default function CreateWorkflowPage() {
                 },
             });
 
+            if (response.error || !response.data?.id) {
+                setError(apiErrorMessage(response.error, copy, "Failed to create workflow. Please try again."));
+                return;
+            }
             if (response.data?.id) {
                 setWorkflowId(String(response.data.id));
                 setShowSuccessModal(true);
             }
         } catch (err) {
-            setError('Failed to create workflow. Please try again.');
+            setError(copy("Failed to create workflow. Please try again."));
             logger.error(`Error creating workflow: ${err}`);
         } finally {
             setIsLoading(false);
@@ -83,65 +91,51 @@ export default function CreateWorkflowPage() {
         <div className="min-h-screen">
             <div className="container mx-auto px-4 py-8 max-w-2xl">
                 <div className="mb-6">
-                    <h1 className="text-3xl font-bold mb-2">Create Voice Agent</h1>
-                    <p className="text-muted-foreground">
-                        Tell us about your use case and we&apos;ll create a customized voice agent for you
-                    </p>
+                    <h1 className="text-3xl font-bold mb-2">{copy("Create Voice Agent")}</h1>
+                    <p className="text-muted-foreground">{copy("Tell us about your use case and we'll create a customized voice agent for you")}</p>
                 </div>
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>Agent Details</CardTitle>
-                        <CardDescription>
-                            Configure your voice agent settings
-                        </CardDescription>
+                        <CardTitle>{copy("Agent Details")}</CardTitle>
+                        <CardDescription>{copy("Configure your voice agent settings")}</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
                         <div className="space-y-2">
-                            <Label htmlFor="call-type">Call Type</Label>
+                            <Label htmlFor="call-type">{copy("Call Type")}</Label>
                             <Select value={callType} onValueChange={(value) => setCallType(value as 'inbound' | 'outbound')}>
                                 <SelectTrigger id="call-type">
-                                    <SelectValue placeholder="Select type" />
+                                    <SelectValue placeholder={copy("Select type")} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="inbound">
-                                        Inbound (Users call AI)
-                                    </SelectItem>
-                                    <SelectItem value="outbound">
-                                        Outbound (AI calls users)
-                                    </SelectItem>
+                                    <SelectItem value="inbound">{copy("Inbound (Users call AI)")}</SelectItem>
+                                    <SelectItem value="outbound">{copy("Outbound (AI calls users)")}</SelectItem>
                                 </SelectContent>
                             </Select>
-                            <p className="text-sm text-muted-foreground">
-                                Choose whether users will call your AI or your AI will call users
-                            </p>
+                            <p className="text-sm text-muted-foreground">{copy("Choose whether users will call your AI or your AI will call users")}</p>
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="use-case">Use Case</Label>
+                            <Label htmlFor="use-case">{copy("Use Case")}</Label>
                             <Input
                                 id="use-case"
-                                placeholder="e.g., Lead Qualification, HR Screening, Customer Support"
+                                placeholder={copy("e.g., Lead Qualification, HR Screening, Customer Support")}
                                 value={useCase}
                                 onChange={(e) => setUseCase(e.target.value)}
                             />
-                            <p className="text-sm text-muted-foreground">
-                                Describe the primary purpose of your voice agent
-                            </p>
+                            <p className="text-sm text-muted-foreground">{copy("Describe the primary purpose of your voice agent")}</p>
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="activity-description">Activity Description</Label>
+                            <Label htmlFor="activity-description">{copy("Activity Description")}</Label>
                             <Textarea
                                 id="activity-description"
-                                placeholder="Describe briefly what your voice agent will do (e.g., Qualify leads for real estate, Screen candidates for roles, Handle customer support). This will be a prompt to an LLM."
+                                placeholder={copy("Describe briefly what your voice agent will do (e.g., Qualify leads for real estate, Screen candidates for roles, Handle customer support). This will be a prompt to an LLM.")}
                                 value={activityDescription}
                                 onChange={(e) => setActivityDescription(e.target.value)}
                                 className="min-h-[100px]"
                             />
-                            <p className="text-sm text-muted-foreground">
-                                This description will be used to generate the AI prompt for your voice agent
-                            </p>
+                            <p className="text-sm text-muted-foreground">{copy("This description will be used to generate the AI prompt for your voice agent")}</p>
                         </div>
 
                         {error && (
@@ -154,7 +148,7 @@ export default function CreateWorkflowPage() {
                                 disabled={isLoading || !useCase || !activityDescription}
                                 className="w-full"
                             >
-                                {isLoading ? 'Creating...' : 'Create Agent'}
+                                {isLoading ? copy("Creating...") : copy("Create Agent")}
                             </Button>
                         </div>
                     </CardContent>
@@ -173,12 +167,8 @@ export default function CreateWorkflowPage() {
                             </div>
 
                             <div className="text-center space-y-2">
-                                <h3 className="text-lg font-semibold">
-                                    Creating Your Workflow
-                                </h3>
-                                <p className="text-sm text-muted-foreground max-w-xs">
-                                    We&apos;re setting up your voice agent with your specifications. This will just take a moment...
-                                </p>
+                                <h3 className="text-lg font-semibold">{copy("Creating Your Workflow")}</h3>
+                                <p className="text-sm text-muted-foreground max-w-xs">{copy("We're setting up your voice agent with your specifications. This will just take a moment...")}</p>
                             </div>
                         </div>
                     </Card>
@@ -192,20 +182,12 @@ export default function CreateWorkflowPage() {
                         <DialogTitle className="flex items-center gap-2">
                             <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            Workflow Created Successfully!
-                        </DialogTitle>
+                            </svg>{copy("Workflow Created Successfully!")}</DialogTitle>
                         <DialogDescription asChild>
                             <div className="mt-4 space-y-3">
-                                <p>
-                                    A voice agent workflow has been generated for your use case, with some artificial data and sample actions.
-                                </p>
-                                <p>
-                                    The voice bot is pre-set to communicate in English with an American accent.
-                                </p>
-                                <p>
-                                    Next steps would be to test the voice bot in the editor, and then modify it to suit your use case.
-                                </p>
+                                <p>{copy("A voice agent workflow has been generated for your use case, with some artificial data and sample actions.")}</p>
+                                <p>{copy("The voice bot is pre-set to communicate in English with an American accent.")}</p>
+                                <p>{copy("Next steps would be to test the voice bot in the editor, and then modify it to suit your use case.")}</p>
                             </div>
                         </DialogDescription>
                     </DialogHeader>
@@ -213,9 +195,7 @@ export default function CreateWorkflowPage() {
                         <Button
                             onClick={handleModalContinue}
                             className="w-full"
-                        >
-                            Open and Test Agent
-                        </Button>
+                        >{copy("Open and Test Agent")}</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

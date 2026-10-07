@@ -12,6 +12,7 @@ from api.services.configuration.masking import (
     MODEL_OVERRIDE_FIELDS,
     SERVICE_SECRET_FIELDS,
     contains_masked_key,
+    require_new_key_for_changed_embedding_url,
     resolve_masked_api_keys,
 )
 
@@ -42,6 +43,7 @@ def _merge_service_secret_fields(
     """
     if not _same_provider(incoming_cfg, existing_cfg):
         return incoming_cfg
+    require_new_key_for_changed_embedding_url(incoming_cfg, existing_cfg)
 
     for secret_field in SERVICE_SECRET_FIELDS:
         if secret_field not in existing_cfg:

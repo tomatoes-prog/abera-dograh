@@ -13,9 +13,11 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { useAuth } from '@/lib/auth';
 import logger from '@/lib/logger';
 import { getRandomId } from '@/lib/utils';
+
 
 const BLANK_WORKFLOW_DEFINITION = {
     nodes: [
@@ -45,6 +47,7 @@ const BLANK_WORKFLOW_DEFINITION = {
 };
 
 export function CreateWorkflowButton() {
+    const copy = useCopy();
     const router = useRouter();
     const { user, getAccessToken } = useAuth();
     const [isCreating, setIsCreating] = useState(false);
@@ -75,7 +78,7 @@ export function CreateWorkflowButton() {
             }
         } catch (err) {
             logger.error(`Error creating blank workflow: ${err}`);
-            toast.error('Failed to create workflow');
+            toast.error(copy("Failed to create workflow"));
         } finally {
             setIsCreating(false);
         }
@@ -86,7 +89,7 @@ export function CreateWorkflowButton() {
             <DropdownMenuTrigger asChild>
                 <Button disabled={isCreating}>
                     <PlusIcon className="w-4 h-4" />
-                    {isCreating ? 'Creating...' : 'Create Agent'}
+                    {isCreating ? copy("Creating...") : copy("Create Agent")}
                     <ChevronDown className="w-4 h-4" />
                 </Button>
             </DropdownMenuTrigger>
@@ -94,15 +97,15 @@ export function CreateWorkflowButton() {
                 <DropdownMenuItem onClick={handleAgentBuilder} className="cursor-pointer">
                     <Bot className="w-4 h-4 mr-2" />
                     <div>
-                        <div className="font-medium">Use Agent Builder</div>
-                        <div className="text-xs text-muted-foreground">AI generates a workflow from your description</div>
+                        <div className="font-medium">{copy("Use Agent Builder")}</div>
+                        <div className="text-xs text-muted-foreground">{copy("AI generates a workflow from your description")}</div>
                     </div>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleBlankCanvas} disabled={isCreating} className="cursor-pointer">
                     <LayoutTemplate className="w-4 h-4 mr-2" />
                     <div>
-                        <div className="font-medium">Blank Canvas</div>
-                        <div className="text-xs text-muted-foreground">Start from scratch with an empty workflow</div>
+                        <div className="font-medium">{copy("Blank Canvas")}</div>
+                        <div className="text-xs text-muted-foreground">{copy("Start from scratch with an empty workflow")}</div>
                     </div>
                 </DropdownMenuItem>
             </DropdownMenuContent>

@@ -219,3 +219,23 @@ class UserClient(BaseDBClient):
             await session.commit()
             await session.refresh(user)
             return user
+
+    async def update_user_password_hash(
+        self, user_id: int, new_hash: str, expected_hash: str
+    ) -> None:
+        """Replace a password only if it has not changed since verification."""
+        from sqlalchemy import update
+
+        async with self.async_session() as session:
+            result = await session.execute(
+                update(UserModel)
+                .where(
+                    UserModel.id == user_id,
+                    UserModel.password_hash == expected_hash,
+                )
+                .values(password_hash=new_hash)
+            )
+            if result.rowcount != 1:
+                await session.rollback()
+                raise ValueError("Password changed concurrently")
+            await session.commit()

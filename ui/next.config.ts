@@ -1,5 +1,8 @@
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
+
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -7,32 +10,23 @@ const nextConfig: NextConfig = {
   experimental: {
     serverSourceMaps: true,
   },
-  async rewrites() {
-    return [
-      {
-        source: "/ingest/static/:path*",
-        destination: "https://us-assets.i.posthog.com/static/:path*",
-      },
-      {
-        source: "/ingest/:path*",
-        destination: "https://us.i.posthog.com/:path*",
-      },
-      {
-        source: "/ingest/decide",
-        destination: "https://us.i.posthog.com/decide",
-      },
-    ];
-  },
-  // This is required to support PostHog trailing slash API requests
-  skipTrailingSlashRedirect: true,
 };
 
-export default withSentryConfig(nextConfig, {
+const telemetryEnabled = process.env.ENABLE_TELEMETRY === "true";
+const sentryBuildConfigured = Boolean(
+  telemetryEnabled &&
+    process.env.SENTRY_AUTH_TOKEN &&
+    process.env.SENTRY_ORG &&
+    process.env.SENTRY_PROJECT,
+);
+
+const localizedConfig = withNextIntl(nextConfig);
+export default sentryBuildConfigured ? withSentryConfig(localizedConfig, {
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
-  org: "dograh",
-  project: "javascript-nextjs",
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
 
   // Only print logs for uploading source maps in CI
   silent: !process.env.CI,
@@ -42,12 +36,6 @@ export default withSentryConfig(nextConfig, {
 
   // Upload a larger set of source maps for prettier stack traces (increases build time)
   widenClientFileUpload: true,
-
-  // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
-  // This can increase your server load as well as your hosting bill.
-  // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
-  // side errors will fail.
-  tunnelRoute: "/monitoring",
 
   webpack: {
     // Automatically tree-shake Sentry logger statements to reduce bundle size
@@ -61,4 +49,4 @@ export default withSentryConfig(nextConfig, {
     // https://vercel.com/docs/cron-jobs
     automaticVercelMonitors: true,
   },
-});
+}) : localizedConfig;

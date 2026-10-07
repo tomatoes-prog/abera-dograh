@@ -8,10 +8,12 @@ import { AgentFolderView } from '@/components/workflow/folders/AgentFolderView';
 import { CreateFolderButton } from '@/components/workflow/folders/CreateFolderButton';
 import { FolderSection } from '@/components/workflow/folders/FolderSection';
 import { UploadWorkflowButton } from '@/components/workflow/UploadWorkflowButton';
+import { CopyText } from "@/i18n/LocaleProvider";
 import { getServerAccessToken, getServerAuthProvider } from '@/lib/auth/server';
 import logger from '@/lib/logger';
 
 import WorkflowLayout from "./WorkflowLayout";
+
 
 export const dynamic = 'force-dynamic';
 
@@ -28,9 +30,7 @@ async function WorkflowList() {
         } else {
             // For OSS mode, this shouldn't happen as token is auto-generated
             return (
-                <div className="text-red-500">
-                    Authentication required. Please refresh the page.
-                </div>
+                <div className="text-red-500"><CopyText text="Authentication required. Please refresh the page." /></div>
             );
         }
     }
@@ -75,14 +75,12 @@ async function WorkflowList() {
             <>
                 {/* Active Workflows Section */}
                 <div className="mb-8">
-                    <h2 className="text-xl font-semibold mb-4">Active Agents</h2>
+                    <h2 className="text-xl font-semibold mb-4"><CopyText text="Active Agents" /></h2>
                     {activeWorkflows.length > 0 || folders.length > 0 ? (
                         <AgentFolderView workflows={activeWorkflows} folders={folders} />
                     ) : (
                         <Card>
-                            <CardContent className="p-8 text-center text-muted-foreground">
-                                No active workflows found. Create your first workflow to get started.
-                            </CardContent>
+                            <CardContent className="p-8 text-center text-muted-foreground"><CopyText text="No active workflows found. Create your first workflow to get started." /></CardContent>
                         </Card>
                     )}
                 </div>
@@ -98,9 +96,7 @@ async function WorkflowList() {
     } catch (err) {
         logger.error(`Error fetching workflows: ${err}`);
         return (
-            <div className="text-red-500">
-                Failed to load Workflows. Please Try Again Later.
-            </div>
+            <div className="text-red-500"><CopyText text="Failed to load Workflows. Please Try Again Later." /></div>
         );
     }
 }
@@ -114,7 +110,7 @@ async function PageContent() {
             {/* Your Workflows Section */}
             <div className="mb-6">
                 <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-2xl font-bold">Your Agents</h1>
+                    <h1 className="text-2xl font-bold"><CopyText text="Your Agents" /></h1>
                     <div className="flex gap-2">
                         <UploadWorkflowButton />
                         <CreateFolderButton />

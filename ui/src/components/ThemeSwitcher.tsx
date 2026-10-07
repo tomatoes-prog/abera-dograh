@@ -4,7 +4,9 @@ import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { cn } from "@/lib/utils";
+
 
 interface ThemeToggleProps {
   className?: string;
@@ -19,6 +21,7 @@ export default function ThemeToggle({
   variant = "ghost",
   size = "icon"
 }: ThemeToggleProps) {
+    const copy = useCopy();
   // Start with null to avoid hydration mismatch - theme is set by inline script in layout.tsx
   const [theme, setTheme] = useState<"light" | "dark" | null>(null);
 
@@ -54,9 +57,9 @@ export default function ThemeToggle({
         !showLabel && "absolute"
       )} />
       {showLabel && theme && (
-        <span className="ml-2">{theme === "light" ? "Light" : "Dark"} Mode</span>
+        <span className="ml-2">{theme === "light" ? copy("Light") : copy("Dark")}{copy(" Mode")}</span>
       )}
-      <span className="sr-only">Toggle theme</span>
+      <span className="sr-only">{copy("Toggle theme")}</span>
     </Button>
   );
 }

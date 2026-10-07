@@ -43,7 +43,9 @@ class NullFileSystem(BaseFileSystem):
     ) -> Optional[str]:
         self._fail("aget_presigned_put_url")
 
-    async def adownload_file(self, source_path: str, local_path: str) -> bool:
+    async def adownload_file(
+        self, source_path: str, local_path: str, *, max_size: int | None = None
+    ) -> bool:
         self._fail("adownload_file")
 
     async def acopy_file(self, source_path: str, destination_path: str) -> bool:

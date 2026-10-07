@@ -32,6 +32,8 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useCopy } from "@/i18n/LocaleProvider";
+
 
 export type HttpBodyFormat = "json" | "form";
 
@@ -104,61 +106,56 @@ export function HttpApiToolConfig({
     onCustomMessageRecordingIdChange,
     recordings = [],
 }: HttpApiToolConfigProps) {
+    const copy = useCopy();
     const urlHostnameParameters = extractUrlHostnameParameters(url);
     const urlPathParameters = extractUrlPathParameters(url);
 
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Tool Configuration</CardTitle>
-                <CardDescription>
-                    Configure the HTTP API endpoint and request settings
-                </CardDescription>
+                <CardTitle>{copy("Tool Configuration")}</CardTitle>
+                <CardDescription>{copy("Configure the HTTP API endpoint and request settings")}</CardDescription>
             </CardHeader>
             <CardContent>
                 <Tabs defaultValue="settings" className="w-full">
                     <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="settings">Settings</TabsTrigger>
-                        <TabsTrigger value="auth">Authentication</TabsTrigger>
-                        <TabsTrigger value="parameters">Parameters</TabsTrigger>
+                        <TabsTrigger value="settings">{copy("Settings")}</TabsTrigger>
+                        <TabsTrigger value="auth">{copy("Authentication")}</TabsTrigger>
+                        <TabsTrigger value="parameters">{copy("Parameters")}</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="settings" className="space-y-4 mt-4">
                         <div className="grid gap-2">
-                            <Label>Tool Name</Label>
-                            <Label className="text-xs text-muted-foreground">
-                                Use a descriptive name, like &quot;Get Weather using API&quot; for a tool that fetches weather
-                            </Label>
+                            <Label>{copy("Tool Name")}</Label>
+                            <Label className="text-xs text-muted-foreground">{copy("Use a descriptive name, like \"Get Weather using API\" for a tool that fetches weather")}</Label>
                             <Input
                                 value={name}
                                 onChange={(e) => onNameChange(e.target.value)}
-                                placeholder="e.g., Book Appointment"
+                                placeholder={copy("e.g., Book Appointment")}
                             />
                         </div>
 
                         <div className="grid gap-2">
-                            <Label>Description</Label>
-                            <Label className="text-xs text-muted-foreground">
-                                Provide a description which makes it easy for LLM to understand what this tool does
-                            </Label>
+                            <Label>{copy("Description")}</Label>
+                            <Label className="text-xs text-muted-foreground">{copy("Provide a description which makes it easy for LLM to understand what this tool does")}</Label>
                             <Textarea
                                 value={description}
                                 onChange={(e) => onDescriptionChange(e.target.value)}
-                                placeholder="What does this tool do?"
+                                placeholder={copy("What does this tool do?")}
                                 rows={3}
                             />
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="grid gap-2">
-                                <Label>HTTP Method</Label>
+                                <Label>{copy("HTTP Method")}</Label>
                                 <HttpMethodSelector
                                     value={httpMethod}
                                     onChange={onHttpMethodChange}
                                 />
                             </div>
                             <div className="grid gap-2">
-                                <Label>Timeout (ms)</Label>
+                                <Label>{copy("Timeout (ms)")}</Label>
                                 <Input
                                     type="number"
                                     value={timeoutMs}
@@ -172,7 +169,7 @@ export function HttpApiToolConfig({
                         </div>
 
                         <div className="grid gap-2">
-                            <Label>Endpoint URL</Label>
+                            <Label>{copy("Endpoint URL")}</Label>
                             <UrlInput
                                 value={url}
                                 onChange={onUrlChange}
@@ -182,26 +179,20 @@ export function HttpApiToolConfig({
                             {urlHostnameParameters.length > 0 && (
                                 <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 p-3 text-sm text-blue-600 flex gap-2 items-start mt-2">
                                     <Info className="h-4 w-4 mt-0.5 shrink-0" />
-                                    <span>
-                                        Hostname parameters detected: {urlHostnameParameters.join(", ")}. Values resolve from tool call arguments or workflow context at runtime.
-                                    </span>
+                                    <span>{copy("Hostname parameters detected: ")}{urlHostnameParameters.join(", ")}{copy(". Values resolve from tool call arguments or workflow context at runtime.")}</span>
                                 </div>
                             )}
                             {urlPathParameters.length > 0 && (
                                 <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 p-3 text-sm text-blue-600 flex gap-2 items-start mt-2">
                                     <Info className="h-4 w-4 mt-0.5 shrink-0" />
-                                    <span>
-                                        Path parameters detected: {urlPathParameters.join(", ")}. Values resolve from tool call arguments or workflow context at runtime.
-                                    </span>
+                                    <span>{copy("Path parameters detected: ")}{urlPathParameters.join(", ")}{copy(". Values resolve from tool call arguments or workflow context at runtime.")}</span>
                                 </div>
                             )}
                         </div>
 
                         <div className="grid gap-2 pt-4 border-t">
-                            <Label>Custom Message</Label>
-                            <Label className="text-xs text-muted-foreground">
-                                Optional message the AI will speak or play before executing this tool.
-                            </Label>
+                            <Label>{copy("Custom Message")}</Label>
+                            <Label className="text-xs text-muted-foreground">{copy("Optional message the AI will speak or play before executing this tool.")}</Label>
                             <TextOrAudioInput
                                 type={customMessageType}
                                 onTypeChange={onCustomMessageTypeChange}
@@ -214,7 +205,7 @@ export function HttpApiToolConfig({
                                     <Textarea
                                         value={customMessage}
                                         onChange={(e) => onCustomMessageChange(e.target.value)}
-                                        placeholder="e.g., Let me check that for you, one moment please."
+                                        placeholder={copy("e.g., Let me check that for you, one moment please.")}
                                         rows={2}
                                     />
                                 </>
@@ -231,11 +222,8 @@ export function HttpApiToolConfig({
 
                     <TabsContent value="parameters" className="space-y-4 mt-4">
                         <div className="grid gap-2">
-                            <Label>LLM Parameters</Label>
-                            <Label className="text-xs text-muted-foreground">
-                                Define the parameters that the LLM will provide when calling this tool.
-                                These will be sent in the request body for POST/PUT/PATCH or as URL query params for GET/DELETE.
-                            </Label>
+                            <Label>{copy("LLM Parameters")}</Label>
+                            <Label className="text-xs text-muted-foreground">{copy("Define the parameters that the LLM will provide when calling this tool. These will be sent in the request body for POST/PUT/PATCH or as URL query params for GET/DELETE.")}</Label>
                             <ParameterEditor
                                 parameters={parameters}
                                 onChange={onParametersChange}
@@ -243,11 +231,8 @@ export function HttpApiToolConfig({
                         </div>
 
                         <div className="grid gap-2 pt-4 border-t">
-                            <Label>Preset Parameters</Label>
-                            <Label className="text-xs text-muted-foreground">
-                                Add values that Dograh should inject at runtime. These are not exposed to the LLM and can use
-                                workflow templates like {`{{initial_context.phone_number}}`} or fixed literals.
-                            </Label>
+                            <Label>{copy("Preset Parameters")}</Label>
+                            <Label className="text-xs text-muted-foreground">{copy("Add values that Dograh should inject at runtime. These are not exposed to the LLM and can use workflow templates like ")}{copy("{{initial_context.phone_number}}")}{copy(" or fixed literals.")}</Label>
                             <PresetParameterEditor
                                 parameters={presetParameters}
                                 onChange={onPresetParametersChange}
@@ -257,11 +242,8 @@ export function HttpApiToolConfig({
                         {["POST", "PUT", "PATCH"].includes(httpMethod) && (
                             <div className="grid gap-4 pt-4 border-t">
                                 <div className="grid gap-2">
-                                    <Label htmlFor="body-format">Body Format</Label>
-                                    <p className="text-xs text-muted-foreground">
-                                        How the request body is encoded. Use form-encoded only for APIs that
-                                        reject JSON; lists repeat the field name and objects are sent as JSON strings.
-                                    </p>
+                                    <Label htmlFor="body-format">{copy("Body Format")}</Label>
+                                    <p className="text-xs text-muted-foreground">{copy("How the request body is encoded. Use form-encoded only for APIs that reject JSON; lists repeat the field name and objects are sent as JSON strings.")}</p>
                                     <Select
                                         value={bodyFormat}
                                         onValueChange={(value) => onBodyFormatChange(value as HttpBodyFormat)}
@@ -270,21 +252,15 @@ export function HttpApiToolConfig({
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="json">JSON (application/json)</SelectItem>
-                                            <SelectItem value="form">
-                                                Form-encoded (application/x-www-form-urlencoded)
-                                            </SelectItem>
+                                            <SelectItem value="json">{copy("JSON (application/json)")}</SelectItem>
+                                            <SelectItem value="form">{copy("Form-encoded (application/x-www-form-urlencoded)")}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                                 <div className="flex items-center justify-between gap-4">
                                     <div className="grid gap-1">
-                                        <Label htmlFor="body-template-enabled">
-                                            Tool Body Template
-                                        </Label>
-                                        <p className="text-xs text-muted-foreground">
-                                            Shape the request body with a JSON template.
-                                        </p>
+                                        <Label htmlFor="body-template-enabled">{copy("Tool Body Template")}</Label>
+                                        <p className="text-xs text-muted-foreground">{copy("Shape the request body with a JSON template.")}</p>
                                     </div>
                                     <Switch
                                         id="body-template-enabled"
@@ -303,10 +279,8 @@ export function HttpApiToolConfig({
                         )}
 
                         <div className="grid gap-2 pt-4 border-t">
-                            <Label>Custom Headers</Label>
-                            <Label className="text-xs text-muted-foreground">
-                                Add custom headers to include in the request (optional)
-                            </Label>
+                            <Label>{copy("Custom Headers")}</Label>
+                            <Label className="text-xs text-muted-foreground">{copy("Add custom headers to include in the request (optional)")}</Label>
                             <KeyValueEditor
                                 items={headers}
                                 onChange={onHeadersChange}

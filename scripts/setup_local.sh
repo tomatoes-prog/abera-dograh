@@ -105,7 +105,7 @@ fi
 FORCE_TURN_RELAY="${FORCE_TURN_RELAY:-false}"
 
 # Telemetry opt-out (default: true)
-ENABLE_TELEMETRY="${ENABLE_TELEMETRY:-true}"
+ENABLE_TELEMETRY="${ENABLE_TELEMETRY:-false}"
 
 # Container registry (defaults to the public OSS registry)
 REGISTRY="${REGISTRY:-ghcr.io/dograh-hq}"
@@ -152,8 +152,6 @@ echo -e "${BLUE}[$ENV_STEP/$TOTAL_STEPS] Creating environment file...${NC}"
 OSS_JWT_SECRET=$(openssl rand -hex 32)
 POSTGRES_PASSWORD=$(openssl rand -hex 32)
 REDIS_PASSWORD=$(openssl rand -hex 32)
-MINIO_ROOT_USER="dograh$(openssl rand -hex 6)"
-MINIO_ROOT_PASSWORD=$(openssl rand -hex 32)
 
 cat > .env << ENV_EOF
 # Container registry for Dograh images
@@ -172,10 +170,9 @@ POSTGRES_PASSWORD=$POSTGRES_PASSWORD
 # container.
 REDIS_PASSWORD=$REDIS_PASSWORD
 
-# MinIO root credentials. Used by the MinIO container and the API's
-# MINIO_ACCESS_KEY / MINIO_SECRET_KEY.
-MINIO_ROOT_USER=$MINIO_ROOT_USER
-MINIO_ROOT_PASSWORD=$MINIO_ROOT_PASSWORD
+# Existing private S3 bucket. Supply AWS credentials or a workload IAM role.
+S3_BUCKET=${S3_BUCKET:-}
+S3_REGION=${S3_REGION:-us-east-2}
 
 # Telemetry (set to false to disable)
 ENABLE_TELEMETRY=$ENABLE_TELEMETRY

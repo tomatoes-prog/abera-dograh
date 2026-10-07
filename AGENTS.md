@@ -21,7 +21,7 @@ dograh/
 - **Frontend**: Next.js 15 with React 19, TypeScript, Tailwind CSS
 - **Database**: PostgreSQL with SQLAlchemy (async)
 - **Cache/Queue**: Redis with ARQ for background tasks
-- **Storage**: MinIO (S3-compatible) for audio files
+- **Storage**: Amazon S3 (private bucket) for audio files
 
 ## Local Development
 

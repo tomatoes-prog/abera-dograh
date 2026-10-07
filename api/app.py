@@ -14,12 +14,10 @@ from api.logging_config import ENVIRONMENT, setup_logging
 setup_logging()
 
 
-if SENTRY_DSN and (
-    DEPLOYMENT_MODE != "oss" or (DEPLOYMENT_MODE == "oss" and ENABLE_TELEMETRY)
-):
+if ENABLE_TELEMETRY and SENTRY_DSN:
     sentry_sdk.init(
         dsn=SENTRY_DSN,
-        send_default_pii=True,
+        send_default_pii=False,
         environment=ENVIRONMENT,
     )
     print(f"Sentry initialized in environment: {ENVIRONMENT}")
@@ -33,9 +31,11 @@ from fastapi.responses import JSONResponse
 from loguru import logger
 
 from api.constants import REDIS_URL
+from api.errors.abera import AgentLimitExceeded
 from api.errors.mps import MPS_UNAVAILABLE_PUBLIC_MESSAGE, MPSUnavailableError
 from api.mcp_server import mcp
 from api.routes.main import router as main_router
+from api.services.model_services.policy import MPSDisabledError
 from api.services.pipecat.tracing_config import (
     handle_langfuse_sync,
     load_all_org_langfuse_credentials,
@@ -55,6 +55,12 @@ mcp_app = mcp.http_app(path="/", stateless_http=True)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    from api.services.auth.security import (
+        close_login_protection,
+        validate_runtime_security,
+    )
+
+    validate_runtime_security()
     async with mcp_app.lifespan(app):
         # warmup arq pool
         await get_arq_redis()
@@ -90,6 +96,7 @@ async def lifespan(app: FastAPI):
             yield  # Run app
         finally:
             logger.info("Starting graceful shutdown...")
+            await close_login_protection()
             await call_event_delivery.shutdown()
             try:
                 await sync_manager.stop()
@@ -114,6 +121,31 @@ app = FastAPI(
 )
 
 
+from api.services.filesystem.quota import StorageQuotaExceeded, StorageQuotaUnavailable
+
+
+@app.exception_handler(StorageQuotaExceeded)
+async def handle_storage_limit(_request: Request, exc: StorageQuotaExceeded):
+    return JSONResponse(
+        status_code=413, content={"code": "STORAGE_LIMIT_EXCEEDED", "detail": str(exc)}
+    )
+
+
+@app.exception_handler(StorageQuotaUnavailable)
+async def handle_storage_busy(_request: Request, exc: StorageQuotaUnavailable):
+    return JSONResponse(status_code=503, content={"detail": str(exc)})
+
+
+@app.exception_handler(AgentLimitExceeded)
+async def handle_abera_agent_limit(
+    _request: Request, exc: AgentLimitExceeded
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=409,
+        content={"code": "AGENT_LIMIT_EXCEEDED", "detail": str(exc)},
+    )
+
+
 @app.exception_handler(MPSUnavailableError)
 async def handle_mps_unavailable_error(
     _request: Request,
@@ -124,6 +156,14 @@ async def handle_mps_unavailable_error(
     return JSONResponse(
         status_code=503,
         content={"detail": MPS_UNAVAILABLE_PUBLIC_MESSAGE},
+    )
+
+
+@app.exception_handler(MPSDisabledError)
+async def handle_mps_disabled(_request: Request, exc: MPSDisabledError) -> JSONResponse:
+    return JSONResponse(
+        status_code=409,
+        content={"code": "DOGRAH_MPS_DISABLED", "detail": str(exc)},
     )
 
 

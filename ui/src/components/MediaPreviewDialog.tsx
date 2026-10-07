@@ -1,7 +1,6 @@
 'use client';
 
 import { Headphones, Loader2 } from 'lucide-react';
-import posthog from 'posthog-js';
 import { useCallback, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -14,9 +13,13 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { PostHogEvent } from '@/constants/posthog-events';
+import { useCopy } from "@/i18n/LocaleProvider";
+import { captureAnalyticsEvent } from '@/lib/analytics';
 import { downloadFile, getSignedUrl } from '@/lib/files';
 
+
 export function MediaPreviewDialog() {
+    const copy = useCopy();
     const [isOpen, setIsOpen] = useState(false);
     const [audioSignedUrl, setAudioSignedUrl] = useState<string | null>(null);
     const [transcriptContent, setTranscriptContent] = useState<string | null>(null);
@@ -50,7 +53,7 @@ export function MediaPreviewDialog() {
                     const response = await fetch(transcriptResult);
                     const text = await response.text();
                     setTranscriptContent(text);
-                    posthog.capture(PostHogEvent.TRANSCRIPT_VIEWED, {
+                    captureAnalyticsEvent(PostHogEvent.TRANSCRIPT_VIEWED, {
                         run_id: runId,
                         source: 'media_preview_dialog',
                         transcript_length: text.length,
@@ -71,16 +74,14 @@ export function MediaPreviewDialog() {
             <Dialog open={isOpen} onOpenChange={setIsOpen}>
                 <DialogContent className="sm:max-w-2xl">
                     <DialogHeader>
-                        <DialogTitle>
-                            Run Preview
-                            {selectedRunId && ` - Run #${selectedRunId}`}
+                        <DialogTitle>{copy("Run Preview")}{selectedRunId && copy(" - Run #{value0}", {value0: selectedRunId})}
                         </DialogTitle>
                     </DialogHeader>
 
                     {mediaLoading && (
                         <div className="flex items-center justify-center py-8 space-x-2">
                             <Loader2 className="h-6 w-6 animate-spin" />
-                            <span>Loading...</span>
+                            <span>{copy("Loading...")}</span>
                         </div>
                     )}
 
@@ -90,7 +91,7 @@ export function MediaPreviewDialog() {
                             controls
                             autoPlay
                             className="w-full mt-4"
-                            onPlay={() => posthog.capture(PostHogEvent.RECORDING_PLAYED, {
+                            onPlay={() => captureAnalyticsEvent(PostHogEvent.RECORDING_PLAYED, {
                                 run_id: selectedRunId,
                                 source: 'media_preview_dialog',
                             })}
@@ -104,25 +105,19 @@ export function MediaPreviewDialog() {
                     )}
 
                     {!mediaLoading && !audioSignedUrl && !transcriptContent && (
-                        <div className="flex items-center justify-center py-8 text-muted-foreground">
-                            No recording or transcript available.
-                        </div>
+                        <div className="flex items-center justify-center py-8 text-muted-foreground">{copy("No recording or transcript available.")}</div>
                     )}
 
                     <DialogFooter className="pt-4">
                         <DialogClose asChild>
-                            <Button variant="secondary">Close</Button>
+                            <Button variant="secondary">{copy("Close")}</Button>
                         </DialogClose>
                         <div className="flex gap-2">
                             {recordingKey && (
-                                <Button variant="outline" onClick={() => downloadFile(recordingKey)}>
-                                    Download Recording
-                                </Button>
+                                <Button variant="outline" onClick={() => downloadFile(recordingKey)}>{copy("Download Recording")}</Button>
                             )}
                             {transcriptKey && (
-                                <Button variant="outline" onClick={() => downloadFile(transcriptKey)}>
-                                    Download Transcript
-                                </Button>
+                                <Button variant="outline" onClick={() => downloadFile(transcriptKey)}>{copy("Download Transcript")}</Button>
                             )}
                         </div>
                     </DialogFooter>

@@ -19,8 +19,11 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { useOrganizationTimezone } from "@/hooks/useOrganizationTimezone";
+import { useCopy } from "@/i18n/LocaleProvider";
+import { useUiLocale } from "@/i18n/LocaleProvider";
 import { formatDateTime } from "@/lib/dateTime";
 import { ActiveFilter, FilterAttribute } from "@/types/filters";
+
 
 export interface WorkflowRunsTableProps {
     // Data
@@ -87,6 +90,8 @@ export function WorkflowRunsTable({
     showAgentVersion = false,
     emptyMessage = "No workflow runs found",
 }: WorkflowRunsTableProps) {
+    const { locale } = useUiLocale();
+    const copy = useCopy();
     const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
     const organizationTimezone = useOrganizationTimezone();
 
@@ -118,7 +123,7 @@ export function WorkflowRunsTable({
             {/* Loading State */}
             {loading ? (
                 <div className="flex justify-center">
-                    <div className="animate-pulse">Loading workflow runs...</div>
+                    <div className="animate-pulse">{copy("Loading workflow runs...")}</div>
                 </div>
             ) : error ? (
                 <div className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded">
@@ -133,9 +138,9 @@ export function WorkflowRunsTable({
                     <CardHeader>
                         <div className="flex items-center justify-between">
                             <div>
-                                <CardTitle>Workflow Runs</CardTitle>
+                                <CardTitle>{copy("Workflow Runs")}</CardTitle>
                                 <CardDescription>
-                                    {subtitle || `Showing ${runs.length} of ${totalCount} total runs`}
+                                    {subtitle || copy("Showing {value0} of {value1} total runs", {value0: runs.length, value1: totalCount})}
                                 </CardDescription>
                             </div>
                             {onReload && (
@@ -144,7 +149,7 @@ export function WorkflowRunsTable({
                                     size="icon"
                                     onClick={onReload}
                                     disabled={loading}
-                                    title="Reload"
+                                    title={copy("Reload")}
                                 >
                                     <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                                 </Button>
@@ -156,26 +161,24 @@ export function WorkflowRunsTable({
                             <Table>
                                 <TableHeader>
                                     <TableRow className="bg-muted/50">
-                                        <TableHead className="font-semibold">ID</TableHead>
-                                        {showAgentVersion && <TableHead>Agent / version</TableHead>}
-                                        <TableHead className="font-semibold">Status</TableHead>
-                                        <TableHead className="font-semibold">Created At</TableHead>
-                                        <TableHead className="font-semibold">Call Type</TableHead>
+                                        <TableHead className="font-semibold">{copy("ID")}</TableHead>
+                                        {showAgentVersion && <TableHead>{copy("Agent / version")}</TableHead>}
+                                        <TableHead className="font-semibold">{copy("Status")}</TableHead>
+                                        <TableHead className="font-semibold">{copy("Created At")}</TableHead>
+                                        <TableHead className="font-semibold">{copy("Call Type")}</TableHead>
                                         <TableHead
                                             className="font-semibold cursor-pointer hover:bg-muted/50 select-none"
                                             onClick={() => onSort?.('duration')}
                                         >
-                                            <div className="flex items-center gap-1">
-                                                Duration
-                                                {sortBy === 'duration' ? (
+                                            <div className="flex items-center gap-1">{copy("Duration")}{sortBy === 'duration' ? (
                                                     sortOrder === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
                                                 ) : (
                                                     <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
                                                 )}
                                             </div>
                                         </TableHead>
-                                        <TableHead className="font-semibold">Disposition</TableHead>
-                                        <TableHead className="font-semibold">Actions</TableHead>
+                                        <TableHead className="font-semibold">{copy("Disposition")}</TableHead>
+                                        <TableHead className="font-semibold">{copy("Actions")}</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -186,21 +189,21 @@ export function WorkflowRunsTable({
                                             onClick={() => handleRowClick(run)}
                                         >
                                             <TableCell className="font-mono text-sm">#{run.id}</TableCell>
-                                            {showAgentVersion && <TableCell><div>{run.workflow_name ?? `Agent #${run.workflow_id}`}</div><div className="text-xs text-muted-foreground">{run.version_number != null ? `Version ${run.version_number}` : run.definition_id != null ? `Definition #${run.definition_id}` : 'Unversioned'}</div></TableCell>}
+                                            {showAgentVersion && <TableCell><div>{run.workflow_name ?? copy("Agent #{value0}", {value0: run.workflow_id})}</div><div className="text-xs text-muted-foreground">{run.version_number != null ? copy("Version {value0}", {value0: run.version_number}) : run.definition_id != null ? copy("Definition #{value0}", {value0: run.definition_id}) : copy("Unversioned")}</div></TableCell>}
                                             <TableCell>
                                                 <Badge variant={run.is_completed ? "default" : "secondary"}>
-                                                    {run.is_completed ? "Completed" : "In Progress"}
+                                                    {run.is_completed ? copy("Completed") : copy("In Progress")}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="text-sm">
-                                                {formatDateTime(run.created_at, organizationTimezone)}
+                                                {formatDateTime(run.created_at, organizationTimezone, locale)}
                                             </TableCell>
                                             <TableCell>
                                                 <CallTypeCell mode={run.mode} callType={run.call_type} />
                                             </TableCell>
                                             <TableCell className="text-sm">
                                                 {typeof run.cost_info?.call_duration_seconds === 'number'
-                                                    ? `${run.cost_info.call_duration_seconds.toFixed(1)}s`
+                                                    ? copy("{value0}s", {value0: run.cost_info.call_duration_seconds.toFixed(1)})
                                                     : "-"}
                                             </TableCell>
                                             <TableCell>
@@ -239,8 +242,7 @@ export function WorkflowRunsTable({
                         {/* Pagination */}
                         {totalPages > 1 && (
                             <div className="flex items-center justify-between mt-6">
-                                <p className="text-sm text-muted-foreground">
-                                    Page {currentPage} of {totalPages}
+                                <p className="text-sm text-muted-foreground">{copy("Page ")}{currentPage}{copy(" of ")}{totalPages}
                                 </p>
                                 <div className="flex gap-2">
                                     <Button
@@ -249,17 +251,13 @@ export function WorkflowRunsTable({
                                         onClick={() => onPageChange(currentPage - 1)}
                                         disabled={currentPage === 1}
                                     >
-                                        <ChevronLeft className="h-4 w-4" />
-                                        Previous
-                                    </Button>
+                                        <ChevronLeft className="h-4 w-4" />{copy("Previous")}</Button>
                                     <Button
                                         variant="outline"
                                         size="sm"
                                         onClick={() => onPageChange(currentPage + 1)}
                                         disabled={currentPage === totalPages}
-                                    >
-                                        Next
-                                        <ChevronRight className="h-4 w-4" />
+                                    >{copy("Next")}<ChevronRight className="h-4 w-4" />
                                     </Button>
                                 </div>
                             </div>

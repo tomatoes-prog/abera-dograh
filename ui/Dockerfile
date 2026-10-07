@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Multi-stage build
 # Stage 1: Dependencies
-FROM node:22-alpine AS deps
+FROM node:22.23.3-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS deps
 WORKDIR /app
 
 # Install Python and build dependencies for native modules
@@ -15,7 +15,7 @@ COPY ui/package*.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci
 
 # Stage 2: Builder
-FROM node:22-alpine AS builder
+FROM node:22.23.3-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS builder
 WORKDIR /app
 
 # Install libc6-compat for native modules in builder stage too
@@ -38,22 +38,26 @@ COPY ui/src ./src
 # Set build-time environment variables (needed for Next.js build)
 ENV NEXT_PUBLIC_NODE_ENV="oss"
 ENV NEXT_TELEMETRY_DISABLED="1"
-ENV NEXT_PUBLIC_CHATWOOT_URL="https://chat.dograh.com"
-ENV NEXT_PUBLIC_CHATWOOT_TOKEN="3fkFx2mCEjNHjM9gaNc4A82X"
 ENV BACKEND_URL="http://api:8000"
 
 # Build the application with standalone mode
 # Increase Node.js heap size to prevent out-of-memory errors during build
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npm run build && \
+    find .next/standalone -type f -name "*.map" -delete && \
+    rm -rf .next/standalone/.next/cache && \
     rm -rf /tmp/* /root/.npm /root/.next/cache
 
 # Stage 3: Runner (production image)
-FROM node:22-alpine AS runner
+FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS runner
+RUN apk add --no-cache libstdc++
+COPY --from=deps /usr/local/bin/node /usr/local/bin/node
 WORKDIR /app
 
 # Environment variables will be provided by docker-compose
 ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3010
 
 # Create a non-root user
 RUN addgroup --system --gid 1001 nodejs && \
@@ -63,6 +67,7 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --chown=nextjs:nodejs LICENSE /usr/share/licenses/dograh/LICENSE
 
 # Switch to non-root user
 USER nextjs
@@ -71,4 +76,4 @@ USER nextjs
 EXPOSE 3010
 
 # Start the production server using the standalone Node.js server
-CMD sh -c "echo '🚀 Application ready at http://localhost:3010' && PORT=3010 node server.js"
+CMD ["node", "server.js"]

@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { useAppConfig } from "@/context/AppConfigContext";
+import { useCopy } from "@/i18n/LocaleProvider";
 
 import { CaptchaChallenge } from "./CaptchaChallenge";
 import {
@@ -19,6 +20,7 @@ import { ENTERPRISE_DEPLOYMENT_SOURCES, type LeadSource } from "./leadFieldOptio
 import { LeadModalShell } from "./LeadModalShell";
 import { submitLead } from "./submitLead";
 
+
 interface EnterpriseModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -29,6 +31,7 @@ interface EnterpriseModalProps {
 }
 
 export function EnterpriseModal({ open, onOpenChange, source, prefill }: EnterpriseModalProps) {
+    const copy = useCopy();
   const { config } = useAppConfig();
   // Deployment provenance (analytics only); OSS submits via the public contact-sales path.
   const origin = config?.deploymentMode === "cloud" ? "cloud_app" : "oss_app";
@@ -82,7 +85,7 @@ export function EnterpriseModal({ open, onOpenChange, source, prefill }: Enterpr
     const err = validateWorkEmail(value.workEmail);
     if (err) { setEmailError(err); return; }
     if (!value.name.trim() || !value.company.trim() || !value.jobTitle.trim() || !value.phone.trim() || !value.volume) {
-      toast.error("Please fill in all required fields");
+      toast.error(copy("Please fill in all required fields"));
       return;
     }
     setCaptchaActive(true);
@@ -115,12 +118,12 @@ export function EnterpriseModal({ open, onOpenChange, source, prefill }: Enterpr
         setSubmitting(false);
         setCalLink(result.cal_link);
       } else {
-        toast.success("Check your inbox - we just emailed you the next steps (give it a minute).");
+        toast.success(copy("Check your inbox - we just emailed you the next steps (give it a minute)."));
         reset();
         onOpenChange(false);
       }
     } catch {
-      toast.error("Something went wrong. Please try again.");
+      toast.error(copy("Something went wrong. Please try again."));
       setSubmitting(false);
     }
   };
@@ -133,8 +136,8 @@ export function EnterpriseModal({ open, onOpenChange, source, prefill }: Enterpr
         onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }}
         icon={ShieldCheck}
         eyebrow="Enterprise"
-        title="Book a Strategy Call"
-        description="Pick a time that works for you."
+        title={copy("Book a Strategy Call")}
+        description={copy("Pick a time that works for you.")}
         primary={{ label: "Done", onClick: () => { reset(); onOpenChange(false); } }}
       >
         {/* Compact, zoomed-out calendar: render it larger, scale to 0.8, and clip the layout box left behind. */}
@@ -155,8 +158,8 @@ export function EnterpriseModal({ open, onOpenChange, source, prefill }: Enterpr
       onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }}
       icon={ShieldCheck}
       eyebrow="Enterprise"
-      title="Book a Strategy Call"
-      description="SSO, on-prem, data residency, committed volume. Tell us about your environment."
+      title={copy("Book a Strategy Call")}
+      description={copy("SSO, on-prem, data residency, committed volume. Tell us about your environment.")}
       primary={{ label: "Submit", onClick: handleSubmit, disabled: !canSubmit, loading: submitting }}
       secondary={{ label: "Cancel", onClick: () => onOpenChange(false), disabled: submitting }}
       trustLine={<FormTrustLine />}

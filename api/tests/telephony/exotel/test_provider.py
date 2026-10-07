@@ -225,7 +225,12 @@ async def test_start_inbound_stream_contains_ws_url():
 
 
 @pytest.mark.asyncio
-async def test_initiate_call_posts_connect_with_stream_url():
+async def test_initiate_call_posts_connect_with_stream_url(monkeypatch):
+    from api import constants
+
+    monkeypatch.setattr(
+        constants, "TELEPHONY_WS_TOKEN_SECRET", "test-only-exotel-secret"
+    )
     provider = _provider()
 
     response = MagicMock()
@@ -277,7 +282,11 @@ async def test_initiate_call_posts_connect_with_stream_url():
     assert form["From"] == "+919999999999"
     assert form["CallerId"] == "080XXXXXXX1"
     assert form["StreamType"] == "bidirectional"
-    assert form["StreamUrl"] == "wss://api.example.test/api/v1/telephony/ws/7/9/42"
+    from api.services.telephony.ws_auth import mint_ws_token
+
+    assert form[
+        "StreamUrl"
+    ] == "wss://api.example.test/api/v1/telephony/ws/7/9/42/" + mint_ws_token(7, 9, 42)
     assert form["StatusCallback"].startswith(
         "https://api.example.test/api/v1/telephony/exotel/status-callback/42"
     )

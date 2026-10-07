@@ -1,3 +1,5 @@
+"use client";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { client } from "@/client/client.gen";
@@ -7,12 +9,14 @@ import { WorkflowValidationError } from "@/components/flow/types";
 import type { ConversationNodeTransitionItem, RealtimeFeedbackMessage as FeedbackMessage } from "@/components/workflow/conversation";
 import { isLlmTtfb } from "@/components/workflow/conversation/adapters/fromRealtimeFeedback";
 import { useAppConfig } from "@/context/AppConfigContext";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { resolveBrowserBackendUrl } from '@/lib/apiClient';
 import { detailFromError } from '@/lib/apiError';
 import logger from '@/lib/logger';
 
 import { sdpFilterCodec } from "../utils";
 import { useDeviceInputs } from "./useDeviceInputs";
+
 
 interface UseWebSocketRTCProps {
     workflowId: number;
@@ -46,6 +50,7 @@ const HANDLED_SERVICE_ERROR_TYPES = new Set([
 const SPENT_RUN_ERROR_TYPES = new Set(['workflow_run_already_completed']);
 
 export const useWebSocketRTC = ({ workflowId, workflowRunId, accessToken, initialContextVariables, onNodeTransition }: UseWebSocketRTCProps) => {
+    const copy = useCopy();
     const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('idle');
     const [connectionActive, setConnectionActive] = useState(false);
     const [isCompleted, setIsCompleted] = useState(false);
@@ -729,12 +734,9 @@ export const useWebSocketRTC = ({ workflowId, workflowRunId, accessToken, initia
 
             if (response.error) {
                 const isServiceUnavailable = response.response?.status === 503;
-                const message = detailFromError(
-                    response.error,
-                    isServiceUnavailable
+                const message = copy(detailFromError(response.error, isServiceUnavailable
                         ? 'Dograh is temporarily unavailable. Please try again later.'
-                        : 'API Key Error',
-                );
+                        : 'API Key Error'));
 
                 if (isServiceUnavailable) {
                     // MPS is a Dograh-owned dependency. Do not tell the customer

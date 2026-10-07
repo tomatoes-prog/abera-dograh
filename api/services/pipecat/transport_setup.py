@@ -29,6 +29,8 @@ async def create_webrtc_transport(
         params=TransportParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
+            video_in_enabled=False,
+            video_out_enabled=False,
             audio_in_sample_rate=audio_config.transport_in_sample_rate,
             audio_out_sample_rate=audio_config.transport_out_sample_rate,
             audio_out_mixer=mixer,

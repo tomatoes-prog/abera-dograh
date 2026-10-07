@@ -14,6 +14,7 @@ from loguru import logger
 from api.constants import DEPLOYMENT_MODE, DOGRAH_MPS_SECRET_KEY, MPS_API_URL
 from api.errors.failure import ErrorSource, classify_exception, log_failure
 from api.errors.mps import MPSUnavailableError
+from api.services.model_services.policy import require_mps_enabled
 
 _INVALID_SERVICE_KEY_STATUSES = frozenset({401, 403})
 
@@ -44,8 +45,18 @@ class MPSServiceKeyClient:
     """HTTP client for managing service keys via MPS API."""
 
     def __init__(self):
-        self.base_url = MPS_API_URL
+        self._base_url = MPS_API_URL
         self.timeout = httpx.Timeout(10.0)
+
+    @property
+    def base_url(self):
+        # Guard old upstream callers too, before any request can be sent.
+        require_mps_enabled()
+        return self._base_url
+
+    @base_url.setter
+    def base_url(self, value):
+        self._base_url = value
 
     def _get_headers(
         self,
@@ -62,6 +73,7 @@ class MPSServiceKeyClient:
         Returns:
             Dictionary of headers
         """
+        require_mps_enabled()
         headers = {"Content-Type": "application/json"}
 
         # Add authentication for non-OSS mode

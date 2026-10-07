@@ -1,7 +1,6 @@
 'use client';
 
 import { useParams, useSearchParams } from 'next/navigation';
-import posthog from 'posthog-js';
 import { useEffect, useMemo, useState } from 'react';
 
 import RenderWorkflow from '@/app/workflow/[workflowId]/RenderWorkflow';
@@ -10,6 +9,8 @@ import type { WorkflowResponse, WorkflowVersionResponse } from '@/client/types.g
 import { FlowEdge, FlowNode } from '@/components/flow/types';
 import SpinLoader from '@/components/SpinLoader';
 import { PostHogEvent } from '@/constants/posthog-events';
+import { useCopy } from "@/i18n/LocaleProvider";
+import { captureAnalyticsEvent } from '@/lib/analytics';
 import { detailFromError } from '@/lib/apiError';
 import { useAuth } from '@/lib/auth';
 import logger from '@/lib/logger';
@@ -17,7 +18,9 @@ import { WorkflowConfigurations } from '@/types/workflow-configurations';
 
 import WorkflowLayout from '../WorkflowLayout';
 
+
 export default function WorkflowDetailPage() {
+    const copy = useCopy();
     const params = useParams();
     const searchParams = useSearchParams();
     const workflowId = Number(params.workflowId);
@@ -49,7 +52,7 @@ export default function WorkflowDetailPage() {
                 if (version !== null && version !== 'latest' && (
                     !/^[1-9]\d*$/.test(version) || !Number.isSafeInteger(Number(version))
                 )) {
-                    setError('Invalid workflow version. Use a version number or “latest”.');
+                    setError(copy("Invalid workflow version. Use a version number or “latest”."));
                     return;
                 }
                 const [response, versionResponse] = await Promise.all([
@@ -69,31 +72,30 @@ export default function WorkflowDetailPage() {
                     const fallback = response.response?.status === 503
                         ? 'Dograh is temporarily unavailable. Please try again later.'
                         : 'Failed to fetch workflow';
-                    setError(detailFromError(response.error, fallback));
+                    setError(copy(detailFromError(response.error, fallback)));
                     return;
                 }
 
                 const workflow = response.data;
                 if (!workflow) {
-                    setError('Workflow not found');
+                    setError(copy("Workflow not found"));
                     return;
                 }
                 if (versionResponse?.error) {
-                    setError(detailFromError(versionResponse.error, 'Failed to fetch workflow version'));
+                    setError(copy(detailFromError(versionResponse.error, 'Failed to fetch workflow version')));
                     return;
                 }
                 const selectedVersion = versionResponse?.data?.[0];
                 if (version !== null && !selectedVersion) {
-                    setError('Workflow version not found');
+                    setError(copy("Workflow version not found"));
                     return;
                 }
                 setLoaded({ key: requestKey, workflow, version: selectedVersion });
-                posthog.capture(PostHogEvent.WORKFLOW_EDITOR_OPENED, {
+                captureAnalyticsEvent(PostHogEvent.WORKFLOW_EDITOR_OPENED, {
                     workflow_id: workflow.id,
-                    workflow_name: workflow.name,
                 });
             } catch (err) {
-                if (!cancelled) setError('Failed to fetch workflow');
+                if (!cancelled) setError(copy("Failed to fetch workflow"));
                 logger.error(`Error fetching workflow: ${err}`);
             } finally {
                 if (!cancelled) setLoading(false);
@@ -102,7 +104,7 @@ export default function WorkflowDetailPage() {
 
         void fetchWorkflow();
         return () => { cancelled = true; };
-    }, [workflowId, version, requestKey, user, authLoading]);
+    }, [workflowId, version, requestKey, user, authLoading, copy]);
 
     const stableUser = useMemo(() => user, [user]);
     const openTesterOnLoad = searchParams.get('onboarding') === 'web_call';
@@ -123,7 +125,7 @@ export default function WorkflowDetailPage() {
         return (
             <WorkflowLayout showFeaturesNav={false}>
                 <div className="flex items-center justify-center min-h-screen">
-                    <div className="text-lg text-destructive">{error || 'Workflow not found'}</div>
+                    <div className="text-lg text-destructive">{error || copy("Workflow not found")}</div>
                 </div>
             </WorkflowLayout>
         );

@@ -14,6 +14,8 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { useCopy } from "@/i18n/LocaleProvider";
+
 
 export type ParameterType = ApiToolParameter["type"];
 
@@ -42,6 +44,7 @@ export function ParameterEditor({
     onChange,
     disabled = false,
 }: ParameterEditorProps) {
+    const copy = useCopy();
     const addParameter = () => {
         onChange([
             ...parameters,
@@ -66,9 +69,7 @@ export function ParameterEditor({
     return (
         <div className="space-y-4">
             {parameters.length === 0 && (
-                <div className="text-sm text-muted-foreground py-4 text-center border border-dashed rounded-md">
-                    No parameters defined. Add a parameter to specify what data this tool needs.
-                </div>
+                <div className="text-sm text-muted-foreground py-4 text-center border border-dashed rounded-md">{copy("No parameters defined. Add a parameter to specify what data this tool needs.")}</div>
             )}
 
             {parameters.map((param, index) => (
@@ -77,8 +78,7 @@ export function ParameterEditor({
                     className="border rounded-lg p-4 space-y-3 bg-muted/20"
                 >
                     <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-muted-foreground">
-                            Parameter {index + 1}
+                        <span className="text-sm font-medium text-muted-foreground">{copy("Parameter ")}{index + 1}
                         </span>
                         <Button
                             variant="ghost"
@@ -93,12 +93,10 @@ export function ParameterEditor({
 
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1.5">
-                            <Label className="text-xs">Name</Label>
-                            <Label className="text-xs text-muted-foreground">
-                                Name of the parameter, like &quot;order_id&quot; or &quot;customer_name&quot;
-                            </Label>
+                            <Label className="text-xs">{copy("Name")}</Label>
+                            <Label className="text-xs text-muted-foreground">{copy("Name of the parameter, like \"order_id\" or \"customer_name\"")}</Label>
                             <Input
-                                placeholder="e.g., customer_name"
+                                placeholder={copy("e.g., customer_name")}
                                 value={param.name}
                                 onChange={(e) =>
                                     updateParameter(index, "name", e.target.value)
@@ -107,10 +105,8 @@ export function ParameterEditor({
                             />
                         </div>
                         <div className="space-y-1.5">
-                            <Label className="text-xs">Type</Label>
-                            <Label className="text-xs text-muted-foreground">
-                                Type of the parameter, like &quot;string&quot; or &quot;number&quot; or &quot;boolean&quot;
-                            </Label>
+                            <Label className="text-xs">{copy("Type")}</Label>
+                            <Label className="text-xs text-muted-foreground">{copy("Type of the parameter, like \"string\" or \"number\" or \"boolean\"")}</Label>
                             <Select
                                 value={param.type}
                                 onValueChange={(value: ParameterType) =>
@@ -119,26 +115,24 @@ export function ParameterEditor({
                                 disabled={disabled}
                             >
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Select type" />
+                                    <SelectValue placeholder={copy("Select type")} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="string">String</SelectItem>
-                                    <SelectItem value="number">Number</SelectItem>
-                                    <SelectItem value="boolean">Boolean</SelectItem>
-                                    <SelectItem value="object">Object</SelectItem>
-                                    <SelectItem value="array">Array</SelectItem>
+                                    <SelectItem value="string">{copy("String")}</SelectItem>
+                                    <SelectItem value="number">{copy("Number")}</SelectItem>
+                                    <SelectItem value="boolean">{copy("Boolean")}</SelectItem>
+                                    <SelectItem value="object">{copy("Object")}</SelectItem>
+                                    <SelectItem value="array">{copy("Array")}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
                     </div>
 
                     <div className="space-y-1.5">
-                        <Label className="text-xs">Description</Label>
-                        <Label className="text-xs text-muted-foreground">
-                            Description of the parameter, which makes it easy for LLM to understand, like &quot;The ID of the Customer to fetch Order Details&quot;
-                        </Label>
+                        <Label className="text-xs">{copy("Description")}</Label>
+                        <Label className="text-xs text-muted-foreground">{copy("Description of the parameter, which makes it easy for LLM to understand, like \"The ID of the Customer to fetch Order Details\"")}</Label>
                         <Input
-                            placeholder="Describe what this parameter is for..."
+                            placeholder={copy("Describe what this parameter is for...")}
                             value={param.description}
                             onChange={(e) =>
                                 updateParameter(index, "description", e.target.value)
@@ -156,9 +150,7 @@ export function ParameterEditor({
                             }
                             disabled={disabled}
                         />
-                        <Label htmlFor={`required-${index}`} className="text-sm">
-                            Required
-                        </Label>
+                        <Label htmlFor={`required-${index}`} className="text-sm">{copy("Required")}</Label>
                     </div>
                 </div>
             ))}
@@ -170,8 +162,7 @@ export function ParameterEditor({
                 className="w-fit"
                 disabled={disabled}
             >
-                <PlusIcon className="h-4 w-4 mr-1" /> Add Parameter
-            </Button>
+                <PlusIcon className="h-4 w-4 mr-1" />{copy(" Add Parameter")}</Button>
         </div>
     );
 }
@@ -187,6 +178,7 @@ export function PresetParameterEditor({
     onChange,
     disabled = false,
 }: PresetParameterEditorProps) {
+    const copy = useCopy();
     const addParameter = () => {
         onChange([
             ...parameters,
@@ -211,9 +203,7 @@ export function PresetParameterEditor({
     return (
         <div className="space-y-4">
             {parameters.length === 0 && (
-                <div className="text-sm text-muted-foreground py-4 text-center border border-dashed rounded-md">
-                    No preset parameters defined. Add one to inject a fixed value or workflow context into the request.
-                </div>
+                <div className="text-sm text-muted-foreground py-4 text-center border border-dashed rounded-md">{copy("No preset parameters defined. Add one to inject a fixed value or workflow context into the request.")}</div>
             )}
 
             {parameters.map((param, index) => (
@@ -222,8 +212,7 @@ export function PresetParameterEditor({
                     className="border rounded-lg p-4 space-y-3 bg-muted/20"
                 >
                     <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-muted-foreground">
-                            Preset Parameter {index + 1}
+                        <span className="text-sm font-medium text-muted-foreground">{copy("Preset Parameter ")}{index + 1}
                         </span>
                         <Button
                             variant="ghost"
@@ -238,12 +227,10 @@ export function PresetParameterEditor({
 
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1.5">
-                            <Label className="text-xs">Name</Label>
-                            <Label className="text-xs text-muted-foreground">
-                                Key sent to the API, like &quot;phone_number&quot; or &quot;customer_id&quot;
-                            </Label>
+                            <Label className="text-xs">{copy("Name")}</Label>
+                            <Label className="text-xs text-muted-foreground">{copy("Key sent to the API, like \"phone_number\" or \"customer_id\"")}</Label>
                             <Input
-                                placeholder="e.g., phone_number"
+                                placeholder={copy("e.g., phone_number")}
                                 value={param.name}
                                 onChange={(e) =>
                                     updateParameter(index, "name", e.target.value)
@@ -252,10 +239,8 @@ export function PresetParameterEditor({
                             />
                         </div>
                         <div className="space-y-1.5">
-                            <Label className="text-xs">Type</Label>
-                            <Label className="text-xs text-muted-foreground">
-                                JSON type to send to the API
-                            </Label>
+                            <Label className="text-xs">{copy("Type")}</Label>
+                            <Label className="text-xs text-muted-foreground">{copy("JSON type to send to the API")}</Label>
                             <Select
                                 value={param.type}
                                 onValueChange={(value: ParameterType) =>
@@ -264,26 +249,25 @@ export function PresetParameterEditor({
                                 disabled={disabled}
                             >
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Select type" />
+                                    <SelectValue placeholder={copy("Select type")} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="string">String</SelectItem>
-                                    <SelectItem value="number">Number</SelectItem>
-                                    <SelectItem value="boolean">Boolean</SelectItem>
-                                    <SelectItem value="object">Object</SelectItem>
-                                    <SelectItem value="array">Array</SelectItem>
+                                    <SelectItem value="string">{copy("String")}</SelectItem>
+                                    <SelectItem value="number">{copy("Number")}</SelectItem>
+                                    <SelectItem value="boolean">{copy("Boolean")}</SelectItem>
+                                    <SelectItem value="object">{copy("Object")}</SelectItem>
+                                    <SelectItem value="array">{copy("Array")}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
                     </div>
 
                     <div className="space-y-1.5">
-                        <Label className="text-xs">Value or Template</Label>
-                        <Label className="text-xs text-muted-foreground">
-                            Use a fixed value or a template like {`{{initial_context.phone_number}}`} or {`{{gathered_context.customer_id}}`}
+                        <Label className="text-xs">{copy("Value or Template")}</Label>
+                        <Label className="text-xs text-muted-foreground">{copy("Use a fixed value or a template like ")}{copy("{{initial_context.phone_number}}")}{copy(" or ")}{copy("{{gathered_context.customer_id}}")}
                         </Label>
                         <Input
-                            placeholder="e.g., {{initial_context.phone_number}}"
+                            placeholder={copy("e.g., {{initial_context.phone_number}}")}
                             value={param.valueTemplate}
                             onChange={(e) =>
                                 updateParameter(index, "valueTemplate", e.target.value)
@@ -301,9 +285,7 @@ export function PresetParameterEditor({
                             }
                             disabled={disabled}
                         />
-                        <Label htmlFor={`preset-required-${index}`} className="text-sm">
-                            Required
-                        </Label>
+                        <Label htmlFor={`preset-required-${index}`} className="text-sm">{copy("Required")}</Label>
                     </div>
                 </div>
             ))}
@@ -315,8 +297,7 @@ export function PresetParameterEditor({
                 className="w-fit"
                 disabled={disabled}
             >
-                <PlusIcon className="h-4 w-4 mr-1" /> Add Preset Parameter
-            </Button>
+                <PlusIcon className="h-4 w-4 mr-1" />{copy(" Add Preset Parameter")}</Button>
         </div>
     );
 }

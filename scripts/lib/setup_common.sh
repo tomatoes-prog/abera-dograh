@@ -258,7 +258,7 @@ dograh_sync_remote_env_file() {
     # so sync it here for installs whose .env predates the key.
     dograh_set_env_key "$env_file" ENABLE_COTURN true
 
-    # BACKEND_API_ENDPOINT / MINIO_PUBLIC_ENDPOINT / TURN_HOST are derived in-app
+    # BACKEND_API_ENDPOINT / TURN_HOST are derived in-app
     # from PUBLIC_BASE_URL / PUBLIC_HOST (see api/constants.py), so sync neither
     # writes nor removes them: new installs simply omit them, and any value an
     # operator set by hand is left untouched as an explicit override.
@@ -271,7 +271,7 @@ dograh_validate_remote_runtime_env() {
     [[ -n "${PUBLIC_BASE_URL:-}" ]] || dograh_fail "PUBLIC_BASE_URL is missing"
     dograh_is_ipv4 "${SERVER_IP:-}" || dograh_fail "SERVER_IP must be a valid IPv4 address"
     [[ "${PUBLIC_BASE_URL}" =~ ^https?:// ]] || dograh_fail "PUBLIC_BASE_URL must include http:// or https://"
-    # BACKEND_API_ENDPOINT / MINIO_PUBLIC_ENDPOINT / TURN_HOST are derived in-app
+    # BACKEND_API_ENDPOINT / TURN_HOST are derived in-app
     # from PUBLIC_BASE_URL / PUBLIC_HOST (see api/constants.py), so they are not
     # required here. When an operator sets them explicitly (split deployment),
     # their value is honored as-is — no equality check.
@@ -381,7 +381,7 @@ dograh_preflight_remote_init_render() {
     turn_conf="$tmp_root/coturn/turnserver.conf"
 
     (
-        export ENVIRONMENT SERVER_IP PUBLIC_HOST PUBLIC_BASE_URL BACKEND_API_ENDPOINT MINIO_PUBLIC_ENDPOINT TURN_HOST TURN_SECRET FASTAPI_WORKERS
+        export ENVIRONMENT SERVER_IP PUBLIC_HOST PUBLIC_BASE_URL BACKEND_API_ENDPOINT S3_BUCKET S3_REGION TURN_HOST TURN_SECRET FASTAPI_WORKERS
         export DOGRAH_INIT_WORKSPACE_DIR="$project_dir"
         export DOGRAH_INIT_OUTPUT_ROOT="$tmp_root"
         export DOGRAH_INIT_CERTS_DIR="$cert_dir"

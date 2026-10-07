@@ -1,3 +1,5 @@
+"use client";
+
 import { BaseEdge, type Edge, EdgeLabelRenderer, type EdgeProps, getSmoothStepPath, useReactFlow } from '@xyflow/react';
 import { AlertCircle, Pencil, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
@@ -10,9 +12,11 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from '@/components/ui/textarea';
+import { useCopy } from "@/i18n/LocaleProvider";
 import { cn } from "@/lib/utils";
 
 import { FlowEdge, FlowEdgeData, FlowNode } from '../types';
+
 type CustomEdge = Edge<{ value: number }, 'custom'>;
 
 
@@ -24,6 +28,7 @@ interface EdgeDetailsDialogProps {
 }
 
 const EdgeDetailsDialog = ({ open, onOpenChange, data, onSave }: EdgeDetailsDialogProps) => {
+    const copy = useCopy();
     const readOnly = useWorkflowOptional()?.readOnly ?? false;
     const { recordings } = useWorkflow();
     const [condition, setCondition] = useState(data?.condition ?? '');
@@ -74,7 +79,7 @@ const EdgeDetailsDialog = ({ open, onOpenChange, data, onSave }: EdgeDetailsDial
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-h-[85vh] flex flex-col">
                 <DialogHeader>
-                    <DialogTitle>Edit Condition</DialogTitle>
+                    <DialogTitle>{copy("Edit Condition")}</DialogTitle>
                     {data?.invalid && data.validationMessage && (
                         <div className="mt-2 flex items-center gap-2 rounded-md bg-red-50 p-2 text-sm text-red-500 border border-red-200">
                             <AlertCircle className="h-4 w-4" />
@@ -84,10 +89,8 @@ const EdgeDetailsDialog = ({ open, onOpenChange, data, onSave }: EdgeDetailsDial
                 </DialogHeader>
                 <div className="grid gap-4 py-4 overflow-y-auto">
                     <div className="grid gap-2">
-                        <Label>Condition Label</Label>
-                        <Label className="text-xs text-muted-foreground">
-                            Enter a short label which helps identify this pathway in logs
-                        </Label>
+                        <Label>{copy("Condition Label")}</Label>
+                        <Label className="text-xs text-muted-foreground">{copy("Enter a short label which helps identify this pathway in logs")}</Label>
                         <Input
                             type="text"
                             value={label}
@@ -95,25 +98,20 @@ const EdgeDetailsDialog = ({ open, onOpenChange, data, onSave }: EdgeDetailsDial
                             onChange={(e) => setLabel(e.target.value)}
                         />
                         <div className="text-xs text-muted-foreground">
-                            {label.length}/64 characters
+                            {label.length}{copy("/64 characters")}
                         </div>
                     </div>
                     <div className="grid gap-2">
-                        <Label>Condition</Label>
-                        <Label className="text-xs text-muted-foreground">
-                            Describe a condition that will be evaluated to determine if this pathway should be taken
-                        </Label>
+                        <Label>{copy("Condition")}</Label>
+                        <Label className="text-xs text-muted-foreground">{copy("Describe a condition that will be evaluated to determine if this pathway should be taken")}</Label>
                         <Textarea
                             value={condition}
                             onChange={(e) => setCondition(e.target.value)}
                         />
                     </div>
                     <div className="grid gap-2">
-                        <Label>Transition Speech</Label>
-                        <Label className="text-xs text-muted-foreground">
-                            Optional text or audio the assistant will play right before transitioning to the node.
-                            This will not be attached in Conversation Context. Use this as simple filler to reduce latency.
-                        </Label>
+                        <Label>{copy("Transition Speech")}</Label>
+                        <Label className="text-xs text-muted-foreground">{copy("Optional text or audio the assistant will play right before transitioning to the node. This will not be attached in Conversation Context. Use this as simple filler to reduce latency.")}</Label>
                         <TextOrAudioInput
                             type={transitionSpeechType}
                             onTypeChange={setTransitionSpeechType}
@@ -125,7 +123,7 @@ const EdgeDetailsDialog = ({ open, onOpenChange, data, onSave }: EdgeDetailsDial
                                 <StaticTextWarning />
                                 <Textarea
                                     value={transitionSpeech}
-                                    placeholder="e.g. Let me transfer you to our billing department..."
+                                    placeholder={copy("e.g. Let me transfer you to our billing department...")}
                                     onChange={(e) => setTransitionSpeech(e.target.value)}
                                 />
                             </>
@@ -134,9 +132,9 @@ const EdgeDetailsDialog = ({ open, onOpenChange, data, onSave }: EdgeDetailsDial
                 </div>
                 <DialogFooter>
                     <div className="flex items-center gap-2">
-                        <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                        <Button variant="outline" onClick={() => onOpenChange(false)}>{copy("Cancel")}</Button>
                         <Button onClick={handleSave} disabled={readOnly}>
-                            {readOnly ? "Read Only" : "Save"}
+                            {readOnly ? copy("Read Only") : copy("Save")}
                         </Button>
                     </div>
                 </DialogFooter>
@@ -150,6 +148,7 @@ interface CustomEdgeProps extends EdgeProps {
 }
 
 export default function CustomEdge(props: CustomEdgeProps) {
+    const copy = useCopy();
     const { id, source, target, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data, style, selected } = props;
 
     const { getEdges, setNodes } = useReactFlow<FlowNode, FlowEdge>();
@@ -320,9 +319,7 @@ export default function CustomEdge(props: CustomEdgeProps) {
                                 "flex items-center justify-between px-3 py-2 border-b",
                                 data?.invalid ? "bg-destructive/10 border-destructive/30" : "bg-muted/50 border-border"
                             )}>
-                                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                                    Condition
-                                </span>
+                                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{copy("Condition")}</span>
                                 <div className="flex items-center gap-1">
                                     <Button
                                         variant="ghost"
@@ -345,7 +342,7 @@ export default function CustomEdge(props: CustomEdgeProps) {
                             {/* Content */}
                             <div className="px-3 pb-3">
                                 <div className="text-sm font-medium text-card-foreground break-words">
-                                    {data?.label || data?.condition || 'Click to set condition'}
+                                    {data?.label || data?.condition || copy("Click to set condition")}
                                 </div>
                             </div>
                         </div>
@@ -358,7 +355,7 @@ export default function CustomEdge(props: CustomEdgeProps) {
                                 ? "bg-destructive text-destructive-foreground"
                                 : "bg-amber-500 text-amber-950"
                         )}>
-                            {data?.label || data?.condition || 'No condition'}
+                            {data?.label || data?.condition || copy("No condition")}
                         </div>
                     )}
                 </div>

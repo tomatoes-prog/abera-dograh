@@ -191,9 +191,10 @@ def _resolve_user_turn_stop_timeout(
 
 
 def _resolve_turn_start_min_words(run_configs: dict) -> int:
+    min_words = run_configs.get("turn_start_min_words")
     return max(
         1,
-        int(run_configs.get("turn_start_min_words", DEFAULT_TURN_START_MIN_WORDS)),
+        int(DEFAULT_TURN_START_MIN_WORDS if min_words is None else min_words),
     )
 
 
@@ -202,18 +203,11 @@ def _create_non_realtime_user_turn_start_strategies(
 ):
     """Return user turn start strategies for non-realtime pipelines."""
 
-    # An STT that reports its own turn boundaries decides the turn start,
-    # whatever `turn_start_strategy` asks for.
-    #
-    # Local VAD is deliberately kept out of these start strategies too: it would
-    # win the race on raw voice activity and start the turn before the STT
-    # confirms a real turn.
-    if uses_external_turns:
-        return [ExternalUserTurnStartStrategy(enable_interruptions=True)]
-
     turn_start_strategy = run_configs.get(
         "turn_start_strategy", DEFAULT_TURN_START_STRATEGY
     )
+    if turn_start_strategy not in ("default", "min_words"):
+        turn_start_strategy = DEFAULT_TURN_START_STRATEGY
 
     if turn_start_strategy == "min_words":
         return [
@@ -221,6 +215,11 @@ def _create_non_realtime_user_turn_start_strategies(
                 min_words=_resolve_turn_start_min_words(run_configs)
             )
         ]
+
+    # Voice activity mode follows provider turn starts when available. Keep local VAD
+    # out of that path so it cannot interrupt before the provider confirms speech.
+    if uses_external_turns:
+        return [ExternalUserTurnStartStrategy(enable_interruptions=True)]
 
     return [TranscriptionUserTurnStartStrategy(), VADUserTurnStartStrategy()]
 
@@ -987,9 +986,8 @@ async def _run_pipeline_impl(
             user_config.realtime.provider, user_config.realtime.model
         )
     else:
-        # Some STT services emit their own turn boundaries, so the aggregator
-        # follows those external signals. Other models use configurable turn
-        # detection.
+        # Provider turn endings stay authoritative even when a word threshold
+        # controls when the caller can interrupt.
         uses_external_turns = stt_uses_external_turns(user_config)
         user_turn_start_strategies = _create_non_realtime_user_turn_start_strategies(
             run_configs,
@@ -998,8 +996,7 @@ async def _run_pipeline_impl(
         turn_start_strategy = run_configs.get(
             "turn_start_strategy", DEFAULT_TURN_START_STRATEGY
         )
-        # `requested` is what the workflow asked for; `resolved` is what the
-        # pipeline built, which differs whenever external turns override it.
+        # Log the configured choice alongside the concrete strategies it selects.
         logger.info(
             f"[run {workflow_run_id}] Non-realtime interrupt strategy "
             f"requested={turn_start_strategy} "
@@ -1145,7 +1142,9 @@ async def _run_pipeline_impl(
                     bus=worker_runner.bus,
                     worker_name=call_worker_name,
                     selected_visit=lambda: engine.selected_visit_id,
-                    allow_inference=lambda: not engine.transfer_in_progress,
+                    allow_inference=lambda: engine.agent_can_generate(
+                        engine.active_agent
+                    ),
                     name=f"{call_worker_name}::AgentBridge",
                 )
             ],
@@ -1167,6 +1166,58 @@ async def _run_pipeline_impl(
     transcript_log_coordinator.attach_turn_tracking_observer(
         task.turn_tracking_observer
     )
+
+    # Realtime server-side history compaction (summarize + delete every N
+    # turns). Off by default; cascade pipelines keep using
+    # context_compaction_enabled. OpenAI Realtime only: other providers use
+    # different server event names.
+    history_compactor = None
+    compaction_turns = int(run_configs.get("realtime_history_compaction_turns", 0) or 0)
+    if is_realtime and compaction_turns > 0 and inference_llm is not None:
+        from api.services.pipecat.realtime.history_compaction import (
+            RealtimeHistoryCompactor,
+            summarize_turns,
+        )
+        from api.services.pipecat.realtime.openai_realtime import (
+            DograhOpenAIRealtimeLLMService,
+        )
+
+        if isinstance(llm, DograhOpenAIRealtimeLLMService):
+            compaction_language = (
+                getattr(getattr(user_config, "realtime", None), "language", None)
+                or "es"
+            )
+
+            async def _summarize_for_compaction(turns):
+                return await summarize_turns(
+                    inference_llm,
+                    turns,
+                    language=compaction_language,
+                    workflow_run_id=workflow_run_id,
+                )
+
+            history_compactor = RealtimeHistoryCompactor(
+                every_n_turns=compaction_turns,
+                language=compaction_language,
+                summarize=_summarize_for_compaction,
+                workflow_run_id=workflow_run_id,
+            )
+            history_compactor.attach(
+                llm,
+                is_active=lambda: not getattr(llm, "_disconnecting", False),
+            )
+            transcript_log_coordinator.subscribe_turn_completed(
+                history_compactor.notify_turn_completed
+            )
+            logger.info(
+                "Realtime history compaction every "
+                f"{compaction_turns} turns (run {workflow_run_id})"
+            )
+        else:
+            logger.info(
+                "Realtime history compaction requested but the realtime "
+                f"service is not OpenAI (run {workflow_run_id})"
+            )
 
     for runtime_session in integration_runtime_sessions:
         runtime_session.attach(task)
@@ -1288,6 +1339,20 @@ async def _run_pipeline_impl(
     if not user_provider_id:
         user_obj = await db_client.get_user_by_id(user_id)
         user_provider_id = str(user_obj.provider_id) if user_obj else None
+    from api.services.abera.bedrock import uses_managed_voice
+    from api.services.abera.voice_minutes import ManagedVoiceSession
+
+    voice_meter = None
+    if uses_managed_voice(user_config):
+
+        async def stop_managed_voice():
+            from pipecat.utils.enums import EndTaskReason
+
+            await engine.end_call_with_reason(
+                EndTaskReason.PIPELINE_ERROR.value, abort_immediately=True
+            )
+
+        voice_meter = ManagedVoiceSession(workflow_run_id, stop_managed_voice)
     in_memory_audio_buffer = register_event_handlers(
         task,
         transport,
@@ -1305,6 +1370,7 @@ async def _run_pipeline_impl(
         integration_runtime_sessions=integration_runtime_sessions,
         call_events_session=call_events_session,
         include_transcript_end_timestamps=include_transcript_end_timestamps,
+        voice_meter=voice_meter,
     )
 
     register_audio_data_handler(audio_buffer, workflow_run_id, in_memory_audio_buffer)
@@ -1316,6 +1382,10 @@ async def _run_pipeline_impl(
     except asyncio.CancelledError:
         logger.warning("Received CancelledError in _run_pipeline")
     finally:
+        if voice_meter is not None:
+            await voice_meter.finish()
+        if history_compactor is not None:
+            await history_compactor.close()
         # Close MCP sessions here, not in engine.cleanup(). The anyio cancel
         # scopes opened by MCPClient.start() in engine.initialize() are
         # task-affine; this finally runs in the same task as initialize(),

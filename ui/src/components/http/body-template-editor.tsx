@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useCopy } from "@/i18n/LocaleProvider";
+
 
 interface BodyTemplateEditorProps {
     value: Record<string, unknown> | null;
@@ -16,6 +18,7 @@ export function BodyTemplateEditor({
     onChange,
     onValidityChange,
 }: BodyTemplateEditorProps) {
+    const copy = useCopy();
     const [text, setText] = useState(value ? JSON.stringify(value, null, 2) : "");
     const [error, setError] = useState(false);
 
@@ -46,21 +49,19 @@ export function BodyTemplateEditor({
 
     return (
         <div className="grid gap-2">
-            <Label>JSON Body Template</Label>
-            <Label className="text-xs text-muted-foreground">
-                Use LLM parameters defined above with {"{{defined_llm_parameter}}"}, or
-                initial context with {"{{initial_context.call_id}}"}.
+            <Label>{copy("JSON Body Template")}</Label>
+            <Label className="text-xs text-muted-foreground">{copy("Use LLM parameters defined above with ")}{copy("{{defined_llm_parameter}}")}{copy(", or initial context with ")}{copy("{{initial_context.call_id}}")}.
             </Label>
             <Textarea
                 className="min-h-48 font-mono text-xs"
                 value={text}
                 onChange={(event) => handleChange(event.target.value)}
                 placeholder={
-                    '{\n  "customer": {\n    "id": "{{defined_llm_parameter}}"\n  },\n  "metadata": {\n    "call": {\n      "id": "{{initial_context.call_id}}"\n    }\n  }\n}'
+                    copy("{\n  \"customer\": {\n    \"id\": \"{{defined_llm_parameter}}\"\n  },\n  \"metadata\": {\n    \"call\": {\n      \"id\": \"{{initial_context.call_id}}\"\n    }\n  }\n}")
                 }
                 spellCheck={false}
             />
-            {error && <p className="text-xs text-destructive">Enter a valid JSON object.</p>}
+            {error && <p className="text-xs text-destructive">{copy("Enter a valid JSON object.")}</p>}
         </div>
     );
 }

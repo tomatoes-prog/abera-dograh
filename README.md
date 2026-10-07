@@ -90,7 +90,7 @@ An honest comparison on the axes that matter most to teams evaluating voice AI p
 ##### Download and setup Dograh on your Local Machine
 
 > **Note**
-> We collect anonymous usage data to improve the product. You can opt out by setting `ENABLE_TELEMETRY=false` before running the startup script.
+> Usage analytics and error reporting are optional and disabled by default. Set `ENABLE_TELEMETRY=true` before running the startup script to opt in.
 
 > **Note**
 > If you wish to run the platform on a remote server instead, checkout our [Documentation](https://docs.dograh.com/deployment/docker#option-2:-remote-server-deployment)

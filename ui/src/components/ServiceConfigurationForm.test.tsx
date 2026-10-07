@@ -48,6 +48,32 @@ const initialConfig = {
     realtime: { provider: "openai_realtime", api_key: "test-key", model: "gpt-realtime-2", voice: "alloy", language: "en" },
 };
 
+it("saves a custom embeddings URL, model and API key without changing the live voice configuration", async () => {
+    const onSave = vi.fn();
+    const customDefaults: ServiceConfigurationDefaults = {
+        ...defaults,
+        default_providers: { ...defaults.default_providers, embeddings: "openai_compatible" },
+        embeddings: { openai_compatible: {
+            title: "OpenAI-compatible", required: ["model", "base_url", "api_key"],
+            properties: {
+                provider: { default: "openai_compatible" }, model: { type: "string" },
+                base_url: { type: "string" }, api_key: { type: "string" },
+            },
+        } },
+    };
+    const view = render(<ServiceConfigurationForm mode="global" forceRealtime configurationDefaults={customDefaults} initialConfig={initialConfig} onSave={onSave} />);
+    const urlInput = await screen.findByLabelText("Provider URL");
+    fireEvent.change(urlInput, { target: { value: "https://embeddings.example/v1" } });
+    fireEvent.change(screen.getByLabelText("Embedding model"), { target: { value: "provider/model-v1" } });
+    fireEvent.change(view.container.querySelector("#embeddings_api_key_0")!, { target: { value: "own-provider-key" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save Configuration" }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledOnce());
+    expect(onSave.mock.calls[0][0].embeddings).toEqual({
+        provider: "openai_compatible", base_url: "https://embeddings.example/v1", model: "provider/model-v1", api_key: ["own-provider-key"],
+    });
+    expect(onSave.mock.calls[0][0].realtime).toEqual({ ...initialConfig.realtime, api_key: ["test-key"] });
+});
+
 describe("OpenAI speech model selection", () => {
     it("switches to Live under the same provider and saves its relevant settings", async () => {
         const onSave = vi.fn();

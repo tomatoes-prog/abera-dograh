@@ -3,6 +3,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+pytestmark = pytest.mark.usefixtures("mps_enabled")
+
 from api.db.organization_configuration_client import LEASE_COMPLETED, LEASE_PENDING
 from api.schemas.ai_model_configuration import (
     DograhManagedAIModelConfiguration,
@@ -27,6 +29,18 @@ def _dograh_config(api_key: str) -> OrganizationAIModelConfigurationV2:
 def _byok_config() -> OrganizationAIModelConfigurationV2:
     """A BYOK org: real ones carry provider blocks, but only `dograh` matters here."""
     return OrganizationAIModelConfigurationV2.model_construct(mode="byok", dograh=None)
+
+
+@pytest.mark.asyncio
+async def test_abera_mode_never_calls_dograh_providers(monkeypatch):
+    monkeypatch.setattr(bootstrap, "DEPLOYMENT_MODE", "abera")
+    read = AsyncMock(side_effect=AssertionError("bootstrap must not read state"))
+    monkeypatch.setattr(bootstrap.db_client, "get_configuration", read)
+    result = await bootstrap.ensure_organization_bootstrapped(
+        ORG_ID, created_by=CREATED_BY
+    )
+    assert result is True
+    read.assert_not_awaited()
 
 
 @pytest.fixture(autouse=True)

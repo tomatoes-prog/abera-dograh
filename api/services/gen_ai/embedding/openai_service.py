@@ -1,12 +1,13 @@
 """OpenAI embedding service.
 
 Embeds text and performs vector similarity search via the local database.
-Document conversion and chunking now live in the Model Proxy Service (MPS);
+Document conversion and chunking run locally in the ARQ worker;
 this file no longer pulls docling/transformers.
 """
 
 from typing import Any, Dict, List, Optional
 
+import httpx
 from loguru import logger
 from openai import AsyncOpenAI
 
@@ -39,6 +40,7 @@ class OpenAIEmbeddingService(BaseEmbeddingService):
         model_id: str = DEFAULT_MODEL_ID,
         base_url: Optional[str] = None,
         default_headers: Optional[Dict[str, str]] = None,
+        http_client: Optional[httpx.AsyncClient] = None,
     ):
         """Initialize the OpenAI embedding service.
 
@@ -63,6 +65,8 @@ class OpenAIEmbeddingService(BaseEmbeddingService):
                 client_kwargs["base_url"] = base_url
             if default_headers:
                 client_kwargs["default_headers"] = default_headers
+            if http_client is not None:
+                client_kwargs["http_client"] = http_client
             self.client = AsyncOpenAI(**client_kwargs)
             logger.info(f"OpenAI embedding service initialized with model: {model_id}")
         else:

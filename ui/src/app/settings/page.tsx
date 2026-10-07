@@ -13,25 +13,23 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useCopy } from "@/i18n/LocaleProvider";
+
 
 export default function SettingsPage() {
+    const copy = useCopy();
   return (
     <div className="flex justify-center py-12 px-4">
       <div className="w-full max-w-2xl space-y-6">
         <div>
-          <h1 className="text-2xl font-bold">Platform Settings</h1>
-          <p className="text-muted-foreground">
-            Manage your platform configuration and integrations.
-          </p>
+          <h1 className="text-2xl font-bold">{copy("Platform Settings")}</h1>
+          <p className="text-muted-foreground">{copy("Manage your platform configuration and integrations.")}</p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Preferences</CardTitle>
-            <CardDescription>
-              Set organization-wide defaults such as the test phone number and
-              timezone.
-            </CardDescription>
+            <CardTitle>{copy("Preferences")}</CardTitle>
+            <CardDescription>{copy("Set organization-wide defaults such as the test phone number and timezone.")}</CardDescription>
           </CardHeader>
           <CardContent>
             <OrganizationPreferencesSection />
@@ -40,17 +38,14 @@ export default function SettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>MCP Server</CardTitle>
-            <CardDescription>
-              Let AI agents access your Dograh workspace and documentation via
-              the Model Context Protocol.{" "}
+            <CardTitle>{copy("MCP Server")}</CardTitle>
+            <CardDescription>{copy("Let AI agents access your Dograh workspace and documentation via the Model Context Protocol.")}{" "}
               <a
                 href="https://docs.dograh.com/integrations/mcp"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-0.5 underline"
-              >
-                Learn more <ExternalLink className="h-3 w-3" />
+              >{copy("Learn more ")}<ExternalLink className="h-3 w-3" />
               </a>
             </CardDescription>
           </CardHeader>
@@ -61,16 +56,14 @@ export default function SettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Telemetry</CardTitle>
-            <CardDescription>
-              Configure Langfuse tracing for your voice agent calls.{" "}
+            <CardTitle>{copy("Telemetry")}</CardTitle>
+            <CardDescription>{copy("Configure Langfuse tracing for your voice agent calls.")}{" "}
               <a
                 href="https://docs.dograh.com/configurations/tracing"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-0.5 underline"
-              >
-                Learn more <ExternalLink className="h-3 w-3" />
+              >{copy("Learn more ")}<ExternalLink className="h-3 w-3" />
               </a>
             </CardDescription>
           </CardHeader>
@@ -80,8 +73,8 @@ export default function SettingsPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Call events</CardTitle>
-            <CardDescription>Configure where your organization sends call diagnostics.</CardDescription>
+            <CardTitle>{copy("Call events")}</CardTitle>
+            <CardDescription>{copy("Configure where your organization sends call diagnostics.")}</CardDescription>
           </CardHeader>
           <CardContent>
             <CallEventsSection />

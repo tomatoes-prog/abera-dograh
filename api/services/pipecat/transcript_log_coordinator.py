@@ -56,6 +56,14 @@ class TranscriptLogCoordinator:
         self._states: dict[int, _TurnTranscriptState] = {}
         self._active_turn_id: int | None = None
         self._lock = asyncio.Lock()
+        self._turn_listeners: list = []
+        self._notified_turns: set[int] = set()
+
+    def subscribe_turn_completed(self, callback) -> None:
+        """Invoke ``callback(turn_id, user_text, assistant_text)`` once per
+        turn when both sides have been emitted. Used by realtime history
+        compaction to count completed turns; never blocks the transcript."""
+        self._turn_listeners.append(callback)
 
     def attach_turn_tracking_observer(self, observer: "TurnTrackingObserver") -> None:
         """Subscribe to the canonical turn owner's correlated lifecycle events."""
@@ -255,6 +263,19 @@ class TranscriptLogCoordinator:
         await self._emit_user(state)
         if not state.assistant.speaking:
             await self._emit_assistant(state)
+        if (
+            state.turn_id not in self._notified_turns
+            and state.user.emitted
+            and state.assistant.emitted
+            and (state.assistant.text or "").strip()
+        ):
+            self._notified_turns.add(state.turn_id)
+            for callback in list(self._turn_listeners):
+                await callback(
+                    state.turn_id,
+                    state.user.text or "",
+                    state.assistant.text or "",
+                )
 
     async def _emit_user(self, state: _TurnTranscriptState) -> None:
         side = state.user

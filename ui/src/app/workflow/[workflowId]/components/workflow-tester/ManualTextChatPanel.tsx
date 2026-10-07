@@ -6,12 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ConversationItem } from "@/components/workflow/conversation";
 import { ConversationTimeline } from "@/components/workflow/conversation";
+import { useCopy } from "@/i18n/LocaleProvider";
 
 import { ChatComposer } from "./ChatComposer";
 import { DisabledNotice, ManualChatEmptyState, TypingIndicator } from "./shared";
 import { TurnMessageActions } from "./TurnMessageActions";
 import type { WorkflowRuntimeNodeTransition } from "./types";
 import { useTextChatSession } from "./useTextChatSession";
+
 
 interface ManualTextChatPanelProps {
     workflowId: number;
@@ -32,6 +34,7 @@ export function ManualTextChatPanel({
     onActiveChange,
     onNodeTransition,
 }: ManualTextChatPanelProps) {
+    const copy = useCopy();
     const {
         session,
         started,
@@ -89,8 +92,8 @@ export function ManualTextChatPanel({
                     <div className="flex h-full items-center justify-center px-4 py-10 text-center">
                         <p className="text-sm text-muted-foreground">
                             {disabled
-                                ? (disabledReason ?? "Testing is paused.")
-                                : "Send a message to start the conversation."}
+                                ? (disabledReason ?? copy("Testing is paused."))
+                                : copy("Send a message to start the conversation.")}
                         </p>
                     </div>
                 ) : (
@@ -140,8 +143,8 @@ export function ManualTextChatPanel({
                 <div className="flex items-center justify-between gap-3 border-t border-border/70 pt-3">
                     <p className="text-xs text-muted-foreground">
                         {session.is_completed
-                            ? "This conversation has ended."
-                            : "End the conversation and run its completion integrations."}
+                            ? copy("This conversation has ended.")
+                            : copy("End the conversation and run its completion integrations.")}
                     </p>
                     {!session.is_completed ? (
                         <Button
@@ -161,7 +164,7 @@ export function ManualTextChatPanel({
                             ) : (
                                 <Square className="h-3.5 w-3.5" />
                             )}
-                            {endingSession ? "Ending" : "End chat"}
+                            {endingSession ? copy("Ending") : copy("End chat")}
                         </Button>
                     ) : null}
                 </div>

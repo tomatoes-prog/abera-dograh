@@ -1,5 +1,8 @@
+"use client";
+
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { RadioValue } from "@/types/filters";
 
 interface RadioFilterProps {
@@ -19,19 +22,20 @@ export const RadioFilter: React.FC<RadioFilterProps> = ({
   options,
   label = "Select Status",
 }) => {
+  const copy = useCopy();
   const handleChange = (newValue: string) => {
     onChange({ status: newValue });
   };
 
   return (
     <div className="space-y-3">
-      <Label>{label}</Label>
+      <Label>{copy(label)}</Label>
       <RadioGroup value={value.status} onValueChange={handleChange}>
         {options.map((option) => (
           <div key={option.value} className="flex items-center space-x-2">
             <RadioGroupItem value={option.value} id={option.value} />
             <Label htmlFor={option.value} className="font-normal cursor-pointer">
-              {option.label}
+              {copy(option.label)}
             </Label>
           </div>
         ))}

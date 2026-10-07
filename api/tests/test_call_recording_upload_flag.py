@@ -1,12 +1,16 @@
 """ENABLE_CALL_RECORDING_UPLOAD gates the end-of-call audio upload."""
 
 import asyncio
+import os
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from api.services.pipecat.event_handlers import register_event_handlers
+from api.services.pipecat.event_handlers import (
+    register_audio_data_handler,
+    register_event_handlers,
+)
 from api.services.pipecat.termination_funnel_processor import (
     TerminationFunnelProcessor,
 )
@@ -43,6 +47,15 @@ async def _run_pipeline_finished(
 
     async def fake_upload(workflow_run_id, **kwargs):
         uploads.update(kwargs)
+        uploads["temporary_files_existed_during_upload"] = all(
+            os.path.isfile(path)
+            for path in (
+                kwargs.get("mixed_audio_path"),
+                kwargs.get("user_audio_path"),
+                kwargs.get("bot_audio_path"),
+            )
+            if path
+        )
 
     monkeypatch.setattr(
         "api.services.pipecat.event_handlers.upload_workflow_run_artifacts",
@@ -224,3 +237,34 @@ async def test_recordings_are_skipped_when_upload_disabled(monkeypatch):
     assert uploads["bot_audio_wav"] is None
     # The transcript is a separate artifact and must still be uploaded.
     assert uploads["transcript_text"] == "hello"
+
+
+@pytest.mark.asyncio
+async def test_abera_basic_never_collects_tracks(monkeypatch):
+    monkeypatch.setenv("DEPLOYMENT_MODE", "abera")
+    monkeypatch.setenv("ABERA_PLAN", "basic")
+    source = _EventSource()
+    register_audio_data_handler(source, 88, None)
+    assert source.handlers == {}
+
+    uploads = await _run_pipeline_finished(monkeypatch, recording_upload_enabled=True)
+    assert uploads["mixed_audio_wav"] is None
+    assert uploads["user_audio_wav"] is None
+    assert uploads["bot_audio_wav"] is None
+    assert uploads["transcript_text"] == "hello"
+
+
+@pytest.mark.asyncio
+async def test_abera_pro_uploads_files_and_cleans_them_up(monkeypatch):
+    monkeypatch.setenv("DEPLOYMENT_MODE", "abera")
+    monkeypatch.setenv("ABERA_PLAN", "pro")
+    uploads = await _run_pipeline_finished(monkeypatch, recording_upload_enabled=True)
+    assert uploads["temporary_files_existed_during_upload"]
+    assert all(
+        uploads[f"{track}_audio_path"]
+        and not os.path.exists(uploads[f"{track}_audio_path"])
+        for track in ("mixed", "user", "bot")
+    )
+    assert all(
+        uploads[f"{track}_audio_wav"] is None for track in ("mixed", "user", "bot")
+    )

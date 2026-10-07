@@ -1,5 +1,5 @@
 # Dograh — production values for k3s
-# Hosted-AI only (no local models). All state on the node's local disk via
+# Hosted-AI only (no local models). Database and queue state on the node's local disk via
 # k3s local-path StorageClass. TLS terminated at Cloudflare edge; re-encrypted
 # to origin using the shared *.yourdomain.com Cloudflare Origin CA cert
 # (secret `cloudflare-origin-tls`, copied from a neighboring namespace).
@@ -13,7 +13,6 @@ image:
 # --- Bundled stateful deps (in-cluster, on local-path PVCs) -----------------
 database: { mode: internal }
 redis:    { mode: internal }
-storage:  { mode: internalMinio }
 
 # --- HTTP exposure ----------------------------------------------------------
 exposure:
@@ -30,7 +29,6 @@ config:
   environment: production
   logLevel: INFO
   backendApiEndpoint: https://aicalling.yourdomain.com   # kills the CF-tunnel fallback
-  minioPublicEndpoint: https://aicalling.yourdomain.com  # browser fetches /voice-audio/ via Traefik
   enableSignup: false   # invite-only: 403 the public signup endpoint
 
 # --- Workloads not needed for hosted-AI web-only calls ---------------------
@@ -109,9 +107,10 @@ redisinternal:
     requests: { cpu: 50m,  memory: 64Mi }
     limits:   { cpu: 300m, memory: 256Mi }
 
-# --- Internal MinIO (audio + artifacts on node disk) -----------------------
-minio:
-  persistence: { size: 10Gi, storageClass: local-path }
-  resources:
-    requests: { cpu: 50m,  memory: 128Mi }
-    limits:   { cpu: 500m, memory: 512Mi }
+
+# Supply a private S3 bucket and workload IAM role (or AWS credentials).
+storage:
+  mode: s3
+  s3:
+    bucket: your-private-dograh-bucket
+    region: us-east-2

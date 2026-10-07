@@ -4,6 +4,8 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
+pytestmark = pytest.mark.usefixtures("mps_enabled")
+
 from api.errors.mps import MPSUnavailableError
 from api.routes import user as user_routes
 from api.schemas.ai_model_configuration import (

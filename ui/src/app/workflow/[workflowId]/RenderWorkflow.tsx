@@ -1,3 +1,5 @@
+"use client";
+
 import '@xyflow/react/dist/style.css';
 
 import {
@@ -20,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useOnboarding } from '@/context/OnboardingContext';
+import { useCopy } from "@/i18n/LocaleProvider";
 import { detailFromError } from '@/lib/apiError';
 import { WorkflowConfigurations } from '@/types/workflow-configurations';
 
@@ -35,6 +38,7 @@ import { WorkflowVersionDiffDialog } from './components/WorkflowVersionDiffDialo
 import { WorkflowProvider } from "./contexts/WorkflowContext";
 import { useWorkflowState } from "./hooks/useWorkflowState";
 import { layoutNodes } from './utils/layoutNodes';
+
 
 const edgeTypes = {
     custom: CustomEdge,
@@ -79,6 +83,7 @@ function RenderWorkflow({
     initialSelectedVersion,
     user,
 }: RenderWorkflowProps) {
+    const copy = useCopy();
     const router = useRouter();
     const searchParams = useSearchParams();
     const { specs } = useNodeSpecs();
@@ -175,7 +180,7 @@ function RenderWorkflow({
                 query: { limit: VERSIONS_PAGE_SIZE + 1, offset: 0 },
             });
             if (response.error) {
-                toast.error(detailFromError(response.error, "Failed to load version history"));
+                toast.error(copy(detailFromError(response.error, "Failed to load version history")));
                 return;
             }
             const data = response.data;
@@ -200,7 +205,7 @@ function RenderWorkflow({
         } finally {
             setVersionsLoading(false);
         }
-    }, [workflowId]);
+    }, [copy, workflowId]);
 
     const handleLoadMoreVersions = useCallback(async () => {
         if (versionsLoadingMore || !versionsHasMore) return;
@@ -211,7 +216,7 @@ function RenderWorkflow({
                 query: { limit: VERSIONS_PAGE_SIZE + 1, offset: versions.length },
             });
             if (response.error) {
-                toast.error(detailFromError(response.error, "Failed to load more versions"));
+                toast.error(copy(detailFromError(response.error, "Failed to load more versions")));
                 return;
             }
             const data = response.data;
@@ -222,7 +227,7 @@ function RenderWorkflow({
         } finally {
             setVersionsLoadingMore(false);
         }
-    }, [workflowId, versions.length, versionsLoadingMore, versionsHasMore]);
+    }, [versionsLoadingMore, versionsHasMore, workflowId, versions.length, copy]);
 
     const handleOpenVersionPanel = useCallback(() => {
         setIsVersionPanelOpen(true);
@@ -234,7 +239,7 @@ function RenderWorkflow({
 
         const selectedIndex = versions.findIndex((candidate) => candidate.id === version.id);
         if (selectedIndex < 0) {
-            toast.error("That workflow version is no longer in the history list");
+            toast.error(copy("That workflow version is no longer in the history list"));
             return;
         }
 
@@ -247,7 +252,7 @@ function RenderWorkflow({
                 query: { limit: 2, offset: selectedIndex },
             });
             if (response.error) {
-                toast.error(detailFromError(response.error, "Failed to compare workflow versions"));
+                toast.error(copy(detailFromError(response.error, "Failed to compare workflow versions")));
                 return;
             }
 
@@ -259,14 +264,14 @@ function RenderWorkflow({
             // every offset. Refresh instead of showing a mismatched comparison.
             if (!selectedVersion || selectedVersion.id !== version.id) {
                 await fetchVersions(true, true);
-                toast.error("Version history changed. Please try the comparison again.");
+                toast.error(copy("Version history changed. Please try the comparison again."));
                 return;
             }
             if (
                 !previousVersion ||
                 previousVersion.version_number >= selectedVersion.version_number
             ) {
-                toast.error(`v${selectedVersion.version_number} has no previous version`);
+                toast.error(copy("v{value0} has no previous version", {value0: selectedVersion.version_number}));
                 return;
             }
 
@@ -279,11 +284,11 @@ function RenderWorkflow({
             setVersionDiffPair({ previousVersion, selectedVersion });
             setIsVersionPanelOpen(false);
         } catch {
-            toast.error("Failed to compare workflow versions");
+            toast.error(copy("Failed to compare workflow versions"));
         } finally {
             setComparingVersionId(null);
         }
-    }, [comparingVersionId, fetchVersions, versions, workflowId]);
+    }, [comparingVersionId, copy, fetchVersions, versions, workflowId]);
 
     const handleVersionDiffOpenChange = useCallback((open: boolean) => {
         if (open) return;
@@ -654,7 +659,7 @@ function RenderWorkflow({
                                                         </Button>
                                                     </TooltipTrigger>
                                                     <TooltipContent side="left">
-                                                        <p>Add node</p>
+                                                        <p>{copy("Add node")}</p>
                                                     </TooltipContent>
                                                 </Tooltip>
 
@@ -670,7 +675,7 @@ function RenderWorkflow({
                                                         </Button>
                                                     </TooltipTrigger>
                                                     <TooltipContent side="left">
-                                                        <p>Workflow settings</p>
+                                                        <p>{copy("Workflow settings")}</p>
                                                     </TooltipContent>
                                                 </Tooltip>
                                             </div>
@@ -694,7 +699,7 @@ function RenderWorkflow({
                                             </Button>
                                         </TooltipTrigger>
                                         <TooltipContent side="top">
-                                            <p>Zoom in</p>
+                                            <p>{copy("Zoom in")}</p>
                                         </TooltipContent>
                                     </Tooltip>
 
@@ -710,7 +715,7 @@ function RenderWorkflow({
                                             </Button>
                                         </TooltipTrigger>
                                         <TooltipContent side="top">
-                                            <p>Zoom out</p>
+                                            <p>{copy("Zoom out")}</p>
                                         </TooltipContent>
                                     </Tooltip>
 
@@ -726,7 +731,7 @@ function RenderWorkflow({
                                             </Button>
                                         </TooltipTrigger>
                                         <TooltipContent side="top">
-                                            <p>Fit view</p>
+                                            <p>{copy("Fit view")}</p>
                                         </TooltipContent>
                                     </Tooltip>
 
@@ -746,7 +751,7 @@ function RenderWorkflow({
                                                 </Button>
                                             </TooltipTrigger>
                                             <TooltipContent side="top">
-                                                <p>Tidy Up</p>
+                                                <p>{copy("Tidy Up")}</p>
                                             </TooltipContent>
                                         </Tooltip>
                                     )}

@@ -28,6 +28,7 @@ from pydantic import ValidationError as PydanticValidationError
 from api.db import db_client
 from api.db.agent_trigger_client import TriggerPathConflictError
 from api.enums import PostHogEvent
+from api.errors.abera import AgentLimitExceeded
 from api.mcp_server.auth import authenticate_mcp_request
 from api.mcp_server.tracing import traced_tool
 from api.mcp_server.ts_bridge import TsBridgeError, parse_code
@@ -94,6 +95,7 @@ async def create_workflow(code: str) -> dict[str, Any]:
       name is required and there is no prior workflow to fall back to.
     - `trigger_path_conflict` — a trigger node's path is already used by
       another workflow in this organization; rename it and resubmit.
+    - `agent_limit_exceeded` — this subscription has reached its agent limit.
     - `bridge_error` — internal/transient; retry once, then surface it.
     """
     user = await authenticate_mcp_request()
@@ -166,19 +168,21 @@ async def create_workflow(code: str) -> dict[str, Any]:
             )
 
     # 5. Persist as a new workflow with v1 published.
-    workflow = await db_client.create_workflow(
-        name,
-        payload,
-        user.id,
-        user.selected_organization_id,
-    )
+    try:
+        workflow = await db_client.create_workflow(
+            name,
+            payload,
+            user.id,
+            user.selected_organization_id,
+        )
+    except AgentLimitExceeded as exc:
+        return _error_result("agent_limit_exceeded", str(exc))
 
     capture_event(
         distinct_id=str(user.provider_id),
         event=PostHogEvent.WORKFLOW_CREATED,
         properties={
             "workflow_id": workflow.id,
-            "workflow_name": workflow.name,
             "source": "mcp",
             "organization_id": user.selected_organization_id,
         },

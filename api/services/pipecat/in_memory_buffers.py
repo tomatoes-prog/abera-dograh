@@ -1,5 +1,7 @@
 import asyncio
 import io
+import os
+import tempfile
 import wave
 from copy import deepcopy
 from datetime import UTC, datetime
@@ -16,7 +18,7 @@ from pipecat.utils.enums import RealtimeFeedbackType
 
 
 class InMemoryAudioBuffer:
-    """Buffer audio data in memory during a call, then encode to WAV bytes on disconnect."""
+    """Buffer PCM until disconnect; Abera spills long recordings to encrypted EBS."""
 
     def __init__(
         self,
@@ -31,6 +33,11 @@ class InMemoryAudioBuffer:
         self._num_channels = num_channels
         self._track = track
         self._chunks: List[bytes] = []
+        self._spool = (
+            tempfile.SpooledTemporaryFile(max_size=2 * 1024 * 1024, mode="w+b")
+            if os.getenv("DEPLOYMENT_MODE") == "abera"
+            else None
+        )
         self._lock = asyncio.Lock()
         self._total_size = 0
         self._max_size = 100 * 1024 * 1024  # 100MB limit
@@ -45,7 +52,10 @@ class InMemoryAudioBuffer:
                     f"Current: {self._total_size}, Attempted to add: {len(pcm_data)}"
                 )
                 raise MemoryError("Audio buffer size limit exceeded")
-            self._chunks.append(pcm_data)
+            if self._spool is None:
+                self._chunks.append(pcm_data)
+            else:
+                await asyncio.to_thread(self._spool.write, pcm_data)
             self._total_size += len(pcm_data)
             logger.trace(
                 f"Appended {len(pcm_data)} bytes to {self._track} audio buffer. "
@@ -55,30 +65,75 @@ class InMemoryAudioBuffer:
     async def to_wav_bytes(self) -> bytes:
         """Encode the buffered PCM data as an in-memory WAV file."""
         async with self._lock:
-            chunks = list(self._chunks)
             total_size = self._total_size
+            chunks = list(self._chunks) if self._spool is None else None
 
-        def _encode() -> bytes:
-            wav_io = io.BytesIO()
-            with wave.open(wav_io, "wb") as wf:
-                wf.setnchannels(self._num_channels)
-                wf.setsampwidth(2)  # 16-bit audio
-                wf.setframerate(self._sample_rate)
+            def _encode() -> bytes:
+                wav_io = io.BytesIO()
+                with wave.open(wav_io, "wb") as wf:
+                    wf.setnchannels(self._num_channels)
+                    wf.setsampwidth(2)  # 16-bit audio
+                    wf.setframerate(self._sample_rate)
+                    if self._spool is None:
+                        for chunk in chunks:
+                            wf.writeframes(chunk)
+                    else:
+                        self._spool.seek(0)
+                        while data := self._spool.read(1024 * 1024):
+                            wf.writeframes(data)
+                        self._spool.seek(0, io.SEEK_END)
+                return wav_io.getvalue()
 
-                # Concatenate all chunks
-                for chunk in chunks:
-                    wf.writeframes(chunk)
-            return wav_io.getvalue()
-
-        # Encoding is mostly memcpy but can touch ~100MB; keep it off the event loop
-        data = await asyncio.to_thread(_encode)
-        logger.info(f"Encoded {total_size} bytes of {self._track} audio")
+            # Encoding copies PCM; keep it off the event loop and exclude writes.
+            data = await asyncio.to_thread(_encode)
+        logger.debug(f"Encoded {total_size} bytes of {self._track} audio")
         return data
+
+    async def to_wav_tempfile(self) -> str:
+        """Write WAV in bounded chunks for a subsequent multipart file upload."""
+        async with self._lock:
+            if self._spool is None:
+                raise RuntimeError("File-backed WAV export requires managed recording")
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as output:
+                path = output.name
+
+            def _write() -> None:
+                try:
+                    with open(path, "wb") as output, wave.open(output, "wb") as wav:
+                        wav.setnchannels(self._num_channels)
+                        wav.setsampwidth(2)
+                        wav.setframerate(self._sample_rate)
+                        self._spool.seek(0)
+                        while chunk := self._spool.read(1024 * 1024):
+                            wav.writeframesraw(chunk)
+                except Exception:
+                    os.unlink(path)
+                    raise
+                finally:
+                    self._spool.seek(0, io.SEEK_END)
+
+            task = asyncio.create_task(asyncio.to_thread(_write))
+            try:
+                await asyncio.shield(task)
+            except asyncio.CancelledError:
+                try:
+                    await task
+                except Exception:
+                    pass
+                if os.path.exists(path):
+                    os.unlink(path)
+                raise
+            return path
+
+    async def close(self) -> None:
+        if self._spool is not None:
+            async with self._lock:
+                await asyncio.to_thread(self._spool.close)
 
     @property
     def is_empty(self) -> bool:
         """Check if the buffer is empty."""
-        return len(self._chunks) == 0
+        return self._total_size == 0
 
     @property
     def size(self) -> int:
@@ -112,6 +167,9 @@ class InMemoryRecordingBuffers:
             num_channels=1,
             track="bot",
         )
+
+    async def close(self) -> None:
+        await asyncio.gather(self.mixed.close(), self.user.close(), self.bot.close())
 
 
 class InMemoryLogsBuffer:

@@ -89,6 +89,23 @@ def get_test_database_url() -> str:
     return test_url
 
 
+@pytest.fixture
+def mps_enabled(monkeypatch):
+    """Explicit opt-in for tests of the legacy upstream integration only."""
+    from api import constants
+
+    monkeypatch.setattr(constants, "ENABLE_DOGRAH_MPS", True)
+    for name in (
+        "api.services.organization_bootstrap",
+        "api.services.quota_service",
+        "api.services.mps_billing",
+        "api.services.workflow_run_billing",
+    ):
+        module = sys.modules.get(name)
+        if module is not None:
+            monkeypatch.setattr(module, "ENABLE_DOGRAH_MPS", True)
+
+
 def get_base_database_url() -> str:
     """Get base database URL (postgres) for creating/dropping test database."""
     parsed = urlparse(get_test_database_url())

@@ -1,23 +1,25 @@
 "use client";
 
 import * as Sentry from "@sentry/nextjs";
-import NextError from "next/error";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+
+import { DEFAULT_UI_LOCALE, LOCALE_COOKIE, resolveUiLocale } from "@/i18n/config";
+import { CopyText,LocaleProvider } from "@/i18n/LocaleProvider";
 
 export default function GlobalError({ error }: { error: Error & { digest?: string } }) {
+  const [locale, setLocale] = useState(DEFAULT_UI_LOCALE);
   useEffect(() => {
     Sentry.captureException(error);
+    const cookie = document.cookie.split("; ").find(value => value.startsWith(LOCALE_COOKIE + "="))?.split("=")[1];
+    setLocale(resolveUiLocale(cookie, DEFAULT_UI_LOCALE));
   }, [error]);
-
-  return (
-    <html>
-      <body>
-        {/* `NextError` is the default Next.js error page component. Its type
-        definition requires a `statusCode` prop. However, since the App Router
-        does not expose status codes for errors, we simply pass 0 to render a
-        generic error message. */}
-        <NextError statusCode={0} />
-      </body>
-    </html>
-  );
+  return <html lang={locale}><body>
+    <LocaleProvider initialLocale={locale} key={locale}>
+      <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
+        <h1><CopyText text="Something went wrong" /></h1>
+        <p><CopyText text="Something went wrong. Please try again." /></p>
+        <button onClick={() => window.location.reload()}><CopyText text="Try again" /></button>
+      </main>
+    </LocaleProvider>
+  </body></html>;
 }

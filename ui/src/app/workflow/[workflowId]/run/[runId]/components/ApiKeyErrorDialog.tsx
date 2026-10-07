@@ -1,7 +1,11 @@
+"use client";
+
 import { AlertCircle, CreditCard, ExternalLink, Key } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useCopy } from "@/i18n/LocaleProvider";
+
 
 const SERVICE_KEYS_DOCS_URL = "https://docs.dograh.com/configurations/api-keys#service-keys";
 
@@ -24,21 +28,22 @@ export const ApiKeyErrorDialog = ({
     onNavigateToDevelopers,
     onNavigateToModelConfig,
 }: ApiKeyErrorDialogProps) => {
+    const copy = useCopy();
     const isBillingCreditsError = errorCode === 'insufficient_credits';
     const isServiceKeyOrgMismatch = errorCode === 'service_key_org_mismatch';
     const isQuotaError = isBillingCreditsError || errorCode === 'quota_exceeded';
 
     const title = isQuotaError
-        ? "Insufficient Credits"
+        ? copy("Insufficient Credits")
         : isServiceKeyOrgMismatch
-            ? "Service Token Account Mismatch"
-            : "API Configuration Error";
+            ? copy("Service Token Account Mismatch")
+            : copy("API Configuration Error");
     const icon = isQuotaError ? <CreditCard className="h-5 w-5 text-orange-500" /> : <Key className="h-5 w-5 text-red-500" />;
     const buttonText = isBillingCreditsError
-        ? "Go to Billing"
+        ? copy("Go to Billing")
         : isServiceKeyOrgMismatch
-            ? "Go to Developers"
-            : "Go to Model Configurations";
+            ? copy("Go to Developers")
+            : copy("Go to Model Configurations");
     const onNavigate = isBillingCreditsError
         ? onNavigateToBilling
         : isServiceKeyOrgMismatch
@@ -59,9 +64,7 @@ export const ApiKeyErrorDialog = ({
                             <div className="text-sm space-y-1">
                                 <p className="font-medium text-foreground">{error}</p>
                                 {isBillingCreditsError && (
-                                    <p className="text-muted-foreground">
-                                        Purchase credits from Billing to continue using Dograh-managed models.
-                                    </p>
+                                    <p className="text-muted-foreground">{copy("Purchase credits from Billing to continue using Dograh-managed models.")}</p>
                                 )}
                                 {isServiceKeyOrgMismatch && (
                                     <a
@@ -69,8 +72,7 @@ export const ApiKeyErrorDialog = ({
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="inline-flex items-center gap-0.5 text-muted-foreground underline"
-                                    >
-                                        Learn more <ExternalLink className="h-3 w-3" />
+                                    >{copy("Learn more ")}<ExternalLink className="h-3 w-3" />
                                     </a>
                                 )}
                             </div>
@@ -78,9 +80,7 @@ export const ApiKeyErrorDialog = ({
                     </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>
-                        Cancel
-                    </Button>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>{copy("Cancel")}</Button>
                     <Button onClick={onNavigate}>
                         {buttonText}
                     </Button>

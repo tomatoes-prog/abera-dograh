@@ -1,8 +1,12 @@
+"use client";
+
 import { useEffect, useState } from "react";
 
 import { getDispositionCodesApiV1OrganizationsDispositionCodesGet } from "@/client/sdk.gen";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { detailFromError } from "@/lib/apiError";
 import { useAuth } from "@/lib/auth";
+
 
 /**
  * Disposition codes available to the current organization, served by the
@@ -25,6 +29,7 @@ export function useDispositionCodes(): {
     systemCodes: string[];
     isLoading: boolean;
 } {
+    const copy = useCopy();
     const { user, loading: authLoading } = useAuth();
     const [codes, setCodes] = useState<string[]>([]);
     const [endTaskReasonCodes, setEndTaskReasonCodes] = useState<string[]>([]);
@@ -41,7 +46,7 @@ export function useDispositionCodes(): {
             try {
                 const response = await getDispositionCodesApiV1OrganizationsDispositionCodesGet();
                 if (response.error) {
-                    throw new Error(detailFromError(response.error, "Failed to load disposition codes"));
+                    throw new Error(copy(detailFromError(response.error, "Failed to load disposition codes")));
                 }
                 if (active) {
                     setCodes(response.data?.codes ?? []);
@@ -60,7 +65,7 @@ export function useDispositionCodes(): {
         return () => {
             active = false;
         };
-    }, [authLoading, user]);
+    }, [authLoading, copy, user]);
 
     return { codes, endTaskReasonCodes, systemCodes, isLoading };
 }

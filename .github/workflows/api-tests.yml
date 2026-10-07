@@ -50,10 +50,10 @@ jobs:
       # api/conftest.py creates test_db via the postgres admin DB.
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_db
       REDIS_URL: redis://localhost:6379/0
-      ENABLE_AWS_S3: "false"
-      # MINIO is not actually contacted by tests, but storage.py constructs
-      # the MinioFileSystem at import time and requires MINIO_PUBLIC_ENDPOINT.
-      MINIO_PUBLIC_ENDPOINT: http://localhost:9000
+      ENABLE_DOGRAH_MPS: "false"
+      ENABLE_TELEMETRY: "false"
+      AWS_EC2_METADATA_DISABLED: "true"
+      OSS_JWT_SECRET: "test-only-secret-never-use-in-production-64-chars"
       DEPLOYMENT_MODE: oss
       ENVIRONMENT: test
       LOG_LEVEL: DEBUG
@@ -83,17 +83,23 @@ jobs:
       - name: Install api and pipecat dependencies
         run: ./scripts/setup_requirements.sh --dev
 
+      - name: Install runtime audio and document tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ffmpeg poppler-utils antiword tesseract-ocr tesseract-ocr-spa tesseract-ocr-eng
+
       - name: Install ts_validator npm deps
         working-directory: api/mcp_server/ts_validator
-        run: npm install
+        run: npm ci
 
       - name: Run pytest
         working-directory: api
-        run: pytest tests/ -xvs
+        run: pytest tests/ -q --tb=short
 
   notify-slack-failure:
     needs: pytest
-    if: ${{ always() && needs.pytest.result == 'failure' }}
+    if: ${{ always() && vars.ENABLE_WORKFLOW_NOTIFICATIONS == 'true' && needs.pytest.result == 'failure' }}
     runs-on: ubuntu-latest
     env:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

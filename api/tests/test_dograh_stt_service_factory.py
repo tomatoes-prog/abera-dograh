@@ -2,6 +2,8 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
+
+pytestmark = pytest.mark.usefixtures("mps_enabled")
 from pipecat.services.settings import NOT_GIVEN
 from pipecat.transcriptions.language import Language
 

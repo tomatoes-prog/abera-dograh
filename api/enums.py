@@ -120,31 +120,15 @@ WORKFLOW_RUN_MODES_BY_CHANNEL: dict[str, tuple[str, ...]] = {
 
 
 class StorageBackend(Enum):
-    """Storage backend enumeration.
+    """S3 is supported; retain the legacy enum for explicit data migration."""
 
-    Currently supported backends:
-    - S3: Amazon S3
-    - MINIO: MinIO
-
-    Future extensibility: Additional backends like GCS, Azure can be added by:
-    1. Adding new enum values as strings
-    2. Implementing storage logic in services/storage.py
-    3. Database will automatically support new values via SQLAlchemy Enum type
-    """
-
-    # Currently implemented backends
-    S3 = "s3"  # AWS S3 for cloud deployments
-    MINIO = "minio"  # MinIO for local/OSS deployments
+    S3 = "s3"
+    MINIO = "minio"  # Historical database rows only, never a runtime backend.
 
     @classmethod
     def get_current_backend(cls):
-        """Get current backend based on ENABLE_AWS_S3 flag."""
-        from api.constants import ENABLE_AWS_S3
-
-        if ENABLE_AWS_S3:
-            return cls.S3
-        else:
-            return cls.MINIO
+        """All new files use S3."""
+        return cls.S3
 
 
 class WorkflowRunState(Enum):

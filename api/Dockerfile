@@ -2,7 +2,7 @@
 # Multi-stage Dockerfile
 # Stage 1: Builder - Install Python dependencies into a venv via uv
 # (mirrors .devcontainer/Dockerfile's venv-builder stage).
-FROM python:3.13-slim AS builder
+FROM python:3.13-slim@sha256:9d2e5553305c7c7b0097999bb17187c69b921ccd6bc9d40e4bb5ebe652c00285 AS builder
 
 WORKDIR /app
 
@@ -13,36 +13,31 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # uv (https://github.com/astral-sh/uv) for ~5-10x faster installs than pip.
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+COPY --from=ghcr.io/astral-sh/uv@sha256:61d393e44e249f2e4b526b6c7ddcecce245946826e608e11c93ad4f5bba55b21 /uv /uvx /usr/local/bin/
 
 # Build the venv at the path it will live at in the final image, so shebangs
 # and console-scripts inside the venv reference the correct runtime location
 # after COPY --from.
 ENV VIRTUAL_ENV=/opt/venv \
-    PATH=/opt/venv/bin:$PATH
+    PATH=/opt/venv/bin:$PATH \
+    TIKTOKEN_CACHE_DIR=/opt/venv/tiktoken_data
 RUN python -m venv "$VIRTUAL_ENV"
 
 # Layer 1: API deps. Cache invalidates only when requirements.txt changes.
 RUN --mount=type=bind,source=api/requirements.txt,target=/tmp/req.txt \
     --mount=type=cache,target=/root/.cache/uv \
     uv pip install -r /tmp/req.txt
+RUN python -c "import tiktoken; tiktoken.get_encoding('cl100k_base')"
 
 # Layer 2: pipecat deps. Cache invalidates when pipecat source changes.
-# After installing pipecat, two hardening tweaks:
-#   1. Swap opencv-python (pulled by pipecat[webrtc]) for opencv-python-headless.
-#      The non-headless build links against X11/Qt (libxcb*); without those
-#      shared libs in the image, `import cv2` fails at runtime.
-#   2. Pre-download NLTK's punkt_tab tokenizer so pipecat's text processing
-#      doesn't hit the network on first agent run. NLTK auto-finds it under
-#      sys.prefix/nltk_data, so it travels with the venv on COPY.
+# Voice-only WebRTC: aiortc is installed explicitly in requirements.txt.
+# Avoid the upstream webrtc extra, which also installs OpenCV for video.
 RUN --mount=type=bind,source=pipecat,target=/tmp/pipecat,rw \
     --mount=type=cache,target=/root/.cache/uv \
-    uv pip install '/tmp/pipecat[cartesia,deepgram,openai,elevenlabs,groq,google,azure,sarvam,soundfile,silero,webrtc,speechmatics,openrouter,camb,mcp,inworld,smallest,aws-nova-sonic]' \
- && uv pip uninstall opencv-python \
- && uv pip install opencv-python-headless \
- && python -c "import nltk; nltk.download('punkt_tab', download_dir='/opt/venv/nltk_data', quiet=True)"
+    uv pip install '/tmp/pipecat[cartesia,deepgram,openai,elevenlabs,groq,google,azure,sarvam,soundfile,silero,speechmatics,openrouter,camb,mcp,inworld,smallest,aws-nova-sonic]'
 
 # Strip cache files, test/example dirs, and type stubs from the venv
+RUN uv pip uninstall pip setuptools || true
 RUN find /opt/venv -type f -name '*.pyc' -delete && \
     find /opt/venv -type d -name '__pycache__' -prune -exec rm -rf {} + && \
     find /opt/venv -type f -name '*.pyo' -delete && \
@@ -51,87 +46,79 @@ RUN find /opt/venv -type f -name '*.pyc' -delete && \
 
 # Stage 2: Node deps for ts_validator (built with full node:22-slim, only
 # node_modules is copied into the runner).
-FROM node:22-slim AS ts-deps
+FROM node:22-slim@sha256:43ac6c60b8f89723f746e8a92ce91abd5017e627ce1ddfe4238355d3a30b772c AS ts-deps
 WORKDIR /ts_validator
 COPY api/mcp_server/ts_validator/package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
+RUN apt-get update && apt-get install -y --no-install-recommends binutils \
+ && cp /usr/local/bin/node /ts_validator/node-runtime \
+ && strip --strip-unneeded /ts_validator/node-runtime
 
-# Stage 3: Static ffmpeg binary (avoids apt ffmpeg pulling mesa/libllvm for
-# hardware acceleration we don't use server-side).
-#
-# Source: BtbN/FFmpeg-Builds, served from GitHub's release-assets CDN (fast,
-# highly available, multi-arch). We pin a specific build for reproducibility,
-# but to a *month-end* autobuild tag — not a daily one. BtbN prunes daily
-# autobuilds after ~2 weeks (the previous pin was a daily tag and started
-# 404ing once GC'd), but keeps one month-end snapshot per month long-term
-# (~2 years back). A dated tag's assets are immutable, so the per-arch sha256
-# below never rots: builds stay reproducible AND integrity-verified.
-#
-# To upgrade ffmpeg: bump BTBN_TAG + BTBN_REV to a newer month-end autobuild
-# and refresh the two sha256s. No download needed — read tag, revision and
-# per-asset sha256 straight from the GitHub release-asset metadata:
-#   gh api repos/BtbN/FFmpeg-Builds/releases/tags/<tag> \
-#     --jq '.assets[] | select(.name|test("(linux64|linuxarm64)-gpl\\.tar\\.xz$")) | "\(.name) \(.digest)"'
-#
-# `--speed-limit/--speed-time` aborts a *stalled* transfer after 30s of <1KB/s
-# (the cause of "stuck" builds) without killing a slow-but-progressing
-# download; `--max-time` is a hard backstop; `--retry` rides out transient CDN
-# hiccups. The archive nests binaries under bin/, so locate them with `find`.
-FROM debian:trixie-slim AS ffmpeg-static
-ARG TARGETARCH
-ARG BTBN_TAG=autobuild-2026-05-31-13-22
-ARG BTBN_REV=N-124714-g49a77d37be
-RUN set -eu ; \
-    apt-get update && apt-get install -y --no-install-recommends \
-        curl ca-certificates xz-utils ; \
-    rm -rf /var/lib/apt/lists/* ; \
-    case "${TARGETARCH}" in \
-      amd64) btbn_arch=linux64 ; \
-             sha256=ee052121296e6479325e09c6097d48e72a4af472d18c2b94388b5405dcde6cce ;; \
-      arm64) btbn_arch=linuxarm64 ; \
-             sha256=e97545305043794cdf7b698d713e29291464e0c35bb8e0f3ff1f62e4c56eedd6 ;; \
-      *) echo "unsupported TARGETARCH: ${TARGETARCH}" >&2 ; exit 1 ;; \
-    esac ; \
-    url="https://github.com/BtbN/FFmpeg-Builds/releases/download/${BTBN_TAG}/ffmpeg-${BTBN_REV}-${btbn_arch}-gpl.tar.xz" ; \
-    mkdir -p /tmp/ffmpeg ; cd /tmp/ffmpeg ; \
-    echo "Downloading ffmpeg (${BTBN_TAG}) from ${url}" ; \
-    curl -fsSL --connect-timeout 20 --speed-limit 1024 --speed-time 30 \
-         --max-time 600 --retry 3 --retry-delay 5 --retry-all-errors \
-         -o ffmpeg.tar.xz "${url}" ; \
-    echo "${sha256}  ffmpeg.tar.xz" | sha256sum -c - ; \
-    tar -xJf ffmpeg.tar.xz ; \
-    ffmpeg_bin="$(find /tmp/ffmpeg -type f -name ffmpeg | head -n1)" ; \
-    ffprobe_bin="$(find /tmp/ffmpeg -type f -name ffprobe | head -n1)" ; \
-    [ -n "${ffmpeg_bin}" ] && [ -n "${ffprobe_bin}" ] ; \
-    mv "${ffmpeg_bin}" "${ffprobe_bin}" /usr/local/bin/ ; \
-    chmod +x /usr/local/bin/ffmpeg /usr/local/bin/ffprobe ; \
-    rm -rf /tmp/ffmpeg
+# Build an audio-only FFmpeg; compilers and source never enter the runner.
+# Source archive is pinned by SHA256; both runtime architectures use the same source.
+FROM debian:trixie-slim@sha256:a99cfc517144bc59b1978475ec53b46ecabec7e43635402ee5b77cc54cd1b20a AS ffmpeg-static
+ARG FFMPEG_VERSION=8.0.2
+ARG FFMPEG_SHA256=5d16962332603c427b3d0887fc12b9166d6ee2cb1108b1865dd2d5eb06a09505
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential pkg-config nasm curl ca-certificates xz-utils libopus-dev libmp3lame-dev \
+ && rm -rf /var/lib/apt/lists/*
+RUN set -eu; \
+    curl -fsSL --retry 3 --connect-timeout 20 --max-time 300 \
+      "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz" -o /tmp/ffmpeg.tar.xz; \
+    echo "${FFMPEG_SHA256}  /tmp/ffmpeg.tar.xz" | sha256sum -c -; \
+    mkdir /tmp/ffmpeg; tar -xJf /tmp/ffmpeg.tar.xz -C /tmp/ffmpeg --strip-components=1; \
+    cd /tmp/ffmpeg; \
+    ./configure --prefix=/out --disable-everything --disable-autodetect \
+      --disable-debug --disable-doc --disable-network --disable-avdevice \
+      --disable-shared --enable-static --pkg-config-flags=--static \
+      --enable-ffmpeg --enable-ffprobe --enable-avcodec --enable-avformat --enable-avfilter --enable-swresample \
+      --enable-protocol=file,pipe \
+      --enable-demuxer=wav,mp3,ogg,flac,mov,aac,matroska,pcm_s16le,pcm_s16be \
+      --enable-muxer=wav,mp3,ogg,flac,pcm_s16le,pcm_s16be,adts \
+      --enable-decoder=pcm_s16le,pcm_s16be,pcm_s24le,pcm_s24be,pcm_s32le,pcm_f32le,pcm_f64le,pcm_alaw,pcm_mulaw,mp3,mp3float,aac,flac,vorbis,opus \
+      --enable-parser=mpegaudio,aac,flac,opus,vorbis \
+      --enable-libopus --enable-libmp3lame --enable-encoder=pcm_s16le,pcm_s16be,flac,aac,libopus,libmp3lame \
+      --enable-filter=aresample,aformat,anull,atrim,asetpts,concat,volume,adelay; \
+    make -j2; make install; \
+    mkdir -p /out/licenses; cp COPYING.LGPLv2.1 COPYING.LGPLv3 LICENSE.md /out/licenses/
+
+# Prepare application files without tests or developer artifacts in the image.
+FROM python:3.13-slim@sha256:9d2e5553305c7c7b0097999bb17187c69b921ccd6bc9d40e4bb5ebe652c00285 AS source
+WORKDIR /source
+COPY api ./api
+RUN find api -type d \( -name tests -o -name __pycache__ -o -name .pytest_cache \) -prune -exec rm -rf {} + \
+ && rm -rf api/load_tests api/conftest.py api/pytest.ini api/requirements.dev.txt
 
 # Stage 4: Runtime - Minimal image with only runtime dependencies
-FROM python:3.13-slim AS runner
+FROM python:3.13-slim@sha256:9d2e5553305c7c7b0097999bb17187c69b921ccd6bc9d40e4bb5ebe652c00285 AS runner
 
 WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libopus0 libmp3lame0 antiword poppler-utils tesseract-ocr tesseract-ocr-spa tesseract-ocr-eng \
+ && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd --system dograh \
  && useradd --system --gid dograh --no-log-init --home-dir /app --shell /usr/sbin/nologin dograh \
  && chown dograh:dograh /app
 
 # Static ffmpeg + ffprobe (used by audio_converter, audio_file_cache, etc.)
-COPY --from=ffmpeg-static /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg
-COPY --from=ffmpeg-static /usr/local/bin/ffprobe /usr/local/bin/ffprobe
+COPY --from=ffmpeg-static /out/bin/ffmpeg /usr/local/bin/ffmpeg
+COPY --from=ffmpeg-static /out/bin/ffprobe /usr/local/bin/ffprobe
+COPY --from=ffmpeg-static /out/licenses /usr/share/licenses/ffmpeg
 
 # Node.js 22 binary only (ts_validator subprocess needs node >=22.6 for
 # native TypeScript stripping; see api/mcp_server/ts_bridge.py). python:3.13-slim
 # already provides libstdc++6, libgcc-s1, and ca-certificates that node needs.
-COPY --from=node:22-slim /usr/local/bin/node /usr/local/bin/node
+COPY --from=ts-deps /ts_validator/node-runtime /usr/local/bin/node
 
-# Copy the populated venv from the builder stage. NLTK data lives at
-# /opt/venv/nltk_data and is auto-discovered via sys.prefix.
+# Copy the populated venv from the builder stage.
 COPY --from=builder /opt/venv /opt/venv
 
 # Activate the venv for subsequent RUN/CMD layers.
 ENV VIRTUAL_ENV=/opt/venv \
-    PATH=/opt/venv/bin:$PATH
+    PATH=/opt/venv/bin:$PATH \
+    TIKTOKEN_CACHE_DIR=/opt/venv/tiktoken_data
 
 # Set Python to not generate .pyc files in runtime
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -140,7 +127,7 @@ ENV PYTHONUNBUFFERED=1
 
 # Copy application code (chown at copy-time avoids a duplicate /app layer
 # from a later `RUN chown -R`, which would double the on-disk size of /app).
-COPY --chown=dograh:dograh ./api ./api
+COPY --from=source --chown=dograh:dograh /source/api ./api
 
 # Entrypoint scripts.
 #   start_services_docker.sh — single-container (docker-compose) entrypoint
@@ -161,6 +148,10 @@ COPY --chown=dograh:dograh \
      ./scripts/drain_web.sh \
      ./scripts/
 
+# Existing Windows checkouts can retain CRLF despite .gitattributes.
+# Normalize entrypoints inside the image before Linux executes their shebangs.
+RUN sed -i 's/\r$//' ./scripts/*.sh
+
 # ts_validator Node deps (built in ts-deps stage with full node:22-slim image).
 # The validator runs as a short-lived subprocess from api/mcp_server/ts_bridge.py.
 COPY --from=ts-deps --chown=dograh:dograh /ts_validator/node_modules ./api/mcp_server/ts_validator/node_modules
@@ -168,6 +159,7 @@ COPY --from=ts-deps --chown=dograh:dograh /ts_validator/node_modules ./api/mcp_s
 # Product documentation — read at runtime by the MCP docs tools
 # (search_dograh_docs / fetch_dograh_doc) so agents can learn Dograh.
 COPY --chown=dograh:dograh ./docs ./docs
+COPY --chown=dograh:dograh ./LICENSE /usr/share/licenses/dograh/LICENSE
 
 ENV PYTHONPATH=/app
 
@@ -181,3 +173,19 @@ EXPOSE 8000
 
 # Run the FastAPI app with uvicorn
 CMD ["./scripts/start_services_docker.sh"]
+
+# Explicit test target; production builds select runner and contain no pytest.
+FROM runner AS test
+USER root
+COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
+RUN uv pip install pytest pytest-asyncio pytest-mock pytest-aiohttp hypothesis faker
+COPY api/tests ./api/tests
+COPY api/load_tests ./api/load_tests
+COPY api/conftest.py api/pytest.ini ./api/
+COPY sdk/python/src ./sdk/python/src
+COPY sdk/typescript ./sdk/typescript
+COPY pipecat/src/pipecat/tests /opt/venv/lib/python3.13/site-packages/pipecat/tests
+USER dograh
+
+# Keep the default output as the production image.
+FROM runner AS production

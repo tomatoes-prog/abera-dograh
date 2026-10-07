@@ -80,7 +80,7 @@
 ##### ローカルマシンに Dograh をダウンロードしてセットアップ
 
 > **注記**
-> 製品改善のため、匿名の利用状況データを収集します。無効にするには、起動スクリプトを実行する前に `ENABLE_TELEMETRY=false` を設定してください。
+> 利用状況分析とエラー報告は任意で、初期設定では無効です。有効にするには、起動スクリプトの前に `ENABLE_TELEMETRY=true` を設定してください。
 
 > **注記**
 > リモートサーバーでプラットフォームを実行したい場合は、[ドキュメント](https://docs.dograh.com/deployment/docker#option-2:-remote-server-deployment)を参照してください。

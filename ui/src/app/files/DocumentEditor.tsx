@@ -19,10 +19,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { useCopy } from "@/i18n/LocaleProvider";
 import { detailFromError } from '@/lib/apiError';
 import logger from '@/lib/logger';
 
 import ExternalProcessingNotice from './ExternalProcessingNotice';
+
 
 const EDITABLE_EXTENSIONS = ['.txt', '.md'];
 
@@ -38,6 +40,7 @@ interface DocumentEditorProps {
 }
 
 export default function DocumentEditor({ doc, onClose, onSaved }: DocumentEditorProps) {
+    const copy = useCopy();
   const [content, setContent] = useState('');
   const [savedContent, setSavedContent] = useState('');
   const [fileHash, setFileHash] = useState('');
@@ -62,7 +65,7 @@ export default function DocumentEditor({ doc, onClose, onSaved }: DocumentEditor
         });
         if (cancelled) return;
         if (response.error || !response.data) {
-          setLoadError(detailFromError(response.error, 'Failed to load document'));
+          setLoadError(copy(detailFromError(response.error, 'Failed to load document')));
           return;
         }
         setContent(response.data.content);
@@ -81,7 +84,7 @@ export default function DocumentEditor({ doc, onClose, onSaved }: DocumentEditor
     return () => {
       cancelled = true;
     };
-  }, [documentUuid]);
+  }, [copy, documentUuid]);
 
   const isDirty = content !== savedContent;
   // Saving unchanged text re-runs processing, so it doubles as a retry.
@@ -92,7 +95,7 @@ export default function DocumentEditor({ doc, onClose, onSaved }: DocumentEditor
 
   const handleOpenChange = (open: boolean) => {
     if (open || isSaving) return;
-    if (isDirty && !confirm('Discard your unsaved changes?')) return;
+    if (isDirty && !confirm(copy("Discard your unsaved changes?"))) return;
     onClose();
   };
 
@@ -106,13 +109,13 @@ export default function DocumentEditor({ doc, onClose, onSaved }: DocumentEditor
         body: { content, expected_file_hash: fileHash },
       });
       if (response.error || !response.data) {
-        setSaveError(detailFromError(response.error, 'Failed to save document'));
+        setSaveError(copy(detailFromError(response.error, 'Failed to save document')));
         return;
       }
       toast.success(
         response.data.processing_status === 'pending'
-          ? `Saved "${doc.filename}". Processing started.`
-          : `No changes to save in "${doc.filename}".`
+          ? copy("Saved \"{value0}\". Processing started.", { value0: doc.filename })
+          : copy("No changes to save in \"{value0}\".", { value0: doc.filename })
       );
       onSaved();
     } catch (err) {
@@ -130,8 +133,8 @@ export default function DocumentEditor({ doc, onClose, onSaved }: DocumentEditor
           <DialogTitle className="truncate pr-6">{doc?.filename}</DialogTitle>
           <DialogDescription>
             {isChunked
-              ? 'Saving re-splits and re-embeds this document. Agents keep using the current version until that finishes.'
-              : 'Agents keep using the current version until the saved text finishes processing, usually a few seconds.'}
+              ? copy("Saving re-splits and re-embeds this document. Agents keep using the current version until that finishes.")
+              : copy("Agents keep using the current version until the saved text finishes processing, usually a few seconds.")}
           </DialogDescription>
         </DialogHeader>
 
@@ -143,7 +146,7 @@ export default function DocumentEditor({ doc, onClose, onSaved }: DocumentEditor
             className="flex h-[60vh] w-full flex-col items-center justify-center gap-2 rounded-md border border-input text-sm text-muted-foreground"
           >
             <Loader2 className="h-6 w-6 animate-spin" />
-            <span>Loading document...</span>
+            <span>{copy("Loading document...")}</span>
           </div>
         ) : loadError ? (
           <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
@@ -162,11 +165,9 @@ export default function DocumentEditor({ doc, onClose, onSaved }: DocumentEditor
         {saveError && <p className="text-sm text-destructive">{saveError}</p>}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isSaving}>
-            Cancel
-          </Button>
+          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isSaving}>{copy("Cancel")}</Button>
           <Button onClick={handleSave} disabled={!canSave}>
-            {isSaving ? 'Saving...' : isChunked ? 'Save & re-index' : 'Save'}
+            {isSaving ? copy("Saving...") : isChunked ? copy("Save & re-index") : copy("Save")}
           </Button>
         </DialogFooter>
       </DialogContent>

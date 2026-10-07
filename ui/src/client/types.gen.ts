@@ -606,6 +606,8 @@ export type ByokPipelineAiModelConfiguration = {
     } & OpenAillmService) | ({
         provider: 'atlascloud';
     } & AtlasCloudLlmService) | ({
+        provider: 'hopper';
+    } & HopperLlmConfiguration) | ({
         provider: 'google_vertex';
     } & GoogleVertexLlmConfiguration) | ({
         provider: 'groq';
@@ -706,6 +708,8 @@ export type ByokPipelineAiModelConfiguration = {
     embeddings?: ({
         provider: 'openai';
     } & OpenAiEmbeddingsConfiguration) | ({
+        provider: 'openai_compatible';
+    } & OpenAiCompatibleEmbeddingsConfiguration) | ({
         provider: 'openrouter';
     } & OpenRouterEmbeddingsConfiguration) | ({
         provider: 'azure';
@@ -744,6 +748,8 @@ export type ByokRealtimeAiModelConfiguration = {
     } & OpenAillmService) | ({
         provider: 'atlascloud';
     } & AtlasCloudLlmService) | ({
+        provider: 'hopper';
+    } & HopperLlmConfiguration) | ({
         provider: 'google_vertex';
     } & GoogleVertexLlmConfiguration) | ({
         provider: 'groq';
@@ -772,6 +778,8 @@ export type ByokRealtimeAiModelConfiguration = {
     embeddings?: ({
         provider: 'openai';
     } & OpenAiEmbeddingsConfiguration) | ({
+        provider: 'openai_compatible';
+    } & OpenAiCompatibleEmbeddingsConfiguration) | ({
         provider: 'openrouter';
     } & OpenRouterEmbeddingsConfiguration) | ({
         provider: 'azure';
@@ -1302,6 +1310,20 @@ export type CartesiaTtsConfiguration = {
      * Cartesia language code for TTS synthesis (e.g. 'en', 'tr', 'fr', 'de').
      */
     language?: string;
+};
+
+/**
+ * ChangePasswordRequest
+ */
+export type ChangePasswordRequest = {
+    /**
+     * Current Password
+     */
+    current_password: string;
+    /**
+     * New Password
+     */
+    new_password: string;
 };
 
 /**
@@ -2395,6 +2417,10 @@ export type DocumentUploadRequestSchema = {
      */
     filename: string;
     /**
+     * File Size Bytes
+     */
+    file_size_bytes?: number | null;
+    /**
      * Mime Type
      *
      * MIME type of the file
@@ -3340,6 +3366,10 @@ export type HealthResponse = {
      */
     signup_enabled: boolean;
     /**
+     * Dograh Mps Enabled
+     */
+    dograh_mps_enabled?: boolean;
+    /**
      * Stack Project Id
      */
     stack_project_id?: string | null;
@@ -3347,6 +3377,28 @@ export type HealthResponse = {
      * Stack Publishable Client Key
      */
     stack_publishable_client_key?: string | null;
+};
+
+/**
+ * Hopper
+ */
+export type HopperLlmConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'hopper';
+    /**
+     * Api Key
+     *
+     * API key from your Hopper console.
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Hopper chat model.
+     */
+    model?: string;
 };
 
 /**
@@ -4414,6 +4466,34 @@ export type OnboardingStateUpdate = {
 };
 
 /**
+ * OpenAI-compatible
+ *
+ * Use your provider URL, API key and embedding model. The model must return 1536-dimensional vectors.
+ */
+export type OpenAiCompatibleEmbeddingsConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'openai_compatible';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Embedding model name supplied by your provider.
+     */
+    model: string;
+    /**
+     * Base Url
+     *
+     * Provider API base URL, including its version path, for example https://provider.example/v1. Do not include /embeddings or an API key.
+     */
+    base_url: string;
+};
+
+/**
  * OpenAI
  */
 export type OpenAiEmbeddingsConfiguration = {
@@ -5064,7 +5144,7 @@ export type ProcessDocumentRequestSchema = {
      *
      * Retrieval mode: 'chunked' for vector search or 'full_document' for full text retrieval
      */
-    retrieval_mode?: string;
+    retrieval_mode?: 'chunked' | 'full_document';
 };
 
 /**
@@ -5733,6 +5813,12 @@ export type SarvamLlmConfiguration = {
      * Sarvam chat model.
      */
     model?: string;
+    /**
+     * Base Url
+     *
+     * Sarvam API base URL.
+     */
+    base_url?: string;
     /**
      * Temperature
      *
@@ -7177,6 +7263,18 @@ export type TransferAgentToolDefinition = {
  */
 export type TransferCallConfig = {
     /**
+     * Introduction Enabled
+     *
+     * Play a generated introduction in the agent's voice to both parties before connecting them. Supported for Twilio calls with a TTS provider. Realtime speech-to-speech agents and synthesis failures skip the introduction.
+     */
+    introduction_enabled?: boolean;
+    /**
+     * Introduction Prompt
+     *
+     * Instructions for the transfer introduction, including language.
+     */
+    introduction_prompt?: string;
+    /**
      * Destination Source
      *
      * Whether the destination is static/template, resolved by HTTP, or selected by ordered gathered/initial-context mapping rules.
@@ -7873,6 +7971,36 @@ export type VobizConfigurationRequest = {
 };
 
 /**
+ * VoiceCatalogueRequest
+ */
+export type VoiceCatalogueRequest = {
+    /**
+     * Api Key
+     */
+    api_key?: string | null;
+    /**
+     * Model
+     */
+    model?: string | null;
+    /**
+     * Language
+     */
+    language?: string | null;
+    /**
+     * Q
+     */
+    q?: string | null;
+    /**
+     * Gender
+     */
+    gender?: string | null;
+    /**
+     * Accent
+     */
+    accent?: string | null;
+};
+
+/**
  * VoiceFacets
  *
  * Distinct selector values across a provider's full voice catalog.
@@ -8127,6 +8255,12 @@ export type WorkflowConfigurationDefaults = {
      * Context Compaction Enabled
      */
     context_compaction_enabled?: boolean;
+    /**
+     * Realtime History Compaction Turns
+     *
+     * Realtime only: summarize and delete server-side history every N completed turns, keeping recent turns verbatim. 0 disables.
+     */
+    realtime_history_compaction_turns?: number;
     /**
      * Tts Cache Enabled
      *
@@ -11244,6 +11378,50 @@ export type GetVoicesApiV1UserConfigurationsVoicesProviderGetResponses = {
 };
 
 export type GetVoicesApiV1UserConfigurationsVoicesProviderGetResponse = GetVoicesApiV1UserConfigurationsVoicesProviderGetResponses[keyof GetVoicesApiV1UserConfigurationsVoicesProviderGetResponses];
+
+export type QueryVoicesApiV1UserConfigurationsVoicesProviderPostData = {
+    body: VoiceCatalogueRequest;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path: {
+        /**
+         * Provider
+         */
+        provider: 'elevenlabs' | 'deepgram' | 'sarvam' | 'cartesia' | 'dograh' | 'rime';
+    };
+    query?: never;
+    url: '/api/v1/user/configurations/voices/{provider}';
+};
+
+export type QueryVoicesApiV1UserConfigurationsVoicesProviderPostErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type QueryVoicesApiV1UserConfigurationsVoicesProviderPostError = QueryVoicesApiV1UserConfigurationsVoicesProviderPostErrors[keyof QueryVoicesApiV1UserConfigurationsVoicesProviderPostErrors];
+
+export type QueryVoicesApiV1UserConfigurationsVoicesProviderPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: VoicesResponse;
+};
+
+export type QueryVoicesApiV1UserConfigurationsVoicesProviderPostResponse = QueryVoicesApiV1UserConfigurationsVoicesProviderPostResponses[keyof QueryVoicesApiV1UserConfigurationsVoicesProviderPostResponses];
 
 export type GetCampaignTrafficStatsApiV1CampaignCampaignIdTrafficStatsGetData = {
     body?: never;
@@ -16567,6 +16745,43 @@ export type GetCurrentUserApiV1AuthMeGetResponses = {
 };
 
 export type GetCurrentUserApiV1AuthMeGetResponse = GetCurrentUserApiV1AuthMeGetResponses[keyof GetCurrentUserApiV1AuthMeGetResponses];
+
+export type ChangePasswordApiV1AuthPasswordChangePostData = {
+    body: ChangePasswordRequest;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/password/change';
+};
+
+export type ChangePasswordApiV1AuthPasswordChangePostErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ChangePasswordApiV1AuthPasswordChangePostError = ChangePasswordApiV1AuthPasswordChangePostErrors[keyof ChangePasswordApiV1AuthPasswordChangePostErrors];
+
+export type ChangePasswordApiV1AuthPasswordChangePostResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
 
 export type ListNodeTypesApiV1NodeTypesGetData = {
     body?: never;

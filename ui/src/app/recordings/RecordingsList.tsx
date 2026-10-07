@@ -15,10 +15,15 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useOrganizationTimezone } from "@/hooks/useOrganizationTimezone";
+import { useCopy } from "@/i18n/LocaleProvider";
+import { useUiLocale } from "@/i18n/LocaleProvider";
 import { formatDateTime } from "@/lib/dateTime";
 import logger from "@/lib/logger";
 
+
 export default function RecordingsList({ refreshKey }: { refreshKey?: number }) {
+    const { locale } = useUiLocale();
+    const copy = useCopy();
     const organizationTimezone = useOrganizationTimezone();
     const [recordings, setRecordings] = useState<RecordingResponseSchema[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -47,19 +52,19 @@ export default function RecordingsList({ refreshKey }: { refreshKey?: number }) 
 
             setRecordings(response.data.recordings);
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to fetch recordings");
+            setError(err instanceof Error ? err.message : copy("Failed to fetch recordings"));
             logger.error("Error fetching recordings:", err);
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [copy]);
 
     useEffect(() => {
         fetchRecordings();
     }, [fetchRecordings, refreshKey]);
 
     const handleDelete = async (recordingId: string) => {
-        if (!confirm("Are you sure you want to delete this recording?")) return;
+        if (!confirm(copy("Are you sure you want to delete this recording?"))) return;
 
         try {
             const response = await deleteRecordingApiV1WorkflowRecordingsRecordingIdDelete({
@@ -70,10 +75,10 @@ export default function RecordingsList({ refreshKey }: { refreshKey?: number }) 
                 throw new Error("Failed to delete recording");
             }
 
-            toast.success("Recording deleted");
+            toast.success(copy("Recording deleted"));
             fetchRecordings();
         } catch (err) {
-            toast.error(err instanceof Error ? err.message : "Failed to delete recording");
+            toast.error(err instanceof Error ? err.message : copy("Failed to delete recording"));
             logger.error("Error deleting recording:", err);
         }
     };
@@ -82,7 +87,7 @@ export default function RecordingsList({ refreshKey }: { refreshKey?: number }) 
         try {
             await togglePlayback(rec.recording_id, rec.storage_key, rec.storage_backend);
         } catch {
-            toast.error("Failed to play recording");
+            toast.error(copy("Failed to play recording"));
         }
     };
 
@@ -125,7 +130,7 @@ export default function RecordingsList({ refreshKey }: { refreshKey?: number }) 
                 throw new Error(errData?.detail || "Failed to update recording ID");
             }
 
-            toast.success(`Recording ID updated to "${newId}". All workflow references have been updated.`);
+            toast.success(copy("Recording ID updated to \"{value0}\". All workflow references have been updated.", {value0: newId}));
             cancelEditing();
             fetchRecordings();
         } catch (err) {
@@ -175,7 +180,7 @@ export default function RecordingsList({ refreshKey }: { refreshKey?: number }) 
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder="Search by filename, transcript, or ID..."
+                        placeholder={copy("Search by filename, transcript, or ID...")}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="pl-10"
@@ -193,8 +198,8 @@ export default function RecordingsList({ refreshKey }: { refreshKey?: number }) 
 
             {/* Results count */}
             <div className="text-sm text-muted-foreground">
-                {filteredRecordings.length} recording{filteredRecordings.length !== 1 ? "s" : ""}
-                {searchQuery && ` matching "${searchQuery}"`}
+                {filteredRecordings.length}{copy(" recording")}{filteredRecordings.length !== 1 ? "s" : ""}
+                {searchQuery && copy(" matching \"{value0}\"", {value0: searchQuery})}
             </div>
 
             {/* Recordings List */}
@@ -203,8 +208,8 @@ export default function RecordingsList({ refreshKey }: { refreshKey?: number }) 
                     <AudioLines className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                     <p className="text-muted-foreground">
                         {searchQuery
-                            ? "No recordings match your search"
-                            : "No recordings yet"}
+                            ? copy("No recordings match your search")
+                            : copy("No recordings yet")}
                     </p>
                 </div>
             ) : (
@@ -269,9 +274,7 @@ export default function RecordingsList({ refreshKey }: { refreshKey?: number }) 
                                                         className="h-6 px-1.5 text-xs text-muted-foreground gap-1"
                                                         onClick={() => startEditing(rec)}
                                                     >
-                                                        <Pencil className="w-3 h-3" />
-                                                        Edit ID
-                                                    </Button>
+                                                        <Pencil className="w-3 h-3" />{copy("Edit ID")}</Button>
                                                 </div>
                                             )}
                                         </div>
@@ -286,7 +289,7 @@ export default function RecordingsList({ refreshKey }: { refreshKey?: number }) 
                                             {rec.transcript}
                                         </p>
                                         <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                                            <span>{formatDateTime(rec.created_at, organizationTimezone)}</span>
+                                            <span>{formatDateTime(rec.created_at, organizationTimezone, locale)}</span>
                                         </div>
                                     </div>
                                 </div>

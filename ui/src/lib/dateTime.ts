@@ -4,8 +4,8 @@ export function getLocalTimezone() {
 
 type DateInput = Date | number | string;
 
-export function formatDateTime(value: DateInput, timezone?: string | null) {
-    return new Date(value).toLocaleString('en-US', {
+export function formatDateTime(value: DateInput, timezone?: string | null, locale = "en") {
+    return new Date(value).toLocaleString(locale, {
         timeZone: timezone || getLocalTimezone(),
         year: 'numeric',
         month: 'short',
@@ -16,8 +16,8 @@ export function formatDateTime(value: DateInput, timezone?: string | null) {
     });
 }
 
-export function formatDate(value: DateInput, timezone?: string | null) {
-    return new Date(value).toLocaleDateString('en-US', {
+export function formatDate(value: DateInput, timezone?: string | null, locale = "en") {
+    return new Date(value).toLocaleDateString(locale, {
         timeZone: timezone || getLocalTimezone(),
         year: 'numeric',
         month: 'short',
@@ -25,21 +25,21 @@ export function formatDate(value: DateInput, timezone?: string | null) {
     });
 }
 
-export function formatCalendarDate(value: string) {
+export function formatCalendarDate(value: string, locale = "en") {
     const calendarDate = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
     if (!calendarDate) {
-        return formatDate(value, 'UTC');
+        return formatDate(value, 'UTC', locale);
     }
 
     const [, year, month, day] = calendarDate;
     return formatDate(
         Date.UTC(Number(year), Number(month) - 1, Number(day)),
-        'UTC',
+        'UTC', locale,
     );
 }
 
-export function formatLocalDateTime(value: Date) {
-    return `${value.toLocaleDateString()} ${value.toLocaleTimeString([], {
+export function formatLocalDateTime(value: Date, locale = "en") {
+    return `${value.toLocaleDateString(locale)} ${value.toLocaleTimeString(locale, {
         hour: '2-digit',
         minute: '2-digit',
     })}`;

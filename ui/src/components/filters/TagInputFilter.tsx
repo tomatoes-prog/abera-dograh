@@ -1,8 +1,12 @@
+"use client";
+
 import { ChangeEvent, useEffect, useState } from "react";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { MultiSelectValue } from "@/types/filters";
+
 
 interface TagInputFilterProps {
   value: MultiSelectValue;
@@ -12,6 +16,7 @@ interface TagInputFilterProps {
 }
 
 export const TagInputFilter: React.FC<TagInputFilterProps> = ({ value, onChange, error, placeholder="Enter tags (comma separated)" }) => {
+    const copy = useCopy();
   const [text, setText] = useState(value.codes.join(", "));
 
   // Sync local state when parent value changes (e.g., from URL or clear)
@@ -29,7 +34,7 @@ export const TagInputFilter: React.FC<TagInputFilterProps> = ({ value, onChange,
 
   return (
     <div className="space-y-2">
-      <Label>Tags</Label>
+      <Label>{copy("Tags")}</Label>
       <Input
         value={text}
         placeholder={placeholder}

@@ -15,6 +15,7 @@ from api.db.db_client import DBClient
 from .azure_openai_service import AzureOpenAIEmbeddingService
 from .base import BaseEmbeddingService
 from .dograh_service import DograhEmbeddingService
+from .openai_compatible_service import OpenAICompatibleEmbeddingService
 from .openai_service import OpenAIEmbeddingService
 
 DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
@@ -78,6 +79,18 @@ async def build_embedding_service(
 
     model_id = model or DEFAULT_EMBEDDING_MODEL
 
+    if provider == ServiceProviders.OPENAI_COMPATIBLE.value:
+        if not base_url or not model:
+            raise ValueError(
+                "Configura la URL y el modelo de tu proveedor de embeddings."
+            )
+        return OpenAICompatibleEmbeddingService(
+            db_client=db_client,
+            api_key=api_key,
+            model_id=model,
+            base_url=base_url,
+        )
+
     if provider == ServiceProviders.AZURE.value and endpoint:
         return AzureOpenAIEmbeddingService(
             db_client=db_client,
@@ -88,6 +101,9 @@ async def build_embedding_service(
         )
 
     if provider == ServiceProviders.DOGRAH.value:
+        from api.services.model_services.policy import require_mps_enabled
+
+        require_mps_enabled()
         cid = correlation_id
         if cid is None and resolve_correlation:
             cid = await resolve_embedding_correlation_id(service_key=api_key)

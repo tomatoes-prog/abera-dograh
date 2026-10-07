@@ -13,9 +13,9 @@ An embedding API key (configured in **AI Models Configuration → Embedding**) i
 
 ## How It Works
 
-1. You **upload** a document (PDF, DOCX, TXT, or JSON) to the Knowledge Base
+1. You **upload** a document (PDF, Word, TXT, Markdown, or JSON) to the Knowledge Base
 2. You **choose a retrieval mode** — Full Document or Chunked Search
-3. Dograh **processes** the document based on the selected mode
+3. A local background worker **reads and splits** the document based on the selected mode
 4. You **attach** the document to one or more workflow nodes
 5. During a call, the agent **retrieves** information from the document and uses it to generate accurate responses
 
@@ -26,9 +26,27 @@ An embedding API key (configured in **AI Models Configuration → Embedding**) i
 | PDF    | `.pdf`    |
 | Word   | `.docx`, `.doc` |
 | Text   | `.txt`    |
+| Markdown | `.md`  |
 | JSON   | `.json`   |
 
 Maximum file size: **5 MB**
+
+Abera reads documents on the instance, including scanned PDFs using Spanish and
+English OCR. Parsing no longer sends files to Dograh's Model Proxy Service (MPS).
+For Chunked Search, extracted text is sent to the embedding provider configured
+by your organization. The agent's model also receives retrieved content when
+answering a question; review the data policies of the providers you choose.
+
+The reader accepts PDFs up to 200 pages and up to two million extracted
+characters. Its background process has a 512 MiB address-space limit, a
+180-second wall timeout and a 60-second CPU budget. One reader runs at a time
+per runtime; other documents stay queued. Complex scans can exceed these limits
+and should be split into smaller files. OCR quality depends on scan clarity;
+check the extracted content before relying on a document in a live call.
+
+Existing documents and vector indexes stay in PostgreSQL. Editing or re-indexing
+a document replaces its searchable content only after processing succeeds. A
+provider failure preserves the previous content.
 
 ## Uploading Documents
 

@@ -1,22 +1,24 @@
 """ARQ background task for processing knowledge base documents.
 
-Document conversion and chunking live in the Model Proxy Service (MPS);
-this task downloads the file from S3, calls MPS, then handles the embedding
-and DB writes locally.
+Document conversion and chunking run locally in a bounded subprocess. Only
+embedding requests use the organization's explicitly configured provider.
 """
 
 import os
 import tempfile
 
+from arq import Retry
 from loguru import logger
 
 from api.db import db_client
 from api.db.models import KnowledgeBaseChunkModel
 from api.services.gen_ai import build_embedding_service
-from api.services.mps_service_key_client import mps_service_key_client
+from api.services.knowledge_base.processing import (
+    MAX_FILE_SIZE_BYTES,
+    process_document_in_queue,
+)
 from api.services.storage import storage_fs
 
-MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
 EMBEDDING_BATCH_SIZE = 64
 
 
@@ -25,7 +27,7 @@ async def _embed_texts_in_batches(
     texts: list[str],
     batch_size: int = EMBEDDING_BATCH_SIZE,
 ) -> list[list[float]]:
-    """Generate embeddings in bounded batches for provider/MPS stability."""
+    """Generate embeddings in bounded batches for provider stability."""
     embeddings: list[list[float]] = []
     for start in range(0, len(texts), batch_size):
         batch = texts[start : start + batch_size]
@@ -45,14 +47,14 @@ async def process_knowledge_base_document(
     max_tokens: int = 128,
     retrieval_mode: str = "chunked",
 ):
-    """Process a knowledge base document via MPS: download, call MPS, embed, store.
+    """Download, extract locally, embed if needed, and atomically replace chunks.
 
     Args:
         ctx: ARQ context
         document_id: Database ID of the document
         s3_key: S3 key where the file is stored
         organization_id: Organization ID
-        created_by_provider_id: Uploading user's provider ID (for OSS-mode auth to MPS)
+        created_by_provider_id: Uploading user's provider ID (kept for queued-job compatibility)
         max_tokens: Maximum number of tokens per chunk (default: 128)
         retrieval_mode: "chunked" for vector search or "full_document" for full text
     """
@@ -62,11 +64,24 @@ async def process_knowledge_base_document(
     )
 
     temp_file_path = None
+    document = await db_client.get_document_by_id(
+        document_id,
+        organization_id=organization_id,
+    )
+    if (
+        not document
+        or (document.custom_metadata or {}).get("s3_key") != s3_key
+        or not s3_key.startswith(
+            f"knowledge_base/{organization_id}/{document.document_uuid}/"
+        )
+    ):
+        # Do not download, parse, or update a document owned by another tenant.
+        raise ValueError("El documento no pertenece a esta organización.")
 
     try:
         await db_client.update_document_status(document_id, "processing")
 
-        filename = s3_key.split("/")[-1]
+        filename = document.filename
         file_extension = os.path.splitext(filename)[1] or ".bin"
 
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=file_extension)
@@ -74,7 +89,9 @@ async def process_knowledge_base_document(
         temp_file.close()
 
         logger.info(f"Downloading file from S3: {s3_key}")
-        download_success = await storage_fs.adownload_file(s3_key, temp_file_path)
+        download_success = await storage_fs.adownload_file(
+            s3_key, temp_file_path, max_size=MAX_FILE_SIZE_BYTES
+        )
         if not download_success:
             raise Exception(f"Failed to download file from S3: {s3_key}")
         if not os.path.exists(temp_file_path):
@@ -96,10 +113,6 @@ async def process_knowledge_base_document(
 
         file_hash = db_client.compute_file_hash(temp_file_path)
         mime_type = db_client.get_mime_type(temp_file_path)
-
-        document = await db_client.get_document_by_id(document_id)
-        if not document:
-            raise Exception(f"Document {document_id} not found")
 
         # Reject duplicates (same hash already ingested for this org).
         existing_doc = await db_client.get_document_by_hash(file_hash, organization_id)
@@ -173,21 +186,19 @@ async def process_knowledge_base_document(
                     f"model={embeddings_model}"
                 )
 
-        logger.info(f"Delegating document processing to MPS (mode={retrieval_mode})")
-        mps_response = await mps_service_key_client.process_document(
+        logger.info(f"Processing document locally (mode={retrieval_mode})")
+        processing_result = await process_document_in_queue(
+            redis=ctx["redis"],
             file_path=temp_file_path,
             filename=filename,
-            content_type=mime_type or "application/octet-stream",
             retrieval_mode=retrieval_mode,
             max_tokens=max_tokens,
-            organization_id=organization_id,
-            created_by=created_by_provider_id,
         )
 
-        docling_metadata = mps_response.get("docling_metadata", {})
+        docling_metadata = processing_result.get("docling_metadata", {})
 
         if retrieval_mode == "full_document":
-            full_text = mps_response.get("full_text") or ""
+            full_text = processing_result.get("full_text") or ""
             await db_client.update_document_full_text(document_id, full_text)
             await db_client.update_document_status(
                 document_id,
@@ -203,8 +214,8 @@ async def process_knowledge_base_document(
 
         if not embeddings_api_key:
             error_message = (
-                "API key not configured. Please set your API key in "
-                "Model Configurations > Embedding to process documents."
+                "Configura una API key de embeddings en Modelos para procesar "
+                "el documento por fragmentos. También puedes usar documento completo."
             )
             logger.warning(f"Document {document_id}: {error_message}")
             await db_client.update_document_status(
@@ -212,8 +223,6 @@ async def process_knowledge_base_document(
             )
             return
 
-        # Ingestion runs outside any workflow run, so resolve the MPS correlation
-        # id here.
         embedding_service = await build_embedding_service(
             db_client=db_client,
             provider=embeddings_provider,
@@ -222,16 +231,16 @@ async def process_knowledge_base_document(
             base_url=embeddings_base_url,
             endpoint=embeddings_endpoint,
             api_version=embeddings_api_version,
-            resolve_correlation=True,
+            resolve_correlation=False,
         )
 
-        mps_chunks = mps_response.get("chunks", [])
-        if not mps_chunks:
-            logger.warning(f"Document {document_id}: MPS returned zero chunks")
+        extracted_chunks = processing_result.get("chunks", [])
+        if not extracted_chunks:
+            raise ValueError("No se encontraron fragmentos de texto para indexar.")
 
         chunk_records = []
         chunk_texts = []
-        for chunk in mps_chunks:
+        for chunk in extracted_chunks:
             contextualized = chunk.get("contextualized_text") or chunk["chunk_text"]
             chunk_records.append(
                 KnowledgeBaseChunkModel(
@@ -280,6 +289,9 @@ async def process_knowledge_base_document(
             f"Total chunks: {len(chunk_records)}"
         )
 
+    except Retry:
+        await db_client.update_document_status(document_id, "pending")
+        raise
     except Exception as e:
         logger.exception(
             "Error processing knowledge base document {}: {}", document_id, e

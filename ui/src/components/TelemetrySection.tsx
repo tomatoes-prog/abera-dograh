@@ -13,9 +13,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { useAuth } from "@/lib/auth";
 
+
 export function TelemetrySection() {
+    const copy = useCopy();
   const { user, loading: authLoading } = useAuth();
   const [credentials, setCredentials] = useState<LangfuseCredentialsResponse>({
     host: "",
@@ -66,10 +69,10 @@ export function TelemetrySection() {
       if (error) {
         throw new Error("Failed to save");
       }
-      toast.success("Telemetry credentials saved");
+      toast.success(copy("Telemetry credentials saved"));
       await fetchCredentials();
     } catch {
-      toast.error("Failed to save telemetry credentials");
+      toast.error(copy("Failed to save telemetry credentials"));
     } finally {
       setSaving(false);
     }
@@ -87,25 +90,23 @@ export function TelemetrySection() {
         traces_public: false,
         configured: false,
       });
-      toast.success("Telemetry credentials removed");
+      toast.success(copy("Telemetry credentials removed"));
     } catch {
-      toast.error("Failed to remove telemetry credentials");
+      toast.error(copy("Failed to remove telemetry credentials"));
     } finally {
       setSaving(false);
     }
   }
 
   if (loading) {
-    return <p className="text-sm text-muted-foreground">Loading...</p>;
+    return <p className="text-sm text-muted-foreground">{copy("Loading...")}</p>;
   }
 
   return (
     <form onSubmit={handleSave} className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        Connect your Langfuse project to receive call tracing data.
-      </p>
+      <p className="text-sm text-muted-foreground">{copy("Connect your Langfuse project to receive call tracing data.")}</p>
       <div className="space-y-2">
-        <Label htmlFor="langfuse-host">Host</Label>
+        <Label htmlFor="langfuse-host">{copy("Host")}</Label>
         <Input
           id="langfuse-host"
           placeholder="https://cloud.langfuse.com"
@@ -115,39 +116,36 @@ export function TelemetrySection() {
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="langfuse-public-key">Public Key</Label>
+        <Label htmlFor="langfuse-public-key">{copy("Public Key")}</Label>
         <Input
           id="langfuse-public-key"
-          placeholder="pk-lf-..."
+          placeholder={copy("pk-lf-...")}
           value={credentials.public_key}
           onChange={(e) => setCredentials({ ...credentials, public_key: e.target.value })}
           required
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="langfuse-secret-key">Secret Key</Label>
+        <Label htmlFor="langfuse-secret-key">{copy("Secret Key")}</Label>
         <Input
           id="langfuse-secret-key"
           type="password"
-          placeholder="sk-lf-..."
+          placeholder={copy("sk-lf-...")}
           value={credentials.secret_key}
           onChange={(e) => setCredentials({ ...credentials, secret_key: e.target.value })}
           required
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="langfuse-project-id">Project ID</Label>
+        <Label htmlFor="langfuse-project-id">{copy("Project ID")}</Label>
         <Input
           id="langfuse-project-id"
-          placeholder="cm..."
+          placeholder={copy("cm...")}
           value={credentials.project_id}
           onChange={(e) => setCredentials({ ...credentials, project_id: e.target.value })}
           required
         />
-        <p className="text-xs text-muted-foreground">
-          Found in your Langfuse URL: /project/&lt;project-id&gt;/traces. Required to
-          build links to your traces.
-        </p>
+        <p className="text-xs text-muted-foreground">{copy("Found in your Langfuse URL: /project/<project-id>/traces. Required to build links to your traces.")}</p>
       </div>
       <div className="space-y-2 pt-2 border-t">
         <div className="flex items-center space-x-2">
@@ -158,23 +156,16 @@ export function TelemetrySection() {
               setCredentials({ ...credentials, traces_public: checked })
             }
           />
-          <Label htmlFor="langfuse-traces-public">Make traces publicly viewable</Label>
+          <Label htmlFor="langfuse-traces-public">{copy("Make traces publicly viewable")}</Label>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Off by default. When on, anyone holding a trace URL can open it without
-          logging in to Langfuse — including the full call transcript, prompts and
-          tool payloads. Turn it on only if you intend to share trace links outside
-          your Langfuse project.
-        </p>
+        <p className="text-xs text-muted-foreground">{copy("Off by default. When on, anyone holding a trace URL can open it without logging in to Langfuse — including the full call transcript, prompts and tool payloads. Turn it on only if you intend to share trace links outside your Langfuse project.")}</p>
       </div>
       <div className="flex gap-2">
         <Button type="submit" disabled={saving}>
-          {saving ? "Saving..." : "Save"}
+          {saving ? copy("Saving...") : copy("Save")}
         </Button>
         {credentials.configured && (
-          <Button type="button" variant="destructive" disabled={saving} onClick={handleDelete}>
-            Remove
-          </Button>
+          <Button type="button" variant="destructive" disabled={saving} onClick={handleDelete}>{copy("Remove")}</Button>
         )}
       </div>
     </form>

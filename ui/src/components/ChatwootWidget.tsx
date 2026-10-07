@@ -1,7 +1,9 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+
+import { useCopy, useUiLocale } from "@/i18n/LocaleProvider";
 
 declare global {
   interface Window {
@@ -15,16 +17,15 @@ declare global {
       position?: "left" | "right";
       type?: "standard" | "expanded_bubble";
       launcherTitle?: string;
+      locale?: string;
     };
     $chatwoot?: {
       toggleBubbleVisibility?: (visibility: "hide" | "show") => void;
       toggle?: (state?: "open" | "close") => void;
+      setLocale?: (locale: string) => void;
     };
   }
 }
-
-const CHATWOOT_BASE_URL = process.env.NEXT_PUBLIC_CHATWOOT_URL;
-const CHATWOOT_WEBSITE_TOKEN = process.env.NEXT_PUBLIC_CHATWOOT_TOKEN;
 
 // Hide the support bubble only on the workflow builder (/workflow/<id> and its
 // sub-routes), where the in-app chat tester occupies the same bottom-right
@@ -35,55 +36,78 @@ const isBuilderPath = (pathname: string) =>
 
 export default function ChatwootWidget() {
   const pathname = usePathname();
+  const copy = useCopy();
+  const { locale } = useUiLocale();
+  const chatLocale = locale === "es-419" ? "es" : "en";
+  const widgetLanguage = useRef({ locale: chatLocale, title: copy("Chat with us") });
+  widgetLanguage.current = { locale: chatLocale, title: copy("Chat with us") };
 
-  // Load the Chatwoot SDK exactly once for the lifetime of the app.
+  // The support widget is an optional external script. Load it only when an
+  // operator explicitly configures it on the server.
   useEffect(() => {
-    // Don't initialize if environment variables are not set
-    if (!CHATWOOT_BASE_URL || !CHATWOOT_WEBSITE_TOKEN) {
-      console.warn("Chatwoot not configured: Missing NEXT_PUBLIC_CHATWOOT_URL or NEXT_PUBLIC_CHATWOOT_TOKEN");
-      return;
-    }
+    let cancelled = false;
+    const loadChatwoot = async () => {
+      try {
+        const response = await fetch("/api/config/chatwoot", { cache: "no-store" });
+        if (!response.ok) return;
+        const config = await response.json();
+        if (
+          cancelled ||
+          config.enabled !== true ||
+          !config.baseUrl ||
+          !config.websiteToken
+        ) {
+          return;
+        }
 
-    // Prevent duplicate initialization
-    if (window.chatwootSettings) {
-      return;
-    }
+        const start = () => {
+          if (cancelled || window.chatwootSettings || !window.chatwootSDK) return;
+          window.chatwootSettings = {
+            position: "right",
+            type: "standard",
+            launcherTitle: widgetLanguage.current.title,
+            locale: widgetLanguage.current.locale,
+          };
+          window.chatwootSDK.run({
+            websiteToken: config.websiteToken,
+            baseUrl: config.baseUrl,
+          });
+        };
 
-    // Configure Chatwoot widget settings
-    window.chatwootSettings = {
-      position: "right",
-      type: "standard",
-      launcherTitle: "Chat with us",
+        const scriptUrl = `${config.baseUrl}/packs/js/sdk.js`;
+        const existingScript = document.querySelector(`script[src="${scriptUrl}"]`);
+        if (existingScript) {
+          existingScript.addEventListener("load", start, { once: true });
+          start();
+          return;
+        }
+
+        const script = document.createElement("script");
+        script.src = scriptUrl;
+        script.async = true;
+        script.defer = true;
+        script.onload = start;
+        document.body.appendChild(script);
+      } catch {
+        // Support integration is optional and must never block the application.
+      }
     };
 
-    // Check if script is already loaded
-    const existingScript = document.querySelector(
-      `script[src="${CHATWOOT_BASE_URL}/packs/js/sdk.js"]`
-    );
-
-    if (existingScript) {
-      // Script already exists, just initialize if SDK is available
-      window.chatwootSDK?.run({
-        websiteToken: CHATWOOT_WEBSITE_TOKEN,
-        baseUrl: CHATWOOT_BASE_URL,
-      });
-      return;
-    }
-
-    // Create and inject the Chatwoot SDK script
-    const script = document.createElement("script");
-    script.src = `${CHATWOOT_BASE_URL}/packs/js/sdk.js`;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      window.chatwootSDK?.run({
-        websiteToken: CHATWOOT_WEBSITE_TOKEN,
-        baseUrl: CHATWOOT_BASE_URL,
-      });
+    void loadChatwoot();
+    return () => {
+      cancelled = true;
     };
-
-    document.body.appendChild(script);
   }, []);
+
+  // Chatwoot's documented locale API updates an existing widget without
+  // recreating the SDK or losing an active support conversation.
+  useEffect(() => {
+    const applyLocale = () => window.$chatwoot?.setLocale?.(chatLocale);
+    if (window.chatwootSettings) window.chatwootSettings.locale = chatLocale;
+    applyLocale();
+    window.addEventListener("chatwoot:ready", applyLocale, { once: true });
+    return () => window.removeEventListener("chatwoot:ready", applyLocale);
+  }, [chatLocale]);
 
   // Show/hide the bubble per route using Chatwoot's native API. We never tear
   // down and recreate the SDK — doing so left the bubble permanently hidden

@@ -78,9 +78,9 @@ if [ "$DEV_MODE" -eq 1 ]; then
     uv pip install -r api/requirements.dev.txt
 fi
 
-# Install pipecat in editable mode with all extras
+# Install voice providers; aiortc comes from API requirements without OpenCV.
 echo "Installing pipecat dependencies..."
-pipecat_install_args=(-e './pipecat[cartesia,deepgram,openai,elevenlabs,groq,google,azure,sarvam,soundfile,silero,webrtc,speechmatics,openrouter,camb,mcp,inworld,smallest,aws-nova-sonic]')
+pipecat_install_args=(-e './pipecat[cartesia,deepgram,openai,elevenlabs,groq,google,azure,sarvam,soundfile,silero,speechmatics,openrouter,camb,mcp,inworld,smallest,aws-nova-sonic]')
 
 if [ "$DEV_MODE" -eq 1 ]; then
     # Resolve dev tools with runtime dependencies so grpcio-tools cannot

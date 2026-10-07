@@ -14,9 +14,10 @@ The same files work on any host that fronts containers with Traefik.
 
 ## What the app stack needs from Traefik
 
-Routing is declared with Traefik labels on `ui`, `api`, and `minio`:
-`/api/v1` → api (includes the signaling **WebSocket**), `/voice-audio` → minio,
-everything else → ui. For that to work the platform's Traefik must offer:
+Routing is declared with Traefik labels on `ui` and `api`:
+`/api/v1` → api (includes the signaling **WebSocket**), everything else → ui.
+Files live in a private S3 bucket and are read using temporary signed URLs.
+Set `S3_BUCKET`, `S3_REGION` and a workload IAM role or AWS credentials. For that to work the platform's Traefik must offer:
 
 - an HTTPS entrypoint — set `TRAEFIK_ENTRYPOINT` (e.g. `websecure`)
 - a Let's Encrypt certresolver — set `TRAEFIK_CERTRESOLVER`

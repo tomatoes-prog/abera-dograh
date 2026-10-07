@@ -200,7 +200,7 @@ def test_create_runtime_sessions_skips_disabled_node():
     assert create_runtime_sessions(context) == []
 
 
-def test_create_runtime_sessions_builds_one_deferred_session():
+def test_create_runtime_sessions_does_not_record_audio_by_default():
     context = _runtime_context([_graph_node(_node_data())])
 
     with patch(
@@ -210,6 +210,20 @@ def test_create_runtime_sessions_builds_one_deferred_session():
 
     assert len(sessions) == 1
     assert sessions[0].name == "noveum"
+    kwargs = build_mock.call_args.kwargs
+    assert kwargs["record_audio"] is False
+    assert kwargs["audio_sink"] is None
+
+
+def test_create_runtime_sessions_records_audio_only_when_enabled():
+    context = _runtime_context([_graph_node(_node_data(noveum_record_audio=True))])
+
+    with patch(
+        "api.services.integrations.noveum.runtime.build_deferred_observer"
+    ) as build_mock:
+        sessions = create_runtime_sessions(context)
+
+    assert len(sessions) == 1
     kwargs = build_mock.call_args.kwargs
     assert kwargs["record_audio"] is True
     assert kwargs["audio_sink"] is not None

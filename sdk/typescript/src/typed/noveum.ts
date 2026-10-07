@@ -33,7 +33,7 @@ export interface Noveum {
      */
     noveum_environment?: string;
     /**
-     * Capture per-segment STT/TTS audio and the full-conversation recording for audio evaluation on Noveum.
+     * When enabled, send per-segment STT/TTS audio and the full-conversation recording to Noveum.
      */
     noveum_record_audio?: boolean;
 }

@@ -13,12 +13,15 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { useAuth } from "@/lib/auth";
 
 import DocumentList from "./DocumentList";
 import DocumentUpload from "./DocumentUpload";
 
+
 export default function FilesPage() {
+    const copy = useCopy();
     const { user, redirectToLogin, loading } = useAuth();
     const [refreshKey, setRefreshKey] = useState(0);
     const [isUploadOpen, setIsUploadOpen] = useState(false);
@@ -49,11 +52,9 @@ export default function FilesPage() {
     return (
         <div className="container mx-auto px-4 py-8">
             <div className="mb-8">
-                <h1 className="text-3xl font-bold mb-2">Knowledge Base Files</h1>
-                <p className="text-muted-foreground">
-                    Upload and manage documents for your voice agents to reference.{" "}
-                    <a href="https://docs.dograh.com/voice-agent/knowledge-base" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline">
-                        Learn more <ExternalLink className="h-3 w-3" />
+                <h1 className="text-3xl font-bold mb-2">{copy("Knowledge Base Files")}</h1>
+                <p className="text-muted-foreground">{copy("Upload and manage documents for your voice agents to reference.")}{" "}
+                    <a href="https://docs.dograh.com/voice-agent/knowledge-base" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline">{copy("Learn more ")}<ExternalLink className="h-3 w-3" />
                     </a>
                 </p>
             </div>
@@ -62,15 +63,11 @@ export default function FilesPage() {
                 <CardHeader>
                     <div className="flex justify-between items-center">
                         <div>
-                            <CardTitle>Your Documents</CardTitle>
-                            <CardDescription>
-                                Documents shared across all agents in your organization
-                            </CardDescription>
+                            <CardTitle>{copy("Your Documents")}</CardTitle>
+                            <CardDescription>{copy("Documents shared across all agents in your organization")}</CardDescription>
                         </div>
                         <Button onClick={() => setIsUploadOpen(true)}>
-                            <Upload className="w-4 h-4 mr-2" />
-                            Upload Document
-                        </Button>
+                            <Upload className="w-4 h-4 mr-2" />{copy("Upload Document")}</Button>
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -81,10 +78,8 @@ export default function FilesPage() {
             <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Upload Document</DialogTitle>
-                        <DialogDescription>
-                            Upload a PDF or document file to add to your knowledge base
-                        </DialogDescription>
+                        <DialogTitle>{copy("Upload Document")}</DialogTitle>
+                        <DialogDescription>{copy("Upload a PDF or document file to add to your knowledge base")}</DialogDescription>
                     </DialogHeader>
                     <DocumentUpload onUploadSuccess={handleUploadSuccess} />
                 </DialogContent>

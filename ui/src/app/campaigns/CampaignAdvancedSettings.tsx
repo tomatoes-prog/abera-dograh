@@ -17,6 +17,8 @@ import {
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
+import { useCopy } from "@/i18n/LocaleProvider";
+
 
 export type TimeSlot = { day_of_week: number; start_time: string; end_time: string };
 
@@ -120,41 +122,39 @@ export default function CampaignAdvancedSettings({
     circuitBreakerWindowSeconds, onCircuitBreakerWindowSecondsChange,
     circuitBreakerMinCalls, onCircuitBreakerMinCallsChange,
 }: CampaignAdvancedSettingsProps) {
+    const copy = useCopy();
     const timezoneSelectId = useId();
 
     return (
         <div className="space-y-6">
             {/* Max Concurrent Calls */}
             <div className="space-y-2">
-                <Label htmlFor="max-concurrency">Max Concurrent Calls</Label>
+                <Label htmlFor="max-concurrency">{copy("Max Concurrent Calls")}</Label>
                 <Input
                     id="max-concurrency"
                     type="number"
-                    placeholder={`Default: ${effectiveLimit}`}
+                    placeholder={copy("Default: {value0}", {value0: effectiveLimit})}
                     value={maxConcurrency}
                     onChange={(e) => onMaxConcurrencyChange(e.target.value)}
                     min={1}
                     max={effectiveLimit}
                 />
-                <p className="text-sm text-muted-foreground">
-                    Maximum number of simultaneous calls. Leave empty to use {effectiveLimit}.
-                    {fromNumbersCount > 0 && ` You have ${fromNumbersCount} CLI${fromNumbersCount !== 1 ? 's' : ''} and an org limit of ${orgConcurrentLimit}.`}
+                <p className="text-sm text-muted-foreground">{copy("Maximum number of simultaneous calls. Leave empty to use ")}{effectiveLimit}.
+                    {fromNumbersCount > 0 && copy(" You have {value0} CLI{value1} and an org limit of {value2}.", {value0: fromNumbersCount, value1: fromNumbersCount !== 1 ? 's' : '', value2: orgConcurrentLimit})}
                 </p>
                 {fromNumbersCount > 0 && (
-                    <p className="text-sm text-muted-foreground">
-                        Caller IDs rotate across calls and may be reused on simultaneous calls.
-                    </p>
+                    <p className="text-sm text-muted-foreground">{copy("Caller IDs rotate across calls and may be reused on simultaneous calls.")}</p>
                 )}
                 {outboundBlockedReason && (
                     <p className="text-sm text-amber-600 dark:text-amber-400">
                         {outboundBlockedReason}{' '}
-                        <Link href="/telephony-configurations" className="underline font-medium">Open Telephony Configuration</Link>.
+                        <Link href="/telephony-configurations" className="underline font-medium">{copy("Open Telephony Configuration")}</Link>.
                     </p>
                 )}
             </div>
 
             <div className="space-y-2">
-                <Label htmlFor="dial-rate">Calls Started per Second</Label>
+                <Label htmlFor="dial-rate">{copy("Calls Started per Second")}</Label>
                 <Input
                     id="dial-rate"
                     type="number"
@@ -165,8 +165,7 @@ export default function CampaignAdvancedSettings({
                     value={rateLimitPerSecond}
                     onChange={(e) => onRateLimitPerSecondChange(e.target.value)}
                 />
-                <p className="text-sm text-muted-foreground">
-                    Maximum new calls this campaign can start each second. Default: 1. Your account allows up to {orgConcurrentLimit}.
+                <p className="text-sm text-muted-foreground">{copy("Maximum new calls this campaign can start each second. Default: 1. Your account allows up to ")}{orgConcurrentLimit}.
                 </p>
             </div>
 
@@ -174,10 +173,8 @@ export default function CampaignAdvancedSettings({
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
                     <div>
-                        <Label htmlFor="retry-enabled">Enable Retries</Label>
-                        <p className="text-sm text-muted-foreground">
-                            Automatically retry failed calls
-                        </p>
+                        <Label htmlFor="retry-enabled">{copy("Enable Retries")}</Label>
+                        <p className="text-sm text-muted-foreground">{copy("Automatically retry failed calls")}</p>
                     </div>
                     <Switch
                         id="retry-enabled"
@@ -190,7 +187,7 @@ export default function CampaignAdvancedSettings({
                     <div className="space-y-4 pl-4 border-l-2 border-muted">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="max-retries">Max Retries</Label>
+                                <Label htmlFor="max-retries">{copy("Max Retries")}</Label>
                                 <Input
                                     id="max-retries"
                                     type="number"
@@ -201,7 +198,7 @@ export default function CampaignAdvancedSettings({
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="retry-delay">Retry Delay (seconds)</Label>
+                                <Label htmlFor="retry-delay">{copy("Retry Delay (seconds)")}</Label>
                                 <Input
                                     id="retry-delay"
                                     type="number"
@@ -214,18 +211,18 @@ export default function CampaignAdvancedSettings({
                         </div>
 
                         <div className="space-y-3">
-                            <Label>Retry On</Label>
+                            <Label>{copy("Retry On")}</Label>
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between">
-                                    <span className="text-sm">Busy Signal</span>
+                                    <span className="text-sm">{copy("Busy Signal")}</span>
                                     <Switch checked={retryOnBusy} onCheckedChange={onRetryOnBusyChange} />
                                 </div>
                                 <div className="flex items-center justify-between">
-                                    <span className="text-sm">No Answer</span>
+                                    <span className="text-sm">{copy("No Answer")}</span>
                                     <Switch checked={retryOnNoAnswer} onCheckedChange={onRetryOnNoAnswerChange} />
                                 </div>
                                 <div className="flex items-center justify-between">
-                                    <span className="text-sm">Voicemail</span>
+                                    <span className="text-sm">{copy("Voicemail")}</span>
                                     <Switch checked={retryOnVoicemail} onCheckedChange={onRetryOnVoicemailChange} />
                                 </div>
                             </div>
@@ -240,10 +237,8 @@ export default function CampaignAdvancedSettings({
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
                     <div>
-                        <Label htmlFor="schedule-enabled">Call Schedule</Label>
-                        <p className="text-sm text-muted-foreground">
-                            Restrict when calls are made
-                        </p>
+                        <Label htmlFor="schedule-enabled">{copy("Call Schedule")}</Label>
+                        <p className="text-sm text-muted-foreground">{copy("Restrict when calls are made")}</p>
                     </div>
                     <Switch
                         id="schedule-enabled"
@@ -255,7 +250,7 @@ export default function CampaignAdvancedSettings({
                 {scheduleEnabled && (
                     <div className="space-y-4 pl-4 border-l-2 border-muted">
                         <div className="space-y-2">
-                            <Label>Timezone</Label>
+                            <Label>{copy("Timezone")}</Label>
                             <TimezoneSelect
                                 instanceId={timezoneSelectId}
                                 value={scheduleTimezone}
@@ -265,7 +260,7 @@ export default function CampaignAdvancedSettings({
                         </div>
 
                         <div className="space-y-3">
-                            <Label>Time Slots</Label>
+                            <Label>{copy("Time Slots")}</Label>
                             {timeSlots.map((slot, index) => (
                                 <div key={index} className="flex items-center gap-2">
                                     <Select
@@ -295,7 +290,7 @@ export default function CampaignAdvancedSettings({
                                         }}
                                         className="w-[130px]"
                                     />
-                                    <span className="text-sm text-muted-foreground">to</span>
+                                    <span className="text-sm text-muted-foreground">{copy("to")}</span>
                                     <Input
                                         type="time"
                                         value={slot.end_time}
@@ -324,9 +319,7 @@ export default function CampaignAdvancedSettings({
                                 size="sm"
                                 onClick={() => onTimeSlotsChange([...timeSlots, { day_of_week: 0, start_time: '09:00', end_time: '17:00' }])}
                             >
-                                <Plus className="h-4 w-4 mr-1" />
-                                Add Time Slot
-                            </Button>
+                                <Plus className="h-4 w-4 mr-1" />{copy("Add Time Slot")}</Button>
                         </div>
                     </div>
                 )}
@@ -338,10 +331,8 @@ export default function CampaignAdvancedSettings({
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
                     <div>
-                        <Label htmlFor="circuit-breaker-enabled">Circuit Breaker</Label>
-                        <p className="text-sm text-muted-foreground">
-                            Auto-pause campaign on high failure rates
-                        </p>
+                        <Label htmlFor="circuit-breaker-enabled">{copy("Circuit Breaker")}</Label>
+                        <p className="text-sm text-muted-foreground">{copy("Auto-pause campaign on high failure rates")}</p>
                     </div>
                     <Switch
                         id="circuit-breaker-enabled"
@@ -353,7 +344,7 @@ export default function CampaignAdvancedSettings({
                 {circuitBreakerEnabled && (
                     <div className="space-y-4 pl-4 border-l-2 border-muted">
                         <div className="space-y-2">
-                            <Label htmlFor="cb-failure-threshold">Failure Threshold (%)</Label>
+                            <Label htmlFor="cb-failure-threshold">{copy("Failure Threshold (%)")}</Label>
                             <Input
                                 id="cb-failure-threshold"
                                 type="number"
@@ -362,13 +353,11 @@ export default function CampaignAdvancedSettings({
                                 min={1}
                                 max={100}
                             />
-                            <p className="text-sm text-muted-foreground">
-                                Pause when failure rate exceeds this percentage
-                            </p>
+                            <p className="text-sm text-muted-foreground">{copy("Pause when failure rate exceeds this percentage")}</p>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="cb-window">Window (seconds)</Label>
+                                <Label htmlFor="cb-window">{copy("Window (seconds)")}</Label>
                                 <Input
                                     id="cb-window"
                                     type="number"
@@ -379,7 +368,7 @@ export default function CampaignAdvancedSettings({
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="cb-min-calls">Min Calls in Window</Label>
+                                <Label htmlFor="cb-min-calls">{copy("Min Calls in Window")}</Label>
                                 <Input
                                     id="cb-min-calls"
                                     type="number"

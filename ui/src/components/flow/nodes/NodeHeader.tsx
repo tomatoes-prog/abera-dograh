@@ -1,3 +1,5 @@
+"use client";
+
 import { Slot } from "@radix-ui/react-slot";
 import { useNodeId, useReactFlow } from "@xyflow/react";
 import { EllipsisVertical, Trash } from "lucide-react";
@@ -9,7 +11,9 @@ import {
     DropdownMenuContent,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { cn } from "@/lib/utils";
+
 
 /* NODE HEADER -------------------------------------------------------------- */
 
@@ -176,6 +180,7 @@ NodeHeaderMenuAction.displayName = "NodeHeaderMenuAction";
 /* NODE HEADER DELETE ACTION --------------------------------------- */
 
 export const NodeHeaderDeleteAction = () => {
+    const copy = useCopy();
     const id = useNodeId();
     const { setNodes } = useReactFlow();
 
@@ -184,7 +189,7 @@ export const NodeHeaderDeleteAction = () => {
     }, [id, setNodes]);
 
     return (
-        <NodeHeaderAction onClick={handleClick} label="Delete node">
+        <NodeHeaderAction onClick={handleClick} label={copy("Delete node")}>
             <Trash />
         </NodeHeaderAction>
     );

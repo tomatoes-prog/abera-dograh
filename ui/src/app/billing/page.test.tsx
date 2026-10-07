@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
     getCredits: vi.fn(), push: vi.fn(), error: vi.fn(),
     params: new URLSearchParams(),
     auth: { isAuthenticated: true, loading: false },
-    config: { deploymentMode: "saas" },
+    config: { deploymentMode: "saas", dograhMpsEnabled: true },
 }));
 vi.mock("next/navigation", () => ({
     useRouter: () => ({ push: mocks.push }), useSearchParams: () => mocks.params,
@@ -39,10 +39,18 @@ beforeEach(() => {
     mocks.params = new URLSearchParams();
     mocks.auth.loading = false;
     mocks.config.deploymentMode = "saas";
+    mocks.config.dograhMpsEnabled = true;
     mocks.getCredits.mockResolvedValue(response);
 });
 
 describe("billing ledger filters", () => {
+    it("uses Abera subscription information without requesting vendor billing when MPS is disabled", async () => {
+        mocks.config.dograhMpsEnabled = false;
+        render(<BillingPage />);
+        await screen.findByText("Subscription");
+        expect(screen.getByText(/Manage your subscription from the Abera Cloud platform/)).toBeTruthy();
+        expect(mocks.getCredits).not.toHaveBeenCalled();
+    });
     it("waits for auth and defaults to all activity for all time", async () => {
         mocks.auth.loading = true;
         const view = render(<BillingPage />);

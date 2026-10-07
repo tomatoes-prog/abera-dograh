@@ -5,18 +5,17 @@
 
 import * as Sentry from "@sentry/nextjs";
 
-// Only initialize Sentry if explicitly enabled and DSN is provided
-const enableSentry = process.env.NEXT_PUBLIC_SENTRY_DSN;
+// No Sentry traffic unless the operator explicitly enables telemetry and sets a DSN.
+const enableSentry = process.env.ENABLE_TELEMETRY === "true";
 
-if (enableSentry) {
+if (enableSentry && process.env.SENTRY_DSN) {
   Sentry.init({
-    dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+    dsn: process.env.SENTRY_DSN,
 
     // Setting this option to true will print useful information to the console while you're setting up Sentry.
     debug: false,
-    enabled: process.env.NEXT_PUBLIC_NODE_ENV === 'production'
+    enabled: true,
+    sendDefaultPii: false,
   });
   console.log('Sentry initialized for edge runtime error tracking');
-} else {
-  console.log('Sentry disabled on edge runtime (NEXT_PUBLIC_ENABLE_SENTRY=false or DSN not configured)');
 }

@@ -12,7 +12,7 @@ from api.tasks.function_names import FunctionNames
 setup_logging()
 
 # Now import ARQ and task dependencies
-from arq import create_pool, cron
+from arq import create_pool, cron, func
 from arq.connections import ArqRedis, RedisSettings
 from redis.asyncio.retry import Retry
 from redis.backoff import ExponentialBackoff
@@ -57,6 +57,7 @@ REDIS_SETTINGS = RedisSettings(
     ssl_check_hostname=False if use_ssl else None,
 )
 
+from api.services.abera.voice_minutes import retry_voice_receipts
 from api.tasks.campaign_tasks import (
     process_campaign_batch,
     sync_campaign_source,
@@ -77,11 +78,14 @@ class WorkerSettings:
         process_workflow_completion,
         sync_campaign_source,
         process_campaign_batch,
-        process_knowledge_base_document,
+        func(process_knowledge_base_document, max_tries=180, timeout=300),
         deliver_webhook,
         complete_inactive_text_chat_session,
     ]
     cron_jobs = [
+        cron(
+            retry_voice_receipts, minute=set(range(60)), second=15, run_at_startup=True
+        ),
         # Safety net for webhook deliveries whose ARQ job was lost (worker
         # restart / Redis flush): re-enqueue any pending delivery that is overdue.
         cron(

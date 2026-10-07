@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Abera Cloud</title>
+  <rect width="64" height="64" rx="18" fill="#0f766e"/>
+  <path d="M18 45 29.3 17h5.4L46 45h-7l-2.1-5.7h-10L24.8 45H18Zm11-11.5h5.8L32 25.7l-3 7.8Z" fill="#fff"/>
+  <circle cx="47" cy="17" r="5" fill="#f59e0b"/>
+</svg>

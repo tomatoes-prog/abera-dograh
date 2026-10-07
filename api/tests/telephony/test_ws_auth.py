@@ -229,14 +229,17 @@ async def test_handler_allows_missing_token_when_enforcement_off(secret, handler
     get_run.assert_awaited_once()
 
 
-async def test_handler_skips_check_entirely_without_secret(no_secret, handler):
+async def test_handler_rejects_missing_secret_under_enforcement(
+    no_secret, handler, monkeypatch
+):
+    monkeypatch.setattr(constants, "TELEPHONY_WS_TOKEN_ENFORCE", True)
     handle, get_run = handler
     ws = _FakeWebSocket()
 
     await handle(ws, 7, 3, 42)
 
-    assert ws.closed_with == (4404, "Workflow run not found")
-    get_run.assert_awaited_once()
+    assert ws.closed_with == (4401, "Media authentication unavailable")
+    get_run.assert_not_awaited()
 
 
 # --------------------------------------------------------------------------

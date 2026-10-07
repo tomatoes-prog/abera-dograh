@@ -22,7 +22,7 @@ vi.mock("@/context/OnboardingContext", () => ({
     useOnboarding: () => ({ markActionCompleted: markActionCompletedMock }),
 }));
 
-vi.mock("posthog-js", () => ({ default: { capture: vi.fn() } }));
+vi.mock("posthog-js", () => ({ default: { __loaded: true, capture: vi.fn() } }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 
 vi.mock("@/components/onboarding/OnboardingTooltip", () => ({

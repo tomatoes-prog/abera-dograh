@@ -1,6 +1,7 @@
 """API routes for knowledge base operations."""
 
 import uuid
+from pathlib import Path
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -22,6 +23,10 @@ from api.schemas.knowledge_base import (
 )
 from api.sdk_expose import sdk_expose
 from api.services.auth.depends import get_user
+from api.services.knowledge_base.processing import (
+    MAX_FILE_SIZE_BYTES,
+    SUPPORTED_EXTENSIONS,
+)
 from api.services.knowledge_base_content import (
     DocumentContentConflictError,
     DocumentContentTooLargeError,
@@ -30,10 +35,25 @@ from api.services.knowledge_base_content import (
     read_document_content,
     update_document_content,
 )
+from api.services.model_services.policy import MPSDisabledError
 from api.services.posthog_client import capture_event
 from api.services.storage import storage_fs
 
 router = APIRouter(prefix="/knowledge-base", tags=["knowledge-base"])
+
+
+def _validate_filename(filename: str) -> None:
+    if (
+        not filename
+        or len(filename) > 500
+        or "/" in filename
+        or "\\" in filename
+        or any(ord(character) < 32 for character in filename)
+        or Path(filename).suffix.lower() not in SUPPORTED_EXTENSIONS
+    ):
+        raise HTTPException(
+            422, "Usa un nombre de archivo PDF, Word, TXT, Markdown o JSON sin rutas."
+        )
 
 
 def _has_live_content(document: KnowledgeBaseDocumentModel) -> bool:
@@ -94,6 +114,9 @@ async def get_upload_url(
     * All authenticated users can upload documents scoped to their organization.
     """
 
+    if not user.selected_organization_id:
+        raise HTTPException(400, "Selecciona una organización.")
+    _validate_filename(request.filename)
     try:
         # Generate unique document UUID for S3 organization
         document_uuid = str(uuid.uuid4())
@@ -101,13 +124,25 @@ async def get_upload_url(
         # Generate S3 key: knowledge_base/{org_id}/{document_uuid}/{filename}
         s3_key = f"knowledge_base/{user.selected_organization_id}/{document_uuid}/{request.filename}"
 
-        # Generate presigned PUT URL (valid for 30 minutes)
-        upload_url = await storage_fs.aget_presigned_put_url(
-            file_path=s3_key,
-            expiration=1800,  # 30 minutes
-            content_type=request.mime_type,
-            max_size=100_000_000,  # 100MB max
-        )
+        from api.constants import DEPLOYMENT_MODE
+
+        if DEPLOYMENT_MODE == "abera":
+            from api.services.abera.storage_upload import create_upload_url
+
+            if request.file_size_bytes is None:
+                raise HTTPException(
+                    422, "Indica el tamaño del archivo para autorizar la carga."
+                )
+            upload_url = await create_upload_url(
+                s3_key, request.file_size_bytes, request.mime_type
+            )
+        else:
+            upload_url = await storage_fs.aget_presigned_put_url(
+                file_path=s3_key,
+                expiration=1800,
+                content_type=request.mime_type,
+                max_size=MAX_FILE_SIZE_BYTES,
+            )
 
         if not upload_url:
             raise HTTPException(
@@ -125,6 +160,8 @@ async def get_upload_url(
             s3_key=s3_key,
         )
 
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.error(f"Error generating upload URL: {exc}")
         raise HTTPException(
@@ -157,6 +194,21 @@ async def process_document(
     * Users can only process documents in their organization.
     """
 
+    if not user.selected_organization_id:
+        raise HTTPException(400, "Selecciona una organización.")
+    try:
+        document_uuid = str(uuid.UUID(request.document_uuid))
+    except ValueError:
+        raise HTTPException(
+            422, "El identificador del documento no es válido."
+        ) from None
+    filename = request.s3_key.split("/")[-1]
+    _validate_filename(filename)
+    if (
+        request.s3_key
+        != f"knowledge_base/{user.selected_organization_id}/{document_uuid}/{filename}"
+    ):
+        raise HTTPException(403, "El archivo no pertenece a esta organización.")
     try:
         # Extract filename from s3_key
         filename = request.s3_key.split("/")[-1]
@@ -170,7 +222,7 @@ async def process_document(
             file_hash="",  # Will be computed by background task
             mime_type="application/octet-stream",  # Will be detected by background task
             custom_metadata={"s3_key": request.s3_key},
-            document_uuid=request.document_uuid,  # Use UUID from upload
+            document_uuid=document_uuid,  # Canonical UUID from the authorized object key
             retrieval_mode=request.retrieval_mode,
         )
 
@@ -194,7 +246,6 @@ async def process_document(
             properties={
                 "document_id": document.id,
                 "document_uuid": str(request.document_uuid),
-                "filename": filename,
                 "retrieval_mode": request.retrieval_mode,
                 "organization_id": user.selected_organization_id,
             },
@@ -505,6 +556,12 @@ async def search_chunks(
                 effective_config.embeddings, "api_version", None
             )
 
+        if not embeddings_api_key:
+            raise HTTPException(
+                422,
+                "Configura una API key de embeddings en Modelos para buscar por fragmentos.",
+            )
+
         # Manual search runs outside any workflow run, so resolve the MPS
         # correlation id here.
         embedding_service = await build_embedding_service(
@@ -554,6 +611,8 @@ async def search_chunks(
             total_results=len(chunks),
         )
 
+    except (HTTPException, MPSDisabledError):
+        raise
     except Exception as exc:
         logger.error(f"Error searching chunks: {exc}")
         raise HTTPException(status_code=500, detail="Failed to search chunks") from exc

@@ -2,6 +2,11 @@
   "name": "ui",
   "version": "1.47.0",
   "private": true,
+  "packageManager": "npm@10.9.9",
+  "engines": {
+    "node": "22.23.x",
+    "npm": "10.9.x"
+  },
   "scripts": {
     "dev": "cross-env NODE_OPTIONS=--enable-source-maps node scripts/dev-server.mjs",
     "build": "next build",
@@ -11,7 +16,8 @@
     "generate-client": "openapi-ts",
     "test": "vitest run",
     "test:display-options": "node scripts/test-display-options.mts",
-    "lint:lead-flow": "bash ../../user_onboarding/scripts/check_lead_flow.sh"
+    "lint:lead-flow": "bash ../../user_onboarding/scripts/check_lead_flow.sh",
+    "i18n:audit": "node --test scripts/i18n/audit.test.mjs && node scripts/i18n/audit.mjs"
   },
   "dependencies": {
     "@calcom/embed-react": "^1.5.3",
@@ -40,7 +46,8 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.505.0",
-    "next": "^15.3.3",
+    "next": "^15.5.27",
+    "next-intl": "4.14.9",
     "next-themes": "^0.4.6",
     "pino": "^9.9.2",
     "pino-pretty": "^13.1.1",
@@ -61,6 +68,9 @@
     "zundo": "^2.3.0",
     "zustand": "^5.0.8"
   },
+  "overrides": {
+    "postcss": "^8.5.23"
+  },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@hey-api/openapi-ts": "^0.99.0",
@@ -73,7 +83,7 @@
     "@vitejs/plugin-react": "^6.0.3",
     "cross-env": "^7.0.3",
     "eslint": "^9",
-    "eslint-config-next": "^15.3.3",
+    "eslint-config-next": "^15.5.27",
     "eslint-plugin-simple-import-sort": "^12.1.1",
     "eslint-plugin-unused-imports": "^4.1.4",
     "jsdom": "^29.1.1",

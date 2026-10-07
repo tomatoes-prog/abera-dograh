@@ -16,9 +16,10 @@ exercised against a live cluster.
 cd deploy/helm/dograh
 
 # Install with defaults (all internal deps, Gateway API exposure).
-# The bundled Postgres/Redis/MinIO are in-chart manifests on official upstream
+# The bundled Postgres/Redis are in-chart manifests on official upstream
 # images — no `helm dependency` / subchart pull step needed.
 helm install dograh . \
+  --set storage.s3.bucket=your-private-dograh-bucket \
   --set secrets.ossJwtSecret="$(openssl rand -hex 32)" \
   --set secrets.turnSecret="$(openssl rand -hex 32)" \
   --set exposure.gatewayApi.gatewayClassName=istio
@@ -67,10 +68,8 @@ silent. Each is exposed in `values.yaml` for operator override.
 - **Singleton replica counts: hard-coded.** No `replicaCount` knob
   exposed on ari-manager / campaign-orchestrator. Prevents accidental
   `kubectl scale` corrupting in-memory dedup state.
-- **MinIO browser exposure: shared host, path prefix `/voice-audio/`.**
-  Mirrors current nginx behavior. Operators wanting a separate
-  hostname can override by editing `httproute-minio.yaml` or
-  `ingress.yaml` post-install.
+- **Private S3 storage.** Supply an existing bucket and workload IAM role.
+  The application issues temporary signed reads; there is no public file route.
 - **NetworkPolicy: not in v1.** TODO below.
 - **ServiceMonitor / Prometheus: not in v1.** TODO below.
 - **TURN TLS (turns://): not in v1.** Original docker-compose exposed
@@ -94,14 +93,11 @@ volume. The remaining `/tmp` uses (`audio_file_cache.py`,
 - **Connection-count HPA metric.** Expose active WS sessions per pod
   (Prometheus or KEDA) and replace CPU/memory HPA target.
 - **NetworkPolicy.** Add default-deny + explicit egress to Postgres,
-  Redis, MinIO/S3, and (for ari-manager) Asterisk.
+  Redis, S3, and (for ari-manager) Asterisk.
 - **ServiceMonitor.** First-class Prometheus integration once
   observability stack is selected.
 - **TURN TLS (turns://).** Wire certificate paths through coturn config
   and document the cert-manager pattern.
-- **MinIO public route via separate hostname.** Make `/voice-audio/`
-  path-prefix the default but allow operators to opt into a dedicated
-  hostname.
 - **KEDA for ARQ workers.** When a queue-depth or active-calls metric
   is available, switch ARQ from CPU HPA to KEDA-driven scaling. Keep
   `autoscaling.workers.enabled=false` when a KEDA ScaledObject owns the
@@ -168,6 +164,5 @@ deploy/helm/dograh/
     ├── gateway.yaml
     ├── httproute-api.yaml
     ├── httproute-ui.yaml
-    ├── httproute-minio.yaml
     └── ingress.yaml
 ```

@@ -4,6 +4,8 @@ from unittest.mock import AsyncMock
 import httpx
 import pytest
 
+pytestmark = pytest.mark.usefixtures("mps_enabled")
+
 from api.services import quota_service
 from api.services.configuration.registry import ServiceProviders
 from api.services.managed_model_services import MPS_CORRELATION_ID_CONTEXT_KEY

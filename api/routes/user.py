@@ -1,15 +1,16 @@
 from datetime import datetime, timedelta
 from typing import List, Literal, Optional, TypedDict, Union
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field, ValidationError
 
+from api import constants
 from api.db import db_client
 from api.db.models import (
     UserModel,
 )
 from api.errors.failure import ErrorSource, classify_exception, log_failure
-from api.errors.mps import MPSUnavailableError
 from api.schemas.onboarding_state import OnboardingState, OnboardingStateUpdate
 from api.schemas.widget_texts import WidgetTexts
 from api.schemas.workflow_configurations import (
@@ -34,7 +35,7 @@ from api.services.configuration.defaults import DEFAULT_SERVICE_PROVIDERS
 from api.services.configuration.masking import check_for_masked_keys, mask_user_config
 from api.services.configuration.merge import merge_user_configurations
 from api.services.configuration.registry import REGISTRY, ServiceType
-from api.services.mps_service_key_client import mps_service_key_client
+from api.services.model_services.voices import get_direct_voices
 from api.services.organization_preferences import (
     get_organization_preferences,
     upsert_organization_preferences,
@@ -86,18 +87,22 @@ async def get_default_configurations() -> DefaultConfigurationsResponse:
         "llm": {
             provider: model_cls.model_json_schema()
             for provider, model_cls in REGISTRY[ServiceType.LLM].items()
+            if provider != "dograh" or constants.ENABLE_DOGRAH_MPS
         },
         "tts": {
             provider: model_cls.model_json_schema()
             for provider, model_cls in REGISTRY[ServiceType.TTS].items()
+            if provider != "dograh" or constants.ENABLE_DOGRAH_MPS
         },
         "stt": {
             provider: model_cls.model_json_schema()
             for provider, model_cls in REGISTRY[ServiceType.STT].items()
+            if provider != "dograh" or constants.ENABLE_DOGRAH_MPS
         },
         "embeddings": {
             provider: model_cls.model_json_schema()
             for provider, model_cls in REGISTRY[ServiceType.EMBEDDINGS].items()
+            if provider != "dograh" or constants.ENABLE_DOGRAH_MPS
         },
         "realtime": {
             provider: model_cls.model_json_schema()
@@ -488,7 +493,9 @@ async def get_voices(
 ) -> VoicesResponse:
     """Get available voices for a TTS provider."""
     try:
-        result = await mps_service_key_client.get_voices(
+        if not user.selected_organization_id:
+            raise HTTPException(400, "Selecciona una organización.")
+        result = await get_direct_voices(
             provider=provider,
             model=model,
             language=language,
@@ -496,23 +503,20 @@ async def get_voices(
             gender=gender,
             accent=accent,
             organization_id=user.selected_organization_id,
-            created_by=user.provider_id,
         )
         return VoicesResponse(
             provider=result.get("provider", provider),
             voices=[VoiceInfo(**voice) for voice in result.get("voices", [])],
             facets=result.get("facets"),
         )
-    except MPSUnavailableError:
-        # The MPS boundary emitted the classified failure. The app-level handler
-        # converts this typed dependency failure to a customer-safe HTTP 503.
+    except HTTPException:
         raise
     except Exception as e:
         log_failure(
             classify_exception(
                 e,
                 source=ErrorSource.PLATFORM,
-                provider="dograh",
+                provider=provider,
                 error_owner="operator",
             ),
             organization_id=user.selected_organization_id,
@@ -520,6 +524,39 @@ async def get_voices(
             requested_provider=provider,
         )
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to fetch voices for {provider}",
+            status_code=502,
+            detail="No se pudo consultar el catálogo de voces. Inténtalo de nuevo.",
         ) from e
+
+
+class VoiceCatalogueRequest(BaseModel):
+    # Send a newly entered key in a POST body, never in URLs or access logs.
+    api_key: str | None = Field(default=None, max_length=4096, repr=False)
+    model: str | None = Field(default=None, max_length=200)
+    language: str | None = Field(default=None, max_length=32)
+    q: str | None = Field(default=None, max_length=200)
+    gender: str | None = Field(default=None, max_length=100)
+    accent: str | None = Field(default=None, max_length=100)
+
+
+@router.post("/configurations/voices/{provider}", response_model=VoicesResponse)
+async def query_voices(
+    provider: TTSProvider,
+    request: VoiceCatalogueRequest,
+    user: UserModel = Depends(get_user),
+) -> VoicesResponse:
+    if not user.selected_organization_id:
+        raise HTTPException(400, "Selecciona una organización.")
+    try:
+        result = await get_direct_voices(
+            organization_id=user.selected_organization_id,
+            provider=provider,
+            **request.model_dump(),
+        )
+        return VoicesResponse.model_validate(result)
+    except HTTPException:
+        raise
+    except (httpx.HTTPError, ValueError, KeyError):
+        raise HTTPException(
+            502, "No se pudo consultar el catálogo de voces. Inténtalo de nuevo."
+        ) from None

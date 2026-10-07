@@ -2,6 +2,7 @@ from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
+from pydantic_core import PydanticCustomError
 
 from api.schemas.answer_supervisor import DEFAULT_LISTENING_WINDOW_SECONDS
 from api.services.integrations import (
@@ -1093,7 +1094,7 @@ class ReactFlowDTO(BaseModel):
     @model_validator(mode="after")
     def _referential_integrity(self):
         node_ids = {n.id for n in self.nodes}
-        line_errors: list[dict[str, str]] = []
+        line_errors: list[dict[str, Any]] = []
 
         for idx, edge in enumerate(self.edges):
             for endpoint in (edge.source, edge.target):
@@ -1101,7 +1102,9 @@ class ReactFlowDTO(BaseModel):
                     line_errors.append(
                         dict(
                             loc=("edges", idx),
-                            type="missing_node",
+                            type=PydanticCustomError(
+                                "missing_node", "Edge references missing node"
+                            ),
                             msg="Edge references missing node",
                             input=edge.model_dump(mode="python"),
                             ctx={"edge_id": edge.id, "endpoint": endpoint},

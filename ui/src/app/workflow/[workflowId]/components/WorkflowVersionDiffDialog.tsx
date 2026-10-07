@@ -12,6 +12,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { cn } from "@/lib/utils";
 
 import {
@@ -19,6 +20,7 @@ import {
     type DiffCell,
     serializeWorkflowVersionJson,
 } from "../utils/workflowVersionDiff";
+
 
 interface WorkflowVersionDiffDialogProps {
     open: boolean;
@@ -105,6 +107,7 @@ export const WorkflowVersionDiffDialog = ({
     previousVersion,
     selectedVersion,
 }: WorkflowVersionDiffDialogProps) => {
+    const copy = useCopy();
     const rows = useMemo(() => {
         const previousJson = serializeWorkflowVersionJson(previousVersion);
         const selectedJson = serializeWorkflowVersionJson(selectedVersion);
@@ -155,8 +158,7 @@ export const WorkflowVersionDiffDialog = ({
             <DialogContent className="h-[calc(100vh-2rem)] max-h-[900px] w-[calc(100vw-2rem)] max-w-[1280px] grid-rows-[auto_auto_minmax(0,1fr)] gap-0 overflow-hidden border-[#333] bg-[#151515] p-0 sm:max-w-[1280px]">
                 <DialogHeader className="border-b border-[#333] px-5 py-4 pr-14">
                     <div className="flex items-center justify-between gap-4">
-                        <DialogTitle className="text-base text-white">
-                            Changes {versionLabel(previousVersion)} → {versionLabel(selectedVersion)}
+                        <DialogTitle className="text-base text-white">{copy("Changes ")}{versionLabel(previousVersion)} → {versionLabel(selectedVersion)}
                         </DialogTitle>
                         {hasChanges && (
                             <div className="flex shrink-0 items-center gap-2">
@@ -165,15 +167,15 @@ export const WorkflowVersionDiffDialog = ({
                                     className="min-w-14 text-right text-xs tabular-nums text-gray-500"
                                 >
                                     {activeChangeIndex >= 0
-                                        ? `${activeChangeIndex + 1} / ${changeHunks.length}`
-                                        : `${changeHunks.length} ${changeHunks.length === 1 ? "change" : "changes"}`}
+                                        ? copy("{value0} / {value1}", {value0: activeChangeIndex + 1, value1: changeHunks.length})
+                                        : copy("{value0} {value1}", {value0: changeHunks.length, value1: changeHunks.length === 1 ? "change" : "changes"})}
                                 </span>
                                 <div className="flex items-center gap-1">
                                     <Button
                                         type="button"
                                         variant="outline"
                                         size="icon"
-                                        aria-label="Go to previous change"
+                                        aria-label={copy("Go to previous change")}
                                         onClick={handlePreviousChange}
                                         className="h-7 w-7 border-[#3a3a3a] bg-transparent text-gray-400 hover:bg-[#292929] hover:text-white"
                                     >
@@ -183,7 +185,7 @@ export const WorkflowVersionDiffDialog = ({
                                         type="button"
                                         variant="outline"
                                         size="icon"
-                                        aria-label="Go to next change"
+                                        aria-label={copy("Go to next change")}
                                         onClick={handleNextChange}
                                         className="h-7 w-7 border-[#3a3a3a] bg-transparent text-gray-400 hover:bg-[#292929] hover:text-white"
                                     >
@@ -193,8 +195,7 @@ export const WorkflowVersionDiffDialog = ({
                             </div>
                         )}
                     </div>
-                    <DialogDescription className="sr-only">
-                        Differences between workflow versions {versionLabel(previousVersion)} and {versionLabel(selectedVersion)}.
+                    <DialogDescription className="sr-only">{copy("Differences between workflow versions ")}{versionLabel(previousVersion)}{copy(" and ")}{versionLabel(selectedVersion)}.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -247,7 +248,7 @@ export const WorkflowVersionDiffDialog = ({
                             })}
                         </div>
                     ) : (
-                        <p className="py-12 text-center text-sm text-gray-500">No changes</p>
+                        <p className="py-12 text-center text-sm text-gray-500">{copy("No changes")}</p>
                     )}
                 </div>
             </DialogContent>

@@ -42,9 +42,8 @@ copy_if_missing() {
 
 # Copy an api/.env*.example template to its target, rewriting infra hostnames
 # from `localhost` to the docker service names defined in
-# docker-compose-local.yaml. MINIO_PUBLIC_ENDPOINT stays on localhost — that
-# URL ends up in UI responses and is loaded by the host browser via the
-# forwarded port. No-op if the target already exists.
+# docker-compose-local.yaml. Configure a private S3 bucket separately.
+# No-op if the target already exists.
 copy_env_with_docker_hostnames() {
   local src=$1
   local dst=$2
@@ -56,7 +55,6 @@ copy_env_with_docker_hostnames() {
   sed -i \
     -e 's|@localhost:5432|@postgres:5432|g' \
     -e 's|@localhost:6379|@redis:6379|g' \
-    -e 's|^MINIO_ENDPOINT=localhost:9000|MINIO_ENDPOINT=minio:9000|' \
     "$dst"
   echo "Created $dst from $src (rewrote service hostnames for docker network)"
 }

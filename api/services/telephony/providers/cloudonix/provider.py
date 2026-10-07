@@ -25,6 +25,7 @@ from api.services.telephony.base import (
     SIPTransportDetails,
     TelephonyProvider,
 )
+from api.services.telephony.sip import first_sip_string, normalize_sip_headers
 from api.services.workflow.initial_context import merge_external_initial_context
 from api.utils.common import get_backend_endpoints
 from api.utils.telephony_address import normalize_telephony_address
@@ -578,6 +579,104 @@ class CloudonixProvider(TelephonyProvider):
             logger.error(f"Error in Cloudonix WebSocket handler: {e}")
             raise
 
+    async def authenticate_external_websocket(
+        self, websocket, *, organization_id: int, workflow_id: int
+    ):
+        """Verify the provider handshake before any customer call state is allocated."""
+        try:
+            first_msg = await asyncio.wait_for(
+                websocket.receive_text(),
+                timeout=AGENT_STREAM_HANDSHAKE_TIMEOUT_S,
+            )
+            msg = json.loads(first_msg)
+            if msg.get("event") != "connected":
+                logger.error(f"Expected 'connected' event, got: {msg.get('event')}")
+                await websocket.close(code=4400, reason="Expected connected event")
+                return
+
+            start_msg = json.loads(
+                await asyncio.wait_for(
+                    websocket.receive_text(),
+                    timeout=AGENT_STREAM_HANDSHAKE_TIMEOUT_S,
+                )
+            )
+        except asyncio.TimeoutError:
+            logger.warning(
+                f"Cloudonix agent-stream handshake timed out for workflow_run "
+                f"{workflow_id}"
+            )
+            await websocket.close(code=4408, reason="Handshake timeout")
+            return
+
+        if start_msg.get("event") != "start":
+            logger.error("Expected 'start' event second")
+            await websocket.close(code=4400, reason="Expected start event")
+            return
+
+        start = start_msg.get("start")
+        if not isinstance(start, dict):
+            logger.error("Cloudonix agent-stream start message missing start object")
+            await websocket.close(code=4400, reason="Missing start metadata")
+            return
+
+        try:
+            stream_sid = start["streamSid"]
+            call_sid = start["callSid"]
+            call_session = start["session"]
+            domain_id = self._normalize_domain(start["accountSid"])
+        except KeyError:
+            logger.error(
+                "Missing streamSid, callSid, session, or accountSid in start message"
+            )
+            await websocket.close(code=4400, reason="Missing stream identifiers")
+            return
+
+        if not domain_id:
+            logger.error("Cloudonix agent-stream start message missing accountSid")
+            await websocket.close(
+                code=4400, reason="Missing Cloudonix domain in start message"
+            )
+            return
+
+        config = await self._find_config_by_domain(organization_id, domain_id)
+        if not config:
+            logger.error(
+                f"Cloudonix agent-stream: no telephony configuration found "
+                f"for domain_id={domain_id}"
+            )
+            await websocket.close(
+                code=4400, reason=f"Unknown Cloudonix domain: {domain_id}"
+            )
+            return
+
+        bearer_token = (config.credentials or {}).get("bearer_token")
+        if not bearer_token:
+            logger.error(
+                f"Cloudonix agent-stream: telephony configuration {config.id} "
+                f"is missing bearer_token in credentials"
+            )
+            await websocket.close(
+                code=4400, reason="Cloudonix configuration missing bearer_token"
+            )
+            return
+
+        if not await self._validate_session(domain_id, call_session, bearer_token):
+            await websocket.close(
+                code=4400, reason="Cloudonix session validation failed"
+            )
+            return
+
+        self._authenticated_external_start = (
+            start,
+            stream_sid,
+            call_sid,
+            call_session,
+            domain_id,
+            config,
+            bearer_token,
+        )
+        return True
+
     async def handle_external_websocket(
         self,
         websocket: "WebSocket",
@@ -605,90 +704,21 @@ class CloudonixProvider(TelephonyProvider):
         from api.services.pipecat.run_pipeline import run_pipeline_telephony
 
         try:
-            try:
-                first_msg = await asyncio.wait_for(
-                    websocket.receive_text(),
-                    timeout=AGENT_STREAM_HANDSHAKE_TIMEOUT_S,
-                )
-                msg = json.loads(first_msg)
-                if msg.get("event") != "connected":
-                    logger.error(f"Expected 'connected' event, got: {msg.get('event')}")
-                    await websocket.close(code=4400, reason="Expected connected event")
+            if not getattr(self, "_authenticated_external_start", None):
+                if not await self.authenticate_external_websocket(
+                    websocket, organization_id=organization_id, workflow_id=workflow_id
+                ):
                     return
-
-                start_msg = json.loads(
-                    await asyncio.wait_for(
-                        websocket.receive_text(),
-                        timeout=AGENT_STREAM_HANDSHAKE_TIMEOUT_S,
-                    )
-                )
-            except asyncio.TimeoutError:
-                logger.warning(
-                    f"Cloudonix agent-stream handshake timed out for workflow_run "
-                    f"{workflow_run_id}"
-                )
-                await websocket.close(code=4408, reason="Handshake timeout")
-                return
-
-            if start_msg.get("event") != "start":
-                logger.error("Expected 'start' event second")
-                await websocket.close(code=4400, reason="Expected start event")
-                return
-
-            start = start_msg.get("start")
-            if not isinstance(start, dict):
-                logger.error(
-                    "Cloudonix agent-stream start message missing start object"
-                )
-                await websocket.close(code=4400, reason="Missing start metadata")
-                return
-
-            try:
-                stream_sid = start["streamSid"]
-                call_sid = start["callSid"]
-                call_session = start["session"]
-                domain_id = self._normalize_domain(start["accountSid"])
-            except KeyError:
-                logger.error(
-                    "Missing streamSid, callSid, session, or accountSid in start message"
-                )
-                await websocket.close(code=4400, reason="Missing stream identifiers")
-                return
-
-            if not domain_id:
-                logger.error("Cloudonix agent-stream start message missing accountSid")
-                await websocket.close(
-                    code=4400, reason="Missing Cloudonix domain in start message"
-                )
-                return
-
-            config = await self._find_config_by_domain(organization_id, domain_id)
-            if not config:
-                logger.error(
-                    f"Cloudonix agent-stream: no telephony configuration found "
-                    f"for domain_id={domain_id}"
-                )
-                await websocket.close(
-                    code=4400, reason=f"Unknown Cloudonix domain: {domain_id}"
-                )
-                return
-
-            bearer_token = (config.credentials or {}).get("bearer_token")
-            if not bearer_token:
-                logger.error(
-                    f"Cloudonix agent-stream: telephony configuration {config.id} "
-                    f"is missing bearer_token in credentials"
-                )
-                await websocket.close(
-                    code=4400, reason="Cloudonix configuration missing bearer_token"
-                )
-                return
-
-            if not await self._validate_session(domain_id, call_session, bearer_token):
-                await websocket.close(
-                    code=4400, reason="Cloudonix session validation failed"
-                )
-                return
+            (
+                start,
+                stream_sid,
+                call_sid,
+                call_session,
+                domain_id,
+                config,
+                bearer_token,
+            ) = self._authenticated_external_start
+            self._authenticated_external_start = None
 
             start_context = start.get("context")
             custom_parameters = start.get("customParameters")
@@ -867,8 +897,11 @@ class CloudonixProvider(TelephonyProvider):
         - SessionData: Contains additional call info including underlying provider details
         """
 
-        session_data = webhook_data.get("SessionData", {})
-        token = session_data.get("token", "") if isinstance(session_data, dict) else ""
+        session_data = webhook_data.get("SessionData")
+        session_data = session_data if isinstance(session_data, dict) else {}
+        profile = session_data.get("profile")
+        profile = profile if isinstance(profile, dict) else {}
+        token = session_data.get("token", "")
 
         call_id = webhook_data.get("Session") or webhook_data.get("CallSid") or token
 
@@ -885,13 +918,32 @@ class CloudonixProvider(TelephonyProvider):
         )
 
         # Extract underlying provider information from SessionData if available
-        session_data = webhook_data.get("SessionData", {})
         underlying_provider = None
-        if isinstance(session_data, dict):
-            profile = session_data.get("profile", {})
-            trunk_headers = profile.get("trunk-sip-headers", {})
-            if "Twilio-AccountSid" in trunk_headers:
-                underlying_provider = "twilio"
+        trunk_headers = profile.get("trunk-sip-headers")
+        if isinstance(trunk_headers, dict) and "Twilio-AccountSid" in trunk_headers:
+            underlying_provider = "twilio"
+
+        # Cloudonix's CallSid/Session identify its session, not the caller's
+        # SIP dialog. The latter is repeated in callIds, profile.callId and CID.
+        sip_headers = normalize_sip_headers(
+            (name, value)
+            for field in ("trunk-sip-headers", "subscriber-sip-headers")
+            if isinstance(forwarded := profile.get(field), dict)
+            for name, value in forwarded.items()
+        )
+        lowered = {name.lower(): value for name, value in sip_headers.items()}
+        sip_call_id = (
+            first_sip_string(session_data.get("callIds"))
+            or first_sip_string(profile.get("callId"))
+            or next(
+                (
+                    lowered[name]
+                    for name in ("cid", "call-id", "correlation-id", "x-correlation-id")
+                    if lowered.get(name)
+                ),
+                None,
+            )
+        )
 
         direction = webhook_data.get("Direction", "inbound").lower()
         if direction in {"inbound", "subscriber"}:
@@ -911,6 +963,8 @@ class CloudonixProvider(TelephonyProvider):
                 **webhook_data,
                 "underlying_provider": underlying_provider,
             },
+            sip_call_id=sip_call_id,
+            sip_headers=sip_headers,
         )
 
     @staticmethod

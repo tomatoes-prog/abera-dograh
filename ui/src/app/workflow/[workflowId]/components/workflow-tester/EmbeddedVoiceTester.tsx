@@ -6,10 +6,12 @@ import { useEffect, useRef } from "react";
 
 import { Button } from "@/components/ui/button";
 import { RealtimeFeedback } from "@/components/workflow/conversation";
+import { useCopy } from "@/i18n/LocaleProvider";
 
 import { ApiKeyErrorDialog, ConnectionStatus, WorkflowConfigErrorDialog } from "../../run/[runId]/components";
 import { useWebSocketRTC } from "../../run/[runId]/hooks";
 import type { WorkflowRuntimeNodeTransition } from "./types";
+
 
 interface EmbeddedVoiceTesterProps {
     workflowId: number;
@@ -28,6 +30,7 @@ export function EmbeddedVoiceTester({
     onReset,
     onNodeTransition,
 }: EmbeddedVoiceTesterProps) {
+    const copy = useCopy();
     const router = useRouter();
     const {
         audioRef,
@@ -101,14 +104,14 @@ export function EmbeddedVoiceTester({
         appConfig?.backendStatus !== "reachable";
 
     const endButtonLabel = connectionActive
-        ? "End Call"
+        ? copy("End Call")
         : isCompleted
-            ? "Start Another Test"
+            ? copy("Start Another Test")
             : connectionStatus === "failed"
-                ? "Retry Call"
+                ? copy("Retry Call")
                 : configUnreachable
-                    ? "Retry Connection"
-                    : "Starting Test...";
+                    ? copy("Retry Connection")
+                    : copy("Starting Test...");
 
     const handleConfigRetry = () => {
         // Deliberately NOT resetting configRetriedRef here. It's already
@@ -171,9 +174,7 @@ export function EmbeddedVoiceTester({
                                 </>
                             ) : isStarting && connectionStatus !== "failed" ? (
                                 <>
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    Starting Test...
-                                </>
+                                    <Loader2 className="h-4 w-4 animate-spin" />{copy("Starting Test...")}</>
                             ) : connectionActive ? (
                                 <>
                                     <Phone className="h-4 w-4" />
@@ -197,9 +198,7 @@ export function EmbeddedVoiceTester({
                             )}
                         </Button>
                         {configUnreachable ? (
-                            <p className="text-center text-sm text-muted-foreground">
-                                Couldn&apos;t reach the backend to confirm call settings. Tap retry once it&apos;s back.
-                            </p>
+                            <p className="text-center text-sm text-muted-foreground">{copy("Couldn't reach the backend to confirm call settings. Tap retry once it's back.")}</p>
                         ) : null}
                     </div>
                 </div>

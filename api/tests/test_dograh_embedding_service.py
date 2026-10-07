@@ -5,6 +5,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+pytestmark = pytest.mark.usefixtures("mps_enabled")
+
 from api.services.gen_ai.embedding.dograh_service import DograhEmbeddingService
 from api.services.gen_ai.embedding.factory import resolve_embedding_correlation_id
 

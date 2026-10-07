@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { detailFromError } from "@/lib/apiError";
 import { useAuth } from "@/lib/auth";
 
@@ -24,6 +25,7 @@ import {
     isUnsafeHttpMethod,
     parseTestParameterValues,
 } from "./helpers";
+
 
 type HttpToolTestDialogProps = {
     open: boolean;
@@ -95,8 +97,9 @@ function ParameterFields({
     onValueChange,
     onEditJson,
 }: ParameterFieldsProps) {
+    const copy = useCopy();
     if (parameters.length === 0) {
-        return <p className="text-sm text-muted-foreground">No parameters configured.</p>;
+        return <p className="text-sm text-muted-foreground">{copy("No parameters configured.")}</p>;
     }
 
     return (
@@ -114,14 +117,13 @@ function ParameterFields({
                             <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
                                 {parameter.type}
                             </span>
-                            {parameter.required && <span className="text-xs text-destructive">required</span>}
+                            {parameter.required && <span className="text-xs text-destructive">{copy("required")}</span>}
                         </div>
                         {"description" in parameter && parameter.description && (
                             <p className="text-xs text-muted-foreground">{parameter.description}</p>
                         )}
                         {"valueTemplate" in parameter && parameter.valueTemplate && (
-                            <p className="break-all text-xs text-muted-foreground">
-                                Configured preset: <code>{parameter.valueTemplate}</code>
+                            <p className="break-all text-xs text-muted-foreground">{copy("Configured preset: ")}<code>{parameter.valueTemplate}</code>
                             </p>
                         )}
                         {parameter.type === "boolean" ? (
@@ -131,8 +133,8 @@ function ParameterFields({
                                 onChange={(event) => onValueChange(parameter.name, event.target.value)}
                                 className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
                             >
-                                <option value="true">true</option>
-                                <option value="false">false</option>
+                                <option value="true">{copy("true")}</option>
+                                <option value="false">{copy("false")}</option>
                             </select>
                         ) : parameter.type === "number" ? (
                             <Input
@@ -149,7 +151,7 @@ function ParameterFields({
                                     className="h-9 flex-1 truncate rounded-md border border-input bg-background px-3 py-1 text-left font-mono text-sm shadow-sm hover:bg-accent"
                                 >
                                     {!value || value === (parameter.type === "array" ? "[]" : "{}") ? (
-                                        <span className="text-muted-foreground">Empty</span>
+                                        <span className="text-muted-foreground">{copy("Empty")}</span>
                                     ) : (
                                         value
                                     )}
@@ -159,7 +161,7 @@ function ParameterFields({
                                     variant="outline"
                                     size="icon"
                                     onClick={() => onEditJson(parameter.name)}
-                                    aria-label={`Edit ${parameter.name}`}
+                                    aria-label={copy("Edit {value0}", {value0: parameter.name})}
                                 >
                                     <Pencil className="h-4 w-4" />
                                 </Button>
@@ -169,7 +171,7 @@ function ParameterFields({
                                 id={inputId}
                                 value={value}
                                 onChange={(event) => onValueChange(parameter.name, event.target.value)}
-                                placeholder={`Enter ${parameter.name}`}
+                                placeholder={copy("Enter {value0}", {value0: parameter.name})}
                             />
                         )}
                     </div>
@@ -188,6 +190,7 @@ export function HttpToolTestDialog({
     parameters,
     presetParameters,
 }: HttpToolTestDialogProps) {
+    const copy = useCopy();
     const { getAccessToken } = useAuth();
     const [llmParamValues, setLlmParamValues] = useState<Record<string, string>>({});
     const [presetParamValues, setPresetParamValues] = useState<Record<string, string>>({});
@@ -295,7 +298,7 @@ export function HttpToolTestDialog({
             });
 
             if (response.error) {
-                setTestError(detailFromError(response.error, "Failed to test tool"));
+                setTestError(copy(detailFromError(response.error, "Failed to test tool")));
                 return;
             }
 
@@ -310,24 +313,20 @@ export function HttpToolTestDialog({
     const isSuccess =
         result?.status === "success" &&
         (result.status_code == null || (result.status_code >= 200 && result.status_code < 300));
-    const resultBadgeLabel = isSuccess ? "success" : result?.status === "success" ? "failed" : "error";
+    const resultBadgeLabel = isSuccess ? copy("success") : result?.status === copy("success") ? copy("failed") : "error";
 
     return (
         <>
             <Dialog open={open} onOpenChange={onOpenChange}>
                 <DialogContent className="max-h-[90vh] max-w-3xl grid-rows-[auto_minmax(0,1fr)]">
                     <DialogHeader>
-                        <DialogTitle>Test Tool</DialogTitle>
-                        <DialogDescription>
-                            Run the saved configuration against the real endpoint.
-                        </DialogDescription>
+                        <DialogTitle>{copy("Test Tool")}</DialogTitle>
+                        <DialogDescription>{copy("Run the saved configuration against the real endpoint.")}</DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-6 overflow-y-auto pr-1">
                         <div className="rounded-lg border bg-muted/40 p-4">
-                            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                Request
-                            </p>
+                            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">{copy("Request")}</p>
                             <div className="flex items-start gap-3">
                                 <span className="rounded bg-foreground px-2 py-1 font-mono text-xs font-semibold text-background">
                                     {httpMethod}
@@ -343,11 +342,8 @@ export function HttpToolTestDialog({
                             >
                                 <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
                                 <div className="space-y-1">
-                                    <p className="text-sm font-medium">This performs a real external request</p>
-                                    <p className="text-sm">
-                                        Testing sends an actual {httpMethod} request to this endpoint. Any configured
-                                        credential is used for the request, and the operation may modify external data.
-                                    </p>
+                                    <p className="text-sm font-medium">{copy("This performs a real external request")}</p>
+                                    <p className="text-sm">{copy("Testing sends an actual ")}{httpMethod}{copy(" request to this endpoint. Any configured credential is used for the request, and the operation may modify external data.")}</p>
                                 </div>
                             </div>
                         )}
@@ -355,10 +351,8 @@ export function HttpToolTestDialog({
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-medium">Parameters</p>
-                                    <p className="text-xs text-muted-foreground">
-                                        Supply the values that would normally come from the model and configured presets.
-                                    </p>
+                                    <p className="text-sm font-medium">{copy("Parameters")}</p>
+                                    <p className="text-xs text-muted-foreground">{copy("Supply the values that would normally come from the model and configured presets.")}</p>
                                 </div>
                                 {(parameters.length > 0 || presetParameters.length > 0) && (
                                     <Button
@@ -366,19 +360,15 @@ export function HttpToolTestDialog({
                                         variant="outline"
                                         size="sm"
                                         onClick={handleFillSampleValues}
-                                    >
-                                        Fill sample values
-                                    </Button>
+                                    >{copy("Fill sample values")}</Button>
                                 )}
                             </div>
                         </div>
 
                         <div className="space-y-3 border-t pt-4">
                             <div>
-                                <p className="text-sm font-medium">LLM Parameters</p>
-                                <p className="text-xs text-muted-foreground">
-                                    Values the model would provide at call time.
-                                </p>
+                                <p className="text-sm font-medium">{copy("LLM Parameters")}</p>
+                                <p className="text-xs text-muted-foreground">{copy("Values the model would provide at call time.")}</p>
                             </div>
                             <ParameterFields
                                 idPrefix="llm-param"
@@ -393,10 +383,8 @@ export function HttpToolTestDialog({
 
                         <div className="space-y-3 border-t pt-4">
                             <div>
-                                <p className="text-sm font-medium">Preset Parameters</p>
-                                <p className="text-xs text-muted-foreground">
-                                    Resolved values that Dograh would normally derive from each configured preset.
-                                </p>
+                                <p className="text-sm font-medium">{copy("Preset Parameters")}</p>
+                                <p className="text-xs text-muted-foreground">{copy("Resolved values that Dograh would normally derive from each configured preset.")}</p>
                             </div>
                             <ParameterFields
                                 idPrefix="preset-param"
@@ -413,11 +401,9 @@ export function HttpToolTestDialog({
                             <Button onClick={handleTestTool} disabled={isTesting}>
                                 {isTesting ? (
                                     <>
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Testing...
-                                    </>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />{copy("Testing...")}</>
                                 ) : (
-                                    "Test Tool"
+                                    copy("Test Tool")
                                 )}
                             </Button>
                         </div>
@@ -467,12 +453,11 @@ export function HttpToolTestDialog({
                                         {resultBadgeLabel}
                                     </span>
                                     {result.status_code != null && (
-                                        <span className="text-sm text-muted-foreground">HTTP {result.status_code}</span>
+                                        <span className="text-sm text-muted-foreground">{copy("HTTP ")}{result.status_code}</span>
                                     )}
                                     {result.duration_ms !== undefined && (
                                         <span className="rounded bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground">
-                                            {result.duration_ms}ms
-                                        </span>
+                                            {result.duration_ms}{copy("ms")}</span>
                                     )}
                                 </div>
                                 {result.hint && (
@@ -504,10 +489,8 @@ export function HttpToolTestDialog({
             >
                 <DialogContent className="max-w-2xl">
                     <DialogHeader>
-                        <DialogTitle>Edit {jsonEditTarget?.name}</DialogTitle>
-                        <DialogDescription>
-                            Edit the JSON value sent for this parameter when testing.
-                        </DialogDescription>
+                        <DialogTitle>{copy("Edit ")}{jsonEditTarget?.name}</DialogTitle>
+                        <DialogDescription>{copy("Edit the JSON value sent for this parameter when testing.")}</DialogDescription>
                     </DialogHeader>
                     <textarea
                         value={jsonEditDraft}
@@ -523,15 +506,9 @@ export function HttpToolTestDialog({
                             variant="outline"
                             onClick={handleFormatJson}
                             disabled={jsonEditDraft.length === 0}
-                        >
-                            Format JSON
-                        </Button>
-                        <Button type="button" variant="outline" onClick={closeJsonEditDialog}>
-                            Cancel
-                        </Button>
-                        <Button type="button" onClick={handleSaveJsonEdit}>
-                            Save
-                        </Button>
+                        >{copy("Format JSON")}</Button>
+                        <Button type="button" variant="outline" onClick={closeJsonEditDialog}>{copy("Cancel")}</Button>
+                        <Button type="button" onClick={handleSaveJsonEdit}>{copy("Save")}</Button>
                     </div>
                 </DialogContent>
             </Dialog>

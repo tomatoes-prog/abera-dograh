@@ -96,7 +96,6 @@ In-cluster service references for internal deps.
 */}}
 {{- define "dograh.postgresHost" -}}{{ .Release.Name }}-postgresql{{- end }}
 {{- define "dograh.redisHost" -}}{{ .Release.Name }}-redisinternal-master{{- end }}
-{{- define "dograh.minioHost" -}}{{ .Release.Name }}-minio{{- end }}
 
 {{/*
 Resolved passwords for the bundled internal deps.
@@ -127,19 +126,6 @@ reference is a secretKeyRef, so the generated value is stable within a render.
 {{- $s := lookup "v1" "Secret" .Release.Namespace (printf "%s-redisinternal" .Release.Name) -}}
 {{- if and $s $s.data (index $s.data "redis-password") -}}
 {{- index $s.data "redis-password" | b64dec -}}
-{{- else -}}
-{{- randAlphaNum 24 -}}
-{{- end -}}
-{{- end -}}
-{{- end }}
-
-{{- define "dograh.minioRootPassword" -}}
-{{- if .Values.minio.auth.rootPassword -}}
-{{- .Values.minio.auth.rootPassword -}}
-{{- else -}}
-{{- $s := lookup "v1" "Secret" .Release.Namespace (printf "%s-minio" .Release.Name) -}}
-{{- if and $s $s.data (index $s.data "root-password") -}}
-{{- index $s.data "root-password" | b64dec -}}
 {{- else -}}
 {{- randAlphaNum 24 -}}
 {{- end -}}
@@ -200,20 +186,6 @@ ship with a literal "$(POSTGRES_PASSWORD)" as the password.
   value: {{ include "dograh.databaseUrl" . | quote }}
 - name: REDIS_URL
   value: {{ include "dograh.redisUrl" . | quote }}
-{{- if eq .Values.storage.mode "internalMinio" }}
-{{- /* Internal MinIO creds come from the <release>-minio secret, the same
-       source the MinIO server uses (no ordering constraint — no composition). */}}
-- name: MINIO_ACCESS_KEY
-  valueFrom:
-    secretKeyRef:
-      name: {{ .Release.Name }}-minio
-      key: root-user
-- name: MINIO_SECRET_KEY
-  valueFrom:
-    secretKeyRef:
-      name: {{ .Release.Name }}-minio
-      key: root-password
-{{- end }}
 {{- end }}
 
 {{/*

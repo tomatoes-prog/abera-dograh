@@ -12,6 +12,14 @@ import pytest
 
 from api.utils.common import get_backend_endpoints, get_scheme
 
+
+@pytest.fixture(autouse=True)
+def explicitly_enable_tunnel_for_tunnel_tests(monkeypatch):
+    # Tunnel discovery is an opt-in deployment mode. Local-only behavior is
+    # covered separately by test_runtime_security.
+    monkeypatch.setattr("api.utils.common.ENABLE_CLOUDFLARE_TUNNEL", True)
+
+
 # Valid test URLs covering various formats
 possible_env_paths = [
     "http://localhost",

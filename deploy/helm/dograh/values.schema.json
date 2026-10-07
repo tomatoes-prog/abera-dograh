@@ -8,41 +8,65 @@
       "properties": {
         "mode": {
           "type": "string",
-          "enum": ["internal", "external"]
+          "enum": [
+            "internal",
+            "external"
+          ]
         }
       },
-      "required": ["mode"]
+      "required": [
+        "mode"
+      ]
     },
     "redis": {
       "type": "object",
       "properties": {
         "mode": {
           "type": "string",
-          "enum": ["internal", "external"]
+          "enum": [
+            "internal",
+            "external"
+          ]
         }
       },
-      "required": ["mode"]
+      "required": [
+        "mode"
+      ]
     },
     "storage": {
       "type": "object",
       "properties": {
         "mode": {
           "type": "string",
-          "enum": ["internalMinio", "externalMinio", "s3"]
+          "enum": [
+            "s3"
+          ]
         }
       },
-      "required": ["mode"]
+      "required": [
+        "mode"
+      ]
     },
     "exposure": {
       "type": "object",
       "properties": {
         "mode": {
           "type": "string",
-          "enum": ["gatewayApi", "ingress"]
+          "enum": [
+            "gatewayApi",
+            "ingress"
+          ]
         }
       },
-      "required": ["mode"]
+      "required": [
+        "mode"
+      ]
     }
   },
-  "required": ["database", "redis", "storage", "exposure"]
+  "required": [
+    "database",
+    "redis",
+    "storage",
+    "exposure"
+  ]
 }

@@ -3,7 +3,7 @@ import uuid
 from typing import Annotated, Any, Dict, Optional, TypedDict
 
 from botocore.exceptions import ClientError
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from loguru import logger
 from pydantic import BaseModel, Field
 
@@ -254,13 +254,18 @@ async def get_file_metadata(
     * Regular users can only request resources belonging to **their** workflow runs.
     """
 
-    # Validate key and extract workflow_run_id (allow special paths for metadata)
-    run_id = await _validate_and_extract_workflow_run_id(key, allow_special_paths=True)
-
-    # Authorize and get workflow run (for special paths, run_id might be None)
-    workflow_run = await _authorize_and_get_workflow_run(
-        run_id, user, require_workflow_run=False
-    )
+    org_id = _extract_org_id_from_key(key)
+    if org_id is not None:
+        if not user.is_superuser and org_id != user.selected_organization_id:
+            raise HTTPException(403, "Access denied for this organization")
+        workflow_run = None
+    elif key.startswith("voicemail_detections/"):
+        if not user.is_superuser:
+            raise HTTPException(403, "Legacy voicemail metadata is restricted")
+        workflow_run = None
+    else:
+        run_id = await _validate_and_extract_workflow_run_id(key)
+        workflow_run = await _authorize_and_get_workflow_run(run_id, user)
 
     # ------------------------------------------------------------------
     # 3. Get file metadata using the correct storage backend
@@ -325,12 +330,21 @@ async def get_presigned_upload_url(
 
     try:
         # Generate presigned PUT URL using current storage backend
-        upload_url = await storage_fs.aget_presigned_put_url(
-            file_path=file_key,
-            expiration=900,  # 15 minutes
-            content_type=request.content_type,
-            max_size=request.file_size,
-        )
+        from api.constants import DEPLOYMENT_MODE
+
+        if DEPLOYMENT_MODE == "abera":
+            from api.services.abera.storage_upload import create_upload_url
+
+            upload_url = await create_upload_url(
+                file_key, request.file_size, request.content_type
+            )
+        else:
+            upload_url = await storage_fs.aget_presigned_put_url(
+                file_path=file_key,
+                expiration=900,
+                content_type=request.content_type,
+                max_size=request.file_size,
+            )
 
         if not upload_url:
             raise HTTPException(
@@ -347,8 +361,20 @@ async def get_presigned_upload_url(
             expires_in=900,
         )
 
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.error(f"Error generating presigned upload URL: {exc}")
         raise HTTPException(
             status_code=500, detail="Failed to generate presigned upload URL"
         )
+
+
+@router.put("/managed-upload/{token}", include_in_schema=False)
+async def managed_upload(token: str, request: Request):
+    # Authentication is the one-time, server-issued upload capability, bound to
+    # an organization key, exact byte count and MIME type in Redis.
+    from api.services.abera.storage_upload import receive_upload
+
+    await receive_upload(token, request)
+    return Response(status_code=204)

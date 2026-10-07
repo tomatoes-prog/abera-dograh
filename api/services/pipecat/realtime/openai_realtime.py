@@ -22,6 +22,7 @@ Adds:
   transcription via the ``completed`` event is final by construction.
 """
 
+import asyncio
 import json
 from typing import Any
 
@@ -49,6 +50,10 @@ from pipecat.transcriptions.language import Language
 from pipecat.utils.time import time_now_iso8601
 
 
+class RealtimeItemMissing(Exception):
+    """The provider explicitly confirmed that a conversation item does not exist."""
+
+
 class DograhOpenAIRealtimeLLMService(
     RealtimeConversationMixin, OpenAIRealtimeLLMService
 ):
@@ -66,6 +71,39 @@ class DograhOpenAIRealtimeLLMService(
         # the text-greeting slot because the transcript may be None while the
         # open itself is still pending.
         self._pending_prerecorded_greeting: tuple[str | None] | None = None
+
+    async def _maybe_handle_evt_retrieve_conversation_item_error(self, evt):
+        if evt.error.code == "item_retrieve_invalid_item_id":
+            item_id = evt.error.event_id.split("_", 1)[1]
+            for future in self._retrieve_conversation_item_futures.pop(item_id, []):
+                if not future.done():
+                    future.set_exception(RealtimeItemMissing(item_id))
+            return True
+        return await super()._maybe_handle_evt_retrieve_conversation_item_error(evt)
+
+    async def _handle_conversation_item_retrieved(self, evt):
+        for future in self._retrieve_conversation_item_futures.pop(evt.item.id, []):
+            if not future.done():
+                future.set_result(evt.item)
+
+    async def confirm_conversation_item(self, item_id):
+        return await asyncio.wait_for(
+            self.retrieve_conversation_item(item_id), timeout=5
+        )
+
+    async def delete_conversation_item_confirmed(self, item_id):
+        try:
+            await self.confirm_conversation_item(item_id)
+        except RealtimeItemMissing:
+            return  # Retry after an acknowledged deletion is harmless.
+        await self.send_client_event(
+            events.ConversationItemDeleteEvent(item_id=item_id)
+        )
+        try:
+            await self.confirm_conversation_item(item_id)
+        except RealtimeItemMissing:
+            return
+        raise RuntimeError("Realtime provider did not confirm item deletion")
 
     # ------------------------------------------------------------------
     # Provider frames: ephemeral prompts and tool-call deferral

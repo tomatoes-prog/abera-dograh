@@ -12,7 +12,11 @@ from groq import Groq
 from api.schemas.ai_model_configuration import (
     EffectiveAIModelConfiguration,
 )
-from api.services.configuration.registry import ServiceConfig, ServiceProviders
+from api.services.configuration.registry import (
+    HOPPER_API_BASE_URL,
+    ServiceConfig,
+    ServiceProviders,
+)
 from api.services.mps_service_key_client import mps_service_key_client
 from api.utils.url_security import validate_user_configured_service_url
 
@@ -32,12 +36,24 @@ class APIKeyStatusResponse(TypedDict):
     status: list[APIKeyStatus]
 
 
+_OPENAI_COMPATIBLE_PROVIDER_NAMES = {
+    ServiceProviders.ATLASCLOUD.value: "Atlas Cloud",
+    ServiceProviders.HOPPER.value: "Hopper",
+}
+
+_OPENAI_COMPATIBLE_PROVIDER_BASE_URLS = {
+    ServiceProviders.HOPPER.value: HOPPER_API_BASE_URL,
+}
+
+
 class UserConfigurationValidator:
     def __init__(self):
         self._dograh_service_key_validation_cache: dict[str, bool] = {}
         self._validator_map = {
             ServiceProviders.OPENAI.value: self._check_openai_api_key,
+            ServiceProviders.OPENAI_COMPATIBLE.value: self._check_openai_compatible_embedding_api_key,
             ServiceProviders.ATLASCLOUD.value: self._check_openai_api_key,
+            ServiceProviders.HOPPER.value: self._check_openai_api_key,
             ServiceProviders.DEEPGRAM.value: self._check_deepgram_api_key,
             ServiceProviders.GROQ.value: self._check_groq_api_key,
             ServiceProviders.OPENROUTER.value: self._check_openrouter_api_key,
@@ -240,20 +256,64 @@ class UserConfigurationValidator:
 
         if provider in (
             ServiceProviders.OPENAI.value,
+            ServiceProviders.OPENAI_COMPATIBLE.value,
             ServiceProviders.ATLASCLOUD.value,
+            ServiceProviders.HOPPER.value,
             ServiceProviders.OPENAI_REALTIME.value,
         ):
             return validator(provider, api_key, service_config)
         return validator(provider, api_key)
 
+    def _check_openai_compatible_embedding_api_key(
+        self,
+        provider: str,
+        api_key: str,
+        service_config: Optional[ServiceConfig] = None,
+    ) -> bool:
+        from api.services.gen_ai.embedding.openai_compatible_service import (
+            validate_embedding_vectors,
+        )
+
+        if not service_config or not api_key:
+            raise ValueError("Configura la URL, API key y modelo de embeddings.")
+        try:
+            # Many compatible providers expose /embeddings without /models.
+            # Probe a short input and verify the actual vector before saving.
+            with openai.OpenAI(
+                api_key=api_key,
+                base_url=service_config.base_url,
+                timeout=10,
+                max_retries=0,
+                http_client=httpx.Client(follow_redirects=False, trust_env=False),
+            ) as client:
+                result = client.embeddings.create(
+                    model=service_config.model,
+                    input=["Prueba"],
+                    encoding_format="float",
+                )
+            validate_embedding_vectors(
+                [item.embedding for item in result.data], expected_count=1
+            )
+            return True
+        except openai.AuthenticationError:
+            raise ValueError("El proveedor rechazó la API key de embeddings.") from None
+        except openai.RateLimitError:
+            raise ValueError(
+                "El proveedor alcanzó su límite de uso. Revisa el saldo y vuelve a intentar."
+            ) from None
+        except openai.APIError:
+            raise ValueError(
+                "No se pudo comprobar el modelo de embeddings. Revisa la URL, el modelo y la API key."
+            ) from None
+
     def _check_openai_api_key(
         self, model: str, api_key: str, service_config: Optional[ServiceConfig] = None
     ) -> bool:
-        provider_name = (
-            "Atlas Cloud" if model == ServiceProviders.ATLASCLOUD.value else "OpenAI"
-        )
+        provider_name = _OPENAI_COMPATIBLE_PROVIDER_NAMES.get(model, "OpenAI")
         client_kwargs: dict[str, str] = {"api_key": api_key}
-        base_url = getattr(service_config, "base_url", None) if service_config else None
+        base_url = (
+            getattr(service_config, "base_url", None) if service_config else None
+        ) or _OPENAI_COMPATIBLE_PROVIDER_BASE_URLS.get(model)
         if base_url:
             client_kwargs["base_url"] = base_url
         client = openai.OpenAI(**client_kwargs)
@@ -348,6 +408,9 @@ class UserConfigurationValidator:
         return True
 
     def _check_dograh_api_key(self, model: str, api_key: str) -> bool:
+        from api.services.model_services.policy import require_mps_enabled
+
+        require_mps_enabled()
         if api_key.startswith("dgr"):
             raise ValueError(
                 "You provided a Dograh API key (dgr...) instead of a service key. "
@@ -496,6 +559,15 @@ class UserConfigurationValidator:
         return True
 
     def _check_aws_bedrock_api_key(self, model: str, service_config) -> bool:
+        if (
+            getattr(service_config, "provider", None) == ServiceProviders.AWS_NOVA_SONIC
+            and not service_config.aws_access_key
+            and not service_config.aws_secret_key
+        ):
+            from api.services.abera.bedrock import validate_managed_nova
+
+            validate_managed_nova(service_config.model, service_config.aws_region)
+            return True
         if not service_config.aws_access_key or not service_config.aws_secret_key:
             raise ValueError("AWS access key and secret key are required for Bedrock")
         return True

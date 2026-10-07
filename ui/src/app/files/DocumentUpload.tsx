@@ -13,9 +13,12 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { useCopy } from "@/i18n/LocaleProvider";
+import { detailFromError } from '@/lib/apiError';
 import logger from '@/lib/logger';
 
 import ExternalProcessingNotice from './ExternalProcessingNotice';
+
 
 interface DocumentUploadProps {
   onUploadSuccess: () => void;
@@ -25,8 +28,9 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_FILE_TYPES = ['.pdf', '.docx', '.doc', '.txt', '.json', '.md'];
 
 export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps) {
+    const copy = useCopy();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [retrievalMode, setRetrievalMode] = useState<string>('full_document');
+  const [retrievalMode, setRetrievalMode] = useState<'chunked' | 'full_document'>('full_document');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [dragActive, setDragActive] = useState(false);
@@ -35,12 +39,12 @@ export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps)
   const validateFile = (file: File): boolean => {
     const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
     if (!ACCEPTED_FILE_TYPES.includes(fileExtension)) {
-      toast.error(`Please select a supported file type: ${ACCEPTED_FILE_TYPES.join(', ')}`);
+      toast.error(copy("Please select a supported file type: {value0}", {value0: ACCEPTED_FILE_TYPES.join(', ')}));
       return false;
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      toast.error('File size must be less than 5MB');
+      toast.error(copy("File size must be less than 5MB"));
       return false;
     }
 
@@ -76,6 +80,7 @@ export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps)
       const uploadUrlResponse = await getUploadUrlApiV1KnowledgeBaseUploadUrlPost({
         body: {
           filename: selectedFile.name,
+          file_size_bytes: selectedFile.size,
           mime_type: selectedFile.type || 'application/octet-stream',
           custom_metadata: {
             original_filename: selectedFile.name,
@@ -85,7 +90,7 @@ export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps)
       });
 
       if (uploadUrlResponse.error || !uploadUrlResponse.data) {
-        throw new Error('Failed to get upload URL');
+        throw new Error(copy(detailFromError(uploadUrlResponse.error, 'Failed to get upload URL')));
       }
 
       const uploadData: DocumentUploadResponseSchema = uploadUrlResponse.data;
@@ -100,7 +105,7 @@ export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps)
       });
 
       if (!uploadResponse.ok) {
-        throw new Error('Failed to upload file to storage');
+        throw new Error(copy('Failed to upload file to storage'));
       }
 
       setUploadProgress(75);
@@ -114,16 +119,16 @@ export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps)
       });
 
       if (processResponse.error) {
-        throw new Error('Failed to trigger processing');
+        throw new Error(copy(detailFromError(processResponse.error, 'Failed to trigger processing')));
       }
 
       setUploadProgress(100);
-      toast.success(`File uploaded: ${selectedFile.name}. Processing started.`);
+      toast.success(copy("File uploaded: {value0}. Processing started.", {value0: selectedFile.name}));
       clearSelectedFile();
       onUploadSuccess();
     } catch (error) {
       logger.error('Error uploading document:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to upload document');
+      toast.error(error instanceof Error ? error.message : copy("Failed to upload document"));
     } finally {
       setUploading(false);
       setUploadProgress(0);
@@ -173,8 +178,7 @@ export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps)
           <div className="flex-1 min-w-0">
             <p className="font-medium truncate">{selectedFile.name}</p>
             <p className="text-xs text-muted-foreground">
-              {(selectedFile.size / 1024).toFixed(1)} KB
-            </p>
+              {(selectedFile.size / 1024).toFixed(1)}{copy(" KB")}</p>
           </div>
           <Button variant="ghost" size="icon" onClick={clearSelectedFile}>
             <X className="w-4 h-4" />
@@ -183,8 +187,10 @@ export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps)
 
         {/* Retrieval mode selection */}
         <div className="space-y-3">
-          <Label className="text-sm font-medium">How should the agent use this document?</Label>
-          <RadioGroup value={retrievalMode} onValueChange={setRetrievalMode}>
+          <Label className="text-sm font-medium">{copy("How should the agent use this document?")}</Label>
+          <RadioGroup value={retrievalMode} onValueChange={(value) => {
+            if (value === 'chunked' || value === 'full_document') setRetrievalMode(value);
+          }}>
             <label
               htmlFor="full_document"
               className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
@@ -193,11 +199,8 @@ export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps)
             >
               <RadioGroupItem value="full_document" id="full_document" className="mt-0.5" />
               <div>
-                <p className="font-medium text-sm">Full Document</p>
-                <p className="text-xs text-muted-foreground">
-                  The entire document is provided to the agent on each retrieval.
-                  Best for menus, price lists, FAQs, and other small reference documents.
-                </p>
+                <p className="font-medium text-sm">{copy("Full Document")}</p>
+                <p className="text-xs text-muted-foreground">{copy("The entire document is provided to the agent on each retrieval. Best for menus, price lists, FAQs, and other small reference documents.")}</p>
               </div>
             </label>
             <label
@@ -208,20 +211,15 @@ export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps)
             >
               <RadioGroupItem value="chunked" id="chunked" className="mt-0.5" />
               <div>
-                <p className="font-medium text-sm">Chunked Search</p>
-                <p className="text-xs text-muted-foreground">
-                  The document is split into chunks and the most relevant ones are retrieved.
-                  Better for large documents like manuals or policies.
-                </p>
+                <p className="font-medium text-sm">{copy("Chunked Search")}</p>
+                <p className="text-xs text-muted-foreground">{copy("The document is split into chunks and the most relevant ones are retrieved. Better for large documents like manuals or policies.")}</p>
               </div>
             </label>
           </RadioGroup>
         </div>
 
         {/* Upload button */}
-        <Button onClick={uploadFile} className="w-full">
-          Upload & Process
-        </Button>
+        <Button onClick={uploadFile} className="w-full">{copy("Upload & Process")}</Button>
       </div>
     );
   }
@@ -253,21 +251,17 @@ export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps)
       >
         <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
         <p className="text-lg font-medium mb-2">
-          {uploading ? 'Uploading...' : 'Drop your document here'}
+          {uploading ? copy("Uploading...") : copy("Drop your document here")}
         </p>
-        <p className="text-sm text-muted-foreground mb-4">
-          or click to browse
-        </p>
-        <p className="text-xs text-muted-foreground">
-          Supported formats: {ACCEPTED_FILE_TYPES.join(', ')} (Max 5MB)
-        </p>
+        <p className="text-sm text-muted-foreground mb-4">{copy("or click to browse")}</p>
+        <p className="text-xs text-muted-foreground">{copy("Supported formats: ")}{ACCEPTED_FILE_TYPES.join(', ')}{copy(" (Max 5MB)")}</p>
       </div>
 
       {/* Upload Progress */}
       {uploading && (
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span>Uploading...</span>
+            <span>{copy("Uploading...")}</span>
             <span>{uploadProgress}%</span>
           </div>
           <Progress value={uploadProgress} />
@@ -281,9 +275,7 @@ export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps)
             type="button"
             variant="outline"
             onClick={handleButtonClick}
-          >
-            Choose File
-          </Button>
+          >{copy("Choose File")}</Button>
         </div>
       )}
     </div>

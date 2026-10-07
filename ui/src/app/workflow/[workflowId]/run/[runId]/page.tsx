@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import posthog from 'posthog-js';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -34,11 +33,15 @@ import { ConversationRailFrame, RealtimeFeedback, WorkflowRunLogs } from '@/comp
 import { PostHogEvent } from '@/constants/posthog-events';
 import { WORKFLOW_RUN_MODES } from '@/constants/workflowRunModes';
 import { useOrganizationTimezone } from '@/hooks/useOrganizationTimezone';
+import { useCopy } from "@/i18n/LocaleProvider";
+import { useUiLocale } from "@/i18n/LocaleProvider";
+import { captureAnalyticsEvent } from '@/lib/analytics';
 import { useAuth } from '@/lib/auth';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { formatDateTime } from '@/lib/dateTime';
 import { downloadFile, getSignedUrl } from '@/lib/files';
 import { cn } from '@/lib/utils';
+
 
 interface WorkflowRunResponse {
     mode: string;
@@ -97,6 +100,7 @@ function MetricCard({ label, value }: { label: string; value: string }) {
 }
 
 function CopyDebugIdButton({ label, value }: { label: string; value: string }) {
+    const copy = useCopy();
     const [copied, setCopied] = useState(false);
 
     const handleCopy = async () => {
@@ -105,7 +109,7 @@ function CopyDebugIdButton({ label, value }: { label: string; value: string }) {
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         } catch {
-            toast.error(`Failed to copy ${label}`);
+            toast.error(copy("Failed to copy {value0}", {value0: label}));
         }
     };
 
@@ -121,7 +125,7 @@ function CopyDebugIdButton({ label, value }: { label: string; value: string }) {
                 size="icon"
                 className="h-7 w-7 shrink-0"
                 onClick={handleCopy}
-                aria-label={`Copy ${label.toLowerCase()}`}
+                aria-label={copy("Copy {value0}", {value0: label.toLowerCase()})}
             >
                 {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
             </Button>
@@ -226,6 +230,7 @@ function SplitTracksSection({
     userRecordingUrl: string;
     botRecordingUrl: string;
 }) {
+    const copy = useCopy();
     const userAudioRef = useRef<HTMLAudioElement | null>(null);
     const botAudioRef = useRef<HTMLAudioElement | null>(null);
     const [signedUrls, setSignedUrls] = useState<{ user: string | null; bot: string | null }>({
@@ -435,17 +440,17 @@ function SplitTracksSection({
                 onEnded={handleTrackEnded}
             />
             <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Split Tracks</CardTitle>
+                <CardTitle className="text-lg">{copy("Split Tracks")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-2" role="group" aria-label="Playback tracks">
+                    <div className="flex items-center gap-2" role="group" aria-label={copy("Playback tracks")}>
                         <Button
                             type="button"
                             variant="outline"
                             size="sm"
                             aria-pressed={userTrackActive}
-                            aria-label={playbackMode === 'user' ? 'Play both tracks' : 'Play user track only'}
+                            aria-label={playbackMode === 'user' ? copy("Play both tracks") : copy("Play user track only")}
                             onClick={() => handleTrackButtonClick('user')}
                             className={cn(
                                 'gap-1.5',
@@ -454,16 +459,14 @@ function SplitTracksSection({
                                     : 'text-muted-foreground opacity-60'
                             )}
                         >
-                            <UserRound className="h-4 w-4" />
-                            User
-                        </Button>
+                            <UserRound className="h-4 w-4" />{copy("User")}</Button>
                         <span className="h-4 w-px bg-border" />
                         <Button
                             type="button"
                             variant="outline"
                             size="sm"
                             aria-pressed={botTrackActive}
-                            aria-label={playbackMode === 'bot' ? 'Play both tracks' : 'Play bot track only'}
+                            aria-label={playbackMode === 'bot' ? copy("Play both tracks") : copy("Play bot track only")}
                             onClick={() => handleTrackButtonClick('bot')}
                             className={cn(
                                 'gap-1.5',
@@ -472,9 +475,7 @@ function SplitTracksSection({
                                     : 'text-muted-foreground opacity-60'
                             )}
                         >
-                            <Bot className="h-4 w-4" />
-                            Bot
-                        </Button>
+                            <Bot className="h-4 w-4" />{copy("Bot")}</Button>
                     </div>
                     <div className="flex items-center gap-2">
                         <Button
@@ -484,9 +485,7 @@ function SplitTracksSection({
                             onClick={() => downloadFile(userRecordingUrl)}
                             className="gap-2"
                         >
-                            <Download className="h-4 w-4" />
-                            User
-                        </Button>
+                            <Download className="h-4 w-4" />{copy("User")}</Button>
                         <Button
                             type="button"
                             variant="outline"
@@ -494,9 +493,7 @@ function SplitTracksSection({
                             onClick={() => downloadFile(botRecordingUrl)}
                             className="gap-2"
                         >
-                            <Download className="h-4 w-4" />
-                            Bot
-                        </Button>
+                            <Download className="h-4 w-4" />{copy("Bot")}</Button>
                     </div>
                 </div>
                 <div className="flex items-center gap-4">
@@ -506,7 +503,7 @@ function SplitTracksSection({
                         variant={isPlaying ? 'default' : 'outline'}
                         onClick={togglePlayback}
                         disabled={!canPlay}
-                        aria-label={isPlaying ? `Pause ${playbackTargetLabel}` : `Play ${playbackTargetLabel}`}
+                        aria-label={isPlaying ? copy("Pause {value0}", {value0: playbackTargetLabel}) : copy("Play {value0}", {value0: playbackTargetLabel})}
                         className="h-10 w-10 shrink-0"
                     >
                         {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
@@ -525,9 +522,7 @@ function SplitTracksSection({
                         )}
                         {isLoading && (
                             <div className="absolute inset-0 flex items-center justify-center bg-background/70 text-xs text-muted-foreground">
-                                <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                                Loading
-                            </div>
+                                <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />{copy("Loading")}</div>
                         )}
                     </div>
                 </div>
@@ -545,25 +540,27 @@ function RunMetricsSection({
     logs: WorkflowRunLogs | null;
     gatheredContext: Record<string, string | number | boolean | object> | null;
 }) {
+    const copy = useCopy();
     const metrics = getTranscriptMetrics(logs, gatheredContext);
 
     return (
         <Card className="border-border">
             <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Run Metrics</CardTitle>
+                <CardTitle className="text-lg">{copy("Run Metrics")}</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                <MetricCard label="Duration" value={formatDuration(costInfo?.call_duration_seconds)} />
-                <MetricCard label="User Turns" value={String(metrics.userTurns)} />
-                <MetricCard label="Bot Turns" value={String(metrics.botTurns)} />
-                <MetricCard label="Tool Calls" value={String(metrics.toolCalls)} />
-                <MetricCard label="Nodes Visited" value={String(metrics.visitedNodes)} />
+                <MetricCard label={copy("Duration")} value={formatDuration(costInfo?.call_duration_seconds)} />
+                <MetricCard label={copy("User Turns")} value={String(metrics.userTurns)} />
+                <MetricCard label={copy("Bot Turns")} value={String(metrics.botTurns)} />
+                <MetricCard label={copy("Tool Calls")} value={String(metrics.toolCalls)} />
+                <MetricCard label={copy("Nodes Visited")} value={String(metrics.visitedNodes)} />
             </CardContent>
         </Card>
     );
 }
 
 function ContextDisplay({ title, context }: { title: string; context: Record<string, string | number | boolean | object> | null }) {
+    const copy = useCopy();
     const [copied, setCopied] = useState(false);
 
     const handleCopy = async () => {
@@ -573,7 +570,7 @@ function ContextDisplay({ title, context }: { title: string; context: Record<str
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         } catch {
-            toast.error('Failed to copy context');
+            toast.error(copy("Failed to copy context"));
         }
     };
 
@@ -584,7 +581,7 @@ function ContextDisplay({ title, context }: { title: string; context: Record<str
                     <CardTitle className="text-lg">{title}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-sm text-muted-foreground">No data available</p>
+                    <p className="text-sm text-muted-foreground">{copy("No data available")}</p>
                 </CardContent>
             </Card>
         );
@@ -596,7 +593,7 @@ function ContextDisplay({ title, context }: { title: string; context: Record<str
                 <CardTitle className="text-lg">{title}</CardTitle>
                 <Button variant="ghost" size="sm" onClick={handleCopy} className="gap-2">
                     {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                    {copied ? 'Copied' : 'Copy'}
+                    {copied ? copy("Copied") : copy("Copy")}
                 </Button>
             </CardHeader>
             <CardContent>
@@ -610,6 +607,8 @@ function ContextDisplay({ title, context }: { title: string; context: Record<str
 
 
 export default function WorkflowRunPage() {
+    const { locale } = useUiLocale();
+    const copy = useCopy();
     const params = useParams();
     const [isLoading, setIsLoading] = useState(true);
     const auth = useAuth();
@@ -667,9 +666,8 @@ export default function WorkflowRunPage() {
                     annotations: runResponse.data?.annotations as Record<string, unknown> | null ?? null,
                 };
                 setWorkflowRun(runData);
-                posthog.capture(PostHogEvent.WORKFLOW_RUN_DETAILS_VIEWED, {
+                captureAnalyticsEvent(PostHogEvent.WORKFLOW_RUN_DETAILS_VIEWED, {
                     workflow_id: workflowId,
-                    workflow_name: workflowResponse.data?.name ?? null,
                     run_id: runId,
                     is_completed: runData.is_completed,
                     has_recording: !!runData.recording_url,
@@ -728,9 +726,7 @@ export default function WorkflowRunPage() {
                                             <Bot className="h-5 w-5" />
                                         </div>
                                         <div className="min-w-0">
-                                            <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                                                Agent
-                                            </p>
+                                            <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">{copy("Agent")}</p>
                                             <p className="truncate text-xl font-semibold text-foreground">
                                                 {workflowName}
                                             </p>
@@ -738,12 +734,12 @@ export default function WorkflowRunPage() {
                                     </div>
                                 )}
                                 <div className="flex flex-wrap gap-2 pt-1">
-                                    <CopyDebugIdButton label="Agent ID" value={workflowId} />
-                                    <CopyDebugIdButton label="Run ID" value={runId} />
+                                    <CopyDebugIdButton label={copy("Agent ID")} value={workflowId} />
+                                    <CopyDebugIdButton label={copy("Run ID")} value={runId} />
                                 </div>
                                 <div className="flex min-w-0 items-center gap-4 pt-1">
                                     <CardTitle className="min-w-0 text-2xl">
-                                        {isTextChatRun ? 'Text Chat Session' : 'Agent Run Completed'}
+                                        {isTextChatRun ? copy("Text Chat Session") : copy("Agent Run Completed")}
                                     </CardTitle>
                                     <div className={`h-8 w-8 rounded-full flex items-center justify-center ${isTextChatRun ? 'bg-sky-500/15' : 'bg-emerald-500/20'}`}>
                                         {isTextChatRun ? (
@@ -757,8 +753,7 @@ export default function WorkflowRunPage() {
                                 </div>
                                 {workflowRun?.created_at && (
                                     <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                                        <Clock className="h-4 w-4" />
-                                        Call time: {formatDateTime(workflowRun.created_at, organizationTimezone)}
+                                        <Clock className="h-4 w-4" />{copy("Call time: ")}{formatDateTime(workflowRun.created_at, organizationTimezone, locale)}
                                     </p>
                                 )}
                             </div>
@@ -770,24 +765,22 @@ export default function WorkflowRunPage() {
                                     >
                                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                        </svg>
-                                        Customize Agent
-                                    </Button>
+                                        </svg>{copy("Customize Agent")}</Button>
                                 </Link>
                             </div>
                         </CardHeader>
                         <CardContent>
                             <p className="text-muted-foreground mb-8">
                                 {isTextChatRun
-                                    ? 'Review the conversation history, metrics, and context captured for this text session.'
-                                    : 'Your voice agent run has been completed successfully. You can preview or download the transcript and recording.'}
+                                    ? copy("Review the conversation history, metrics, and context captured for this text session.")
+                                    : copy("Your voice agent run has been completed successfully. You can preview or download the transcript and recording.")}
                             </p>
 
                             <div className="flex flex-wrap gap-4">
                                 {!isTextChatRun && (
                                     <>
                                         <div className="flex items-center gap-2">
-                                            <span className="text-sm text-muted-foreground">Preview:</span>
+                                            <span className="text-sm text-muted-foreground">{copy("Preview:")}</span>
                                             <MediaPreviewButton
                                                 recordingUrl={workflowRun?.recording_url}
                                                 transcriptUrl={workflowRun?.transcript_url}
@@ -796,31 +789,27 @@ export default function WorkflowRunPage() {
                                             />
                                         </div>
                                         <div className="flex items-center gap-2 border-l border-border pl-4">
-                                            <span className="text-sm text-muted-foreground">Download:</span>
+                                            <span className="text-sm text-muted-foreground">{copy("Download:")}</span>
                                             <Button
                                                 onClick={() => downloadFile(workflowRun?.transcript_url ?? null)}
                                                 disabled={!workflowRun?.transcript_url || !auth.isAuthenticated}
                                                 size="sm"
                                                 className="gap-2"
                                             >
-                                                <FileText className="h-4 w-4" />
-                                                Transcript
-                                            </Button>
+                                                <FileText className="h-4 w-4" />{copy("Transcript")}</Button>
                                             <Button
                                                 onClick={() => downloadFile(workflowRun?.recording_url ?? null)}
                                                 disabled={!workflowRun?.recording_url || !auth.isAuthenticated}
                                                 size="sm"
                                                 className="gap-2"
                                             >
-                                                <Video className="h-4 w-4" />
-                                                Recording
-                                            </Button>
+                                                <Video className="h-4 w-4" />{copy("Recording")}</Button>
                                         </div>
                                     </>
                                 )}
                                 {workflowRun?.gathered_context?.trace_url && (
                                     <div className={`flex items-center gap-2 ${isTextChatRun ? '' : 'border-l border-border pl-4'}`}>
-                                        <span className="text-sm text-muted-foreground">Trace:</span>
+                                        <span className="text-sm text-muted-foreground">{copy("Trace:")}</span>
                                         <Button
                                             asChild
                                             size="sm"
@@ -832,9 +821,7 @@ export default function WorkflowRunPage() {
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                             >
-                                                <ExternalLink className="h-4 w-4" />
-                                                View Trace
-                                            </a>
+                                                <ExternalLink className="h-4 w-4" />{copy("View Trace")}</a>
                                         </Button>
                                     </div>
                                 )}
@@ -857,18 +844,18 @@ export default function WorkflowRunPage() {
 
                         <div className="grid gap-6 md:grid-cols-2">
                             <ContextDisplay
-                                title="Initial Context"
+                                title={copy("Initial Context")}
                                 context={workflowRun?.initial_context ?? null}
                             />
                             <ContextDisplay
-                                title="Gathered Context"
+                                title={copy("Gathered Context")}
                                 context={workflowRun?.gathered_context ?? null}
                             />
                         </div>
 
                         {workflowRun?.annotations && Object.keys(workflowRun.annotations).length > 0 && (
                             <ContextDisplay
-                                title="QA Results"
+                                title={copy("QA Results")}
                                 context={workflowRun.annotations as Record<string, string | number | boolean | object>}
                             />
                         )}
@@ -888,16 +875,12 @@ export default function WorkflowRunPage() {
             <div className="flex h-full items-center justify-center p-6">
                 <Card className="w-full max-w-xl border-border">
                     <CardHeader className="space-y-2">
-                        <CardTitle className="text-2xl">Run Details Unavailable</CardTitle>
-                        <p className="text-sm text-muted-foreground">
-                            This run does not have a details view yet. Go back to the workflow to continue testing or make changes.
-                        </p>
+                        <CardTitle className="text-2xl">{copy("Run Details Unavailable")}</CardTitle>
+                        <p className="text-sm text-muted-foreground">{copy("This run does not have a details view yet. Go back to the workflow to continue testing or make changes.")}</p>
                     </CardHeader>
                     <CardFooter>
                         <Button asChild className="gap-2">
-                            <Link href={`/workflow/${params.workflowId}`}>
-                                Customize Agent
-                            </Link>
+                            <Link href={`/workflow/${params.workflowId}`}>{copy("Customize Agent")}</Link>
                         </Button>
                     </CardFooter>
                 </Card>
@@ -914,7 +897,7 @@ export default function WorkflowRunPage() {
             {showRunDetailsView && (
                 <OnboardingTooltip
                     tooltipKey="customize_workflow"
-                    title='Customize Your Workflow'
+                    title={copy("Customize Your Workflow")}
                     targetRef={customizeButtonRef}
                     message="Edit your workflow to adjust the voice agent's behavior, add new steps, or modify the conversation flow."
                     showNext={false}
