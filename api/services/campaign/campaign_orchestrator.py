@@ -19,7 +19,7 @@ from zoneinfo import ZoneInfo
 import redis.asyncio as aioredis
 from loguru import logger
 
-from api.constants import CAMPAIGN_PROCESSING_CLAIM_TIMEOUT_SECONDS, REDIS_URL
+from api.constants import CAMPAIGN_PROCESSING_CLAIM_TIMEOUT_SECONDS, DEPLOYMENT_MODE, REDIS_URL
 from api.db import db_client
 from api.db.models import CampaignModel
 from api.enums import RedisChannel
@@ -53,21 +53,25 @@ class CampaignOrchestrator:
         ] = {}  # track batches that have been scheduled but not completed
         self._running = False
         self._pubsub = None
+        self._listener_ready = asyncio.Event()
 
     async def run(self):
         """Main service with two concurrent tasks."""
         self._running = True
         logger.info("Campaign Orchestrator starting...")
-
+        tasks = []
         try:
             # Task 1: Listen for events and react immediately
             event_task = asyncio.create_task(self._listen_for_events())
 
             # Task 2: Periodically check for stale campaigns
             completion_task = asyncio.create_task(self._monitor_completion())
-
+            tasks = [event_task, completion_task]
+            if DEPLOYMENT_MODE == "abera":
+                from api.services.abera.readiness import orchestrator_heartbeat
+                tasks.append(asyncio.create_task(orchestrator_heartbeat(self.redis, self._listener_ready)))
             # Wait for both tasks
-            await asyncio.gather(event_task, completion_task)
+            await asyncio.gather(*tasks)
 
         except asyncio.CancelledError:
             logger.info("Campaign Orchestrator cancelled")
@@ -76,15 +80,22 @@ class CampaignOrchestrator:
             logger.error(f"Campaign Orchestrator error: {e}")
             raise
         finally:
+            for task in tasks:
+                task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
             await self.shutdown()
 
     async def _listen_for_events(self):
         """Listen for campaign events and react immediately."""
         self._pubsub = self.redis.pubsub()
         await self._pubsub.subscribe(RedisChannel.CAMPAIGN_EVENTS.value)
+        self._listener_ready.set()
         logger.info(f"Subscribed to {RedisChannel.CAMPAIGN_EVENTS.value} channel")
 
         async for message in self._pubsub.listen():
+            if DEPLOYMENT_MODE == "abera":
+                from api.services.abera.maintenance import wait_for_writes
+                await wait_for_writes(self.redis)
             if not self._running:
                 break
 
@@ -379,6 +390,9 @@ class CampaignOrchestrator:
     async def _monitor_completion(self):
         """Periodically check for campaigns that should be marked complete."""
         while self._running:
+            if DEPLOYMENT_MODE == "abera":
+                from api.services.abera.maintenance import wait_for_writes
+                await wait_for_writes(self.redis)
             try:
                 await self._check_stale_campaigns()
             except Exception as e:

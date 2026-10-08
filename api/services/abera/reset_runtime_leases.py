@@ -15,6 +15,7 @@ STALE_PATTERNS = ("concurrent_calls:*", "workflow_slot_mapping:*", "rate_limit:*
 
 async def reset_runtime_leases(redis):
     await redis.delete("concurrent_calls_fleet")
+    await redis.delete("abera:health:worker", "abera:health:orchestrator")
     for pattern in STALE_PATTERNS:
         batch = []
         async for key in redis.scan_iter(match=pattern, count=100):
