@@ -3,7 +3,11 @@
 import ssl
 from urllib.parse import urlparse
 
-from api.constants import DEPLOYMENT_MODE, REDIS_URL, TEXT_CHAT_INACTIVITY_SWEEP_INTERVAL_MINUTES
+from api.constants import (
+    DEPLOYMENT_MODE,
+    REDIS_URL,
+    TEXT_CHAT_INACTIVITY_SWEEP_INTERVAL_MINUTES,
+)
 
 # Setup logging - this is now idempotent and safe to call multiple times
 from api.logging_config import setup_logging
@@ -75,9 +79,11 @@ from api.tasks.workflow_completion import process_workflow_completion
 class WorkerSettings:
     if DEPLOYMENT_MODE == "abera":
         from api.services.abera.readiness import WORKER_HEALTH_KEY
+
         health_check_key = WORKER_HEALTH_KEY
         health_check_interval = 5
         from api.services.abera.maintenance import before_job
+
         on_job_start = before_job
     functions = [
         run_integrations_post_workflow_run,

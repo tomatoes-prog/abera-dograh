@@ -130,8 +130,14 @@ async def managed_startup_writes(request: Request, call_next):
         except Exception:
             paused = True
         if paused:
-            return JSONResponse(status_code=503, headers={"Retry-After": "5"},
-                content={"code": "SERVICE_MAINTENANCE", "detail": "Tu servicio está en mantenimiento. Intenta de nuevo en unos momentos."})
+            return JSONResponse(
+                status_code=503,
+                headers={"Retry-After": "5"},
+                content={
+                    "code": "SERVICE_MAINTENANCE",
+                    "detail": "Tu servicio está en mantenimiento. Intenta de nuevo en unos momentos.",
+                },
+            )
     return await call_next(request)
 
 

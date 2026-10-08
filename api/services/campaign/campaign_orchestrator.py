@@ -19,7 +19,11 @@ from zoneinfo import ZoneInfo
 import redis.asyncio as aioredis
 from loguru import logger
 
-from api.constants import CAMPAIGN_PROCESSING_CLAIM_TIMEOUT_SECONDS, DEPLOYMENT_MODE, REDIS_URL
+from api.constants import (
+    CAMPAIGN_PROCESSING_CLAIM_TIMEOUT_SECONDS,
+    DEPLOYMENT_MODE,
+    REDIS_URL,
+)
 from api.db import db_client
 from api.db.models import CampaignModel
 from api.enums import RedisChannel
@@ -69,7 +73,12 @@ class CampaignOrchestrator:
             tasks = [event_task, completion_task]
             if DEPLOYMENT_MODE == "abera":
                 from api.services.abera.readiness import orchestrator_heartbeat
-                tasks.append(asyncio.create_task(orchestrator_heartbeat(self.redis, self._listener_ready)))
+
+                tasks.append(
+                    asyncio.create_task(
+                        orchestrator_heartbeat(self.redis, self._listener_ready)
+                    )
+                )
             # Wait for both tasks
             await asyncio.gather(*tasks)
 
@@ -95,6 +104,7 @@ class CampaignOrchestrator:
         async for message in self._pubsub.listen():
             if DEPLOYMENT_MODE == "abera":
                 from api.services.abera.maintenance import wait_for_writes
+
                 await wait_for_writes(self.redis)
             if not self._running:
                 break
@@ -392,6 +402,7 @@ class CampaignOrchestrator:
         while self._running:
             if DEPLOYMENT_MODE == "abera":
                 from api.services.abera.maintenance import wait_for_writes
+
                 await wait_for_writes(self.redis)
             try:
                 await self._check_stale_campaigns()
