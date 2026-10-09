@@ -121,6 +121,26 @@ app = FastAPI(
 )
 
 
+@app.middleware("http")
+async def managed_startup_writes(request: Request, call_next):
+    if DEPLOYMENT_MODE == "abera" and request.method not in {"GET", "HEAD", "OPTIONS"}:
+        try:
+            redis = await get_arq_redis()
+            paused = bool(await redis.get("abera:updating"))
+        except Exception:
+            paused = True
+        if paused:
+            return JSONResponse(
+                status_code=503,
+                headers={"Retry-After": "5"},
+                content={
+                    "code": "SERVICE_MAINTENANCE",
+                    "detail": "Tu servicio está en mantenimiento. Intenta de nuevo en unos momentos.",
+                },
+            )
+    return await call_next(request)
+
+
 from api.services.filesystem.quota import StorageQuotaExceeded, StorageQuotaUnavailable
 
 
