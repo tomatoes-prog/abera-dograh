@@ -1516,6 +1516,12 @@ export interface components {
              */
             context_compaction_enabled: boolean;
             /**
+             * Realtime History Compaction Turns
+             * @description Realtime only: summarize and delete server-side history every N completed turns, keeping recent turns verbatim. 0 disables.
+             * @default 0
+             */
+            realtime_history_compaction_turns: number;
+            /**
              * Tts Cache Enabled
              * @description Reuse generated speech for repeated phrases. Supports MiniMax TTS.
              * @default false
