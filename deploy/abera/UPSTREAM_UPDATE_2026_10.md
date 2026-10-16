@@ -93,4 +93,16 @@ No uses un downgrade como sustituto de la copia completa: el esquema anterior no
 
 Quedan para un entorno autorizado tras revisar el PR: llamadas y calidad de audio con proveedores reales, MiniMax WebSocket y voces en vivo, evaluación con Gemini, embeddings contra el destino real, subida y lectura de grabaciones con S3 y llamadas reales de WhatsApp a través de Meta. También debe comprobarse el acceso HTTPS, la configuración de TURN y la disponibilidad de llamadas en la cuenta y los números de Meta.
 
-No se ha desplegado esta rama, habilitado llamadas en Meta ni iniciado llamadas de pago.
+No se ha desplegado esta rama fuera del entorno local, habilitado llamadas en Meta ni iniciado llamadas de pago.
+
+## Arranque de la instalación local existente
+
+El 16 de octubre se construyeron las imágenes de producción con los Dockerfile de esta rama y se actualizaron API y panel en el proyecto local `abera-dograh`. Se reutilizaron sus contenedores y volúmenes de PostgreSQL, Redis y almacenamiento S3 compatible; los demás proyectos de Docker continuaron funcionando. El panel está en `http://localhost:3010` y la API en `http://localhost:8000`.
+
+La instalación limpia del panel detectó una entrada faltante en `package-lock.json`: la dependencia opcional `@swc/helpers@0.5.23` de `next-intl`. Se regeneró esa entrada con el mismo Node 22 y npm del Dockerfile, sin actualizar los demás paquetes. Después pasaron `npm ci`, la compilación, TypeScript, ESLint y la generación de las 33 páginas.
+
+Antes de migrar se guardó un `pg_dump` completo de la base local. Se restauró en otra base, se ensayaron las migraciones y se comprobó la imagen nueva de API con Python 3.13.15. La instalación quedó en `c82d4f6a9b10`, conservando sus dos agentes y cinco versiones. La comparación con la imagen anterior verificó siete registros y 77 campos efectivos, incluidas las claves, modelos y parámetros, además de las huellas del contenido del cliente. Coinciden al normalizar las listas de una sola clave y excluir los metadatos de validación del contrato anterior.
+
+API, panel, PostgreSQL, Redis y almacenamiento quedaron saludables. Pasaron 18 comprobaciones HTTP de API directa y proxy del panel: autenticación, agentes, catálogo, conexiones sin secretos, configuraciones V3, configuración predeterminada y locale de acceso. También pasó la lectura autenticada del bucket local. En el navegador se comprobaron los agentes, proveedores y editor de modelos en español con la sesión existente, sin guardar cambios de configuración.
+
+Este arranque local no valida llamadas ni conexiones con proveedores reales. Se mantienen pendientes las comprobaciones externas enumeradas arriba. Los respaldos, secretos y registros locales permanecen fuera de Git.
