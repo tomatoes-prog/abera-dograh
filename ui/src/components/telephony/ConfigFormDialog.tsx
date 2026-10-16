@@ -221,7 +221,10 @@ export function ConfigFormDialog({
             headers: { Authorization: `Bearer ${token}` },
             body: {
               name: name.trim(),
-              is_default_outbound: isDefault,
+              // A provider that only receives calls is never the outbound
+              // default, whatever the (hidden) switch was left at.
+              is_default_outbound:
+                currentProvider.supports_outbound === false ? false : isDefault,
               config: configPayload,
             },
           },
@@ -315,7 +318,7 @@ export function ConfigFormDialog({
             )}
           </div>
 
-          {!isEdit && (
+          {!isEdit && currentProvider?.supports_outbound !== false && (
             <div className="flex items-center justify-between rounded border p-3">
               <div>
                 <Label className="text-sm">{copy("Set as default for outbound calls")}</Label>

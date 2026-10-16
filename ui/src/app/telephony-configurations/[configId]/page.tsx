@@ -86,8 +86,9 @@ export default function TelephonyConfigurationDetailPage() {
   const { config: appConfig } = useAppConfig();
   const { externalPbxIntegrationsEnabled } = useOrgConfig();
   const organizationTimezone = useOrganizationTimezone();
-  const inboundWebhookUrl = `${resolveWebhookBaseUrl(appConfig?.tunnelUrl)}${INBOUND_WEBHOOK_PATH}`;
   const [config, setConfig] = useState<TelephonyConfigurationDetail | null>(null);
+  const webhookBaseUrl = resolveWebhookBaseUrl(appConfig?.tunnelUrl);
+  const inboundWebhookUrl = `${webhookBaseUrl}${INBOUND_WEBHOOK_PATH}`;
   // ARI only: Dograh generates the Stasis application name, so the dialplan
   // line cannot be written until the configuration has been saved.
   const stasisAppName =
@@ -95,6 +96,14 @@ export default function TelephonyConfigurationDetailPage() {
       ? config.credentials.stasis_app_name
       : "";
   const stasisDialplanLine = `same => n,Stasis(${stasisAppName})`;
+  // WhatsApp only: Meta verifies the webhook with a token Dograh generates on
+  // save, and delivers calls to the provider's own route rather than the
+  // shared inbound dispatcher — so the customer pastes this pair into Meta.
+  const webhookVerifyToken =
+    typeof config?.credentials?.webhook_verify_token === "string"
+      ? config.credentials.webhook_verify_token
+      : "";
+  const providerWebhookUrl = `${webhookBaseUrl}/api/v1/telephony/${config?.provider}/webhook`;
   const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumberResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [editConfigOpen, setEditConfigOpen] = useState(false);
@@ -290,7 +299,7 @@ export default function TelephonyConfigurationDetailPage() {
               <Button variant="outline" size="sm" onClick={onReactivate}>
                 <RotateCcw className="h-4 w-4 mr-2" />{copy(" Reactivate")}</Button>
             )}
-            {!config.is_default_outbound && (
+            {!config.is_default_outbound && config.supports_outbound !== false && (
               <Button variant="outline" size="sm" onClick={onSetDefaultOutbound}>
                 <Star className="h-4 w-4 mr-2" />{copy(" Set as default")}</Button>
             )}
@@ -318,7 +327,7 @@ export default function TelephonyConfigurationDetailPage() {
           <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
             {Object.entries(config.credentials ?? {})
               .filter(([key]) => key !== "external_pbx" || externalPbxIntegrationsEnabled)
-              .filter(([key]) => key !== "stasis_app_name")
+              .filter(([key]) => key !== "stasis_app_name" && key !== "webhook_verify_token")
               .map(([k, v]) => (
                 <div key={k} className="flex justify-between gap-3">
                   <dt className="text-muted-foreground">{k}</dt>
@@ -348,24 +357,56 @@ export default function TelephonyConfigurationDetailPage() {
               </button>
             </div>
           )}
-          <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">{copy("Inbound webhook URL")}</p>
-            <button
-              type="button"
-              onClick={() => {
-                const url = inboundWebhookUrl;
-                copyTextToClipboard(url)
-                  .then(() => toast.success(copy("Inbound webhook URL copied")))
-                  .catch(() => toast.error(copy("Failed to copy URL")));
-              }}
-              title={copy("Click to copy inbound webhook URL")}
-              aria-label={copy("Copy inbound webhook URL")}
-              className="inline-flex items-center gap-1 self-start rounded font-mono text-xs text-muted-foreground hover:text-foreground"
-            >
-              <span className="truncate">{inboundWebhookUrl}</span>
-              <Copy className="h-3 w-3 shrink-0" />
-            </button>
-          </div>
+          {webhookVerifyToken ? (
+            <div className="space-y-2 rounded-md border border-dashed p-3">
+              <p className="text-sm font-medium">Webhook for your Meta app</p>
+              <p className="text-xs text-muted-foreground">
+                Paste both into the app&apos;s webhook settings and verify, then
+                subscribe to the <code>calls</code> field. Until you do, calls to
+                your number never reach Dograh.
+              </p>
+              {[
+                { label: "Callback URL", value: providerWebhookUrl },
+                { label: "Verify token", value: webhookVerifyToken },
+              ].map(({ label, value }) => (
+                <div key={label} className="space-y-1">
+                  <p className="text-xs text-muted-foreground">{label}</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      copyTextToClipboard(value)
+                        .then(() => toast.success(`${label} copied`))
+                        .catch(() => toast.error("Failed to copy"));
+                    }}
+                    title="Click to copy"
+                    className="group flex w-full items-center gap-2 rounded-md border bg-muted/20 p-2 text-left font-mono text-xs transition-colors hover:bg-muted/40"
+                  >
+                    <code className="flex-1 truncate">{value}</code>
+                    <Copy className="h-3 w-3 shrink-0 text-muted-foreground group-hover:text-foreground" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Inbound webhook URL</p>
+              <button
+                type="button"
+                onClick={() => {
+                  const url = inboundWebhookUrl;
+                  copyTextToClipboard(url)
+                    .then(() => toast.success("Inbound webhook URL copied"))
+                    .catch(() => toast.error("Failed to copy URL"));
+                }}
+                title="Click to copy inbound webhook URL"
+                aria-label="Copy inbound webhook URL"
+                className="inline-flex items-center gap-1 self-start rounded font-mono text-xs text-muted-foreground hover:text-foreground"
+              >
+                <span className="truncate">{inboundWebhookUrl}</span>
+                <Copy className="h-3 w-3 shrink-0" />
+              </button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -398,8 +439,11 @@ export default function TelephonyConfigurationDetailPage() {
       <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div className="space-y-1">
-            <CardTitle>{copy("Phone numbers")}</CardTitle>
-            <CardDescription>{copy("Numbers used as caller ID for outbound and accepted for inbound matching. SIP URIs and extensions are supported alongside PSTN numbers.")}{" "}
+            <CardTitle>Phone numbers</CardTitle>
+            <CardDescription>
+              {config.supports_outbound === false
+                ? "Numbers this configuration answers calls on."
+                : "Numbers used as caller ID for outbound and accepted for inbound matching. SIP URIs and extensions are supported alongside PSTN numbers."}{" "}
               <a
                 href="https://docs.dograh.com/integrations/telephony/inbound"
                 target="_blank"
@@ -414,7 +458,13 @@ export default function TelephonyConfigurationDetailPage() {
         </CardHeader>
         <CardContent>
           {phoneNumbers.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{copy("No phone numbers yet. Add one to start placing or receiving calls on this configuration.")}</p>
+            <p className="text-sm text-muted-foreground">
+              No phone numbers yet. Add one to start{" "}
+              {config.supports_outbound === false
+                ? "receiving"
+                : "placing or receiving"}{" "}
+              calls on this configuration.
+            </p>
           ) : (
             <Table>
               <TableHeader>
@@ -512,7 +562,9 @@ export default function TelephonyConfigurationDetailPage() {
                     )}
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        {!n.is_default_caller_id && n.is_active && (
+                        {!n.is_default_caller_id &&
+                          n.is_active &&
+                          config.supports_outbound !== false && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -559,6 +611,7 @@ export default function TelephonyConfigurationDetailPage() {
         open={phoneDialogOpen}
         onOpenChange={setPhoneDialogOpen}
         configId={configId}
+        supportsOutbound={config?.supports_outbound !== false}
         trunks={config?.trunks}
         defaultTrunkId={phoneDefaultTrunkId}
         existing={phoneEditTarget}
