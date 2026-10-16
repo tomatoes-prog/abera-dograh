@@ -318,7 +318,40 @@ class TestWhatsAppProvider(IsolatedAsyncioTestCase):
             with self.assertRaises(ProviderPhoneNumberLookupError) as ctx:
                 await _provider().list_provider_phone_numbers()
         self.assertEqual(ctx.exception.status_code, 400)
-        self.assertIn("Invalid OAuth token", str(ctx.exception))
+        self.assertIn("400", str(ctx.exception))
+        self.assertNotIn("Invalid OAuth token", str(ctx.exception))
+
+    async def test_pagination_never_forwards_credentials_outside_the_account_endpoint(
+        self,
+    ):
+        for next_url in (
+            "https://attacker.example/next",
+            "http://graph.facebook.com/next",
+            f"{GRAPH_API_BASE_URL}/another-account/phone_numbers",
+        ):
+            session = _DummySession(
+                {f"/{WABA}/phone_numbers": (200, _page(next_url=next_url))}
+            )
+            with patch("aiohttp.ClientSession", return_value=session):
+                with self.assertRaises(ProviderPhoneNumberLookupError):
+                    await _provider().list_provider_phone_numbers()
+            self.assertEqual(len(session.requests), 1)
+            self.assertFalse(session.requests[0][2]["allow_redirects"])
+
+    async def test_provider_error_does_not_expose_access_token_or_response_body(self):
+        session = _DummySession(
+            {
+                f"/{WABA}/phone_numbers": (
+                    403,
+                    {"error": {"message": "test_token private-account-detail"}},
+                )
+            }
+        )
+        with patch("aiohttp.ClientSession", return_value=session):
+            with self.assertRaises(ProviderPhoneNumberLookupError) as failure:
+                await _provider().list_provider_phone_numbers()
+        self.assertNotIn("test_token", str(failure.exception))
+        self.assertNotIn("private-account-detail", str(failure.exception))
 
     async def test_validate_phone_number_accepts_only_numbers_on_the_account(self):
         session = _DummySession(

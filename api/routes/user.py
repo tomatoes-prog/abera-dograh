@@ -2,16 +2,15 @@ from datetime import datetime
 from typing import List, Literal, Optional, TypedDict, Union
 
 import httpx
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from api import constants
 from api.db import db_client
 from api.db.models import (
     UserModel,
 )
 from api.errors.failure import ErrorSource, classify_exception, log_failure
-from api import constants
 from api.schemas.onboarding_state import OnboardingState, OnboardingStateUpdate
 from api.schemas.voices import VoiceInfo, VoicesResponse
 from api.schemas.widget_texts import WidgetTexts
@@ -33,8 +32,8 @@ from api.services.configuration.check_validity import (
 from api.services.configuration.defaults import DEFAULT_SERVICE_PROVIDERS
 from api.services.configuration.masking import mask_user_config
 from api.services.configuration.registry import REGISTRY, ServiceType
-from api.services.model_services.voices import get_direct_voices
 from api.services.configuration.voice_catalog import get_connection_voices
+from api.services.model_services.voices import get_direct_voices
 from api.services.organization_preferences import (
     get_organization_preferences,
     upsert_organization_preferences,
@@ -462,7 +461,8 @@ class VoiceCatalogueRequest(BaseModel):
 
 @router.post("/configurations/voices/{provider}", response_model=VoicesResponse)
 async def query_voices(
-    provider: TTSProvider, request: VoiceCatalogueRequest,
+    provider: TTSProvider,
+    request: VoiceCatalogueRequest,
     user: UserModel = Depends(get_user),
 ) -> VoicesResponse:
     if not user.selected_organization_id:
@@ -470,10 +470,13 @@ async def query_voices(
     try:
         result = await get_direct_voices(
             organization_id=user.selected_organization_id,
-            provider=provider, **request.model_dump(),
+            provider=provider,
+            **request.model_dump(),
         )
         return VoicesResponse.model_validate(result)
     except HTTPException:
         raise
     except (httpx.HTTPError, ValueError, KeyError):
-        raise HTTPException(502, "No se pudo consultar el catálogo de voces. Inténtalo de nuevo.") from None
+        raise HTTPException(
+            502, "No se pudo consultar el catálogo de voces. Inténtalo de nuevo."
+        ) from None

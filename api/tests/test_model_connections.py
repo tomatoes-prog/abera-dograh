@@ -14,6 +14,9 @@ from api.schemas.model_connections import (
 )
 from api.services.configuration import model_connections as service
 
+# Explicit opt-in for these tests of the legacy managed provider.
+pytestmark = pytest.mark.usefixtures("mps_enabled")
+
 
 def connection(provider="dograh", keys=None, **kwargs):
     return SimpleNamespace(

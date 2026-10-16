@@ -96,21 +96,26 @@ async def _claim_call(call_id: str) -> bool:
 
     Meta delivers connect at least once, so two deliveries of one call can
     overlap before either has created its run. The database check alone then
-    lets both through and the call is answered twice. Without Redis the claim
-    is granted and that check is the only guard.
+    lets both through and the call is answered twice. Redis is required: when
+    unavailable, return a retryable error before allocating a run or quota.
     """
     try:
         redis = await _get_redis()
         if redis is None:
-            return True
+            raise ConnectionError("Redis unavailable")
         return bool(
             await redis.set(
                 _claim_key(call_id), _WORKER_ID, nx=True, ex=CALL_CLAIM_TTL_SECONDS
             )
         )
     except Exception as e:
-        logger.warning(f"[WhatsApp] Call claim unavailable for {call_id}: {e}")
-        return True
+        logger.warning(
+            "[WhatsApp] Call claim unavailable for {} ({})", call_id, type(e).__name__
+        )
+        raise HTTPException(
+            status_code=503,
+            detail="WhatsApp call coordination unavailable; retry later",
+        ) from None
 
 
 def _claim_key(call_id: str) -> str:
@@ -516,6 +521,21 @@ async def handle_whatsapp_webhook(request: Request):
                         )
                     elif event == "terminate":
                         if call_id:
+                            # An organization knows its own app secret. Its signed
+                            # payload still cannot close another tenant's client.
+                            # Include inactive rows so disabling a number cannot
+                            # prevent teardown of a call already in progress.
+                            phones = await db_client.list_phone_numbers_for_config(
+                                config.id
+                            )
+                            if not any(
+                                str(phone.external_id or "") == phone_number_id
+                                for phone in phones
+                            ):
+                                raise HTTPException(
+                                    status_code=403,
+                                    detail="WhatsApp number does not belong to this configuration",
+                                )
                             await _handle_call_terminate(
                                 phone_number_id, call_payload, call_id
                             )
@@ -529,10 +549,8 @@ async def handle_whatsapp_webhook(request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"[WhatsApp] Error processing webhook: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=500, detail=f"Webhook processing failed: {str(e)}"
-        )
+        logger.error("[WhatsApp] Error processing webhook ({})", type(e).__name__)
+        raise HTTPException(status_code=500, detail="Webhook processing failed")
 
 
 async def _handle_inbound_call_connect(
@@ -553,10 +571,7 @@ async def _handle_inbound_call_connect(
     session_data = call_data.get("session") or {}
     sdp_type = session_data.get("sdp_type")
 
-    logger.info(
-        f"[WhatsApp] Incoming call {call_id} from {from_number} to {to_number}, "
-        f"sdp_type={sdp_type}"
-    )
+    logger.info(f"[WhatsApp] Incoming call {call_id}, sdp_type={sdp_type}")
 
     if sdp_type != "offer":
         logger.warning(
@@ -624,13 +639,19 @@ async def _answer_claimed_call(
 
     phones = await db_client.list_phone_numbers_for_config(config.id)
     phone_row: Optional[TelephonyPhoneNumberModel] = next(
-        (p for p in phones if p.is_active and p.address_normalized == normalized_to),
+        (
+            p
+            for p in phones
+            if p.is_active
+            and p.address_normalized == normalized_to
+            and str(p.external_id or "") == phone_number_id
+        ),
         None,
     )
 
     if not phone_row:
         logger.warning(
-            f"[WhatsApp] No active phone number {normalized_to!r} on config "
+            f"[WhatsApp] No matching active phone number on config "
             f"{config.id} (phone_number_id {phone_number_id}). Rejecting call {call_id}."
         )
         await _reject_whatsapp_call(phone_number_id, call_id, access_token)
@@ -638,7 +659,7 @@ async def _answer_claimed_call(
 
     if not phone_row.inbound_workflow_id:
         logger.warning(
-            f"[WhatsApp] No inbound workflow assigned for number {to_number} "
+            f"[WhatsApp] No inbound workflow assigned "
             f"(phone_number_id {phone_number_id}). Rejecting call."
         )
         await _reject_whatsapp_call(phone_number_id, call_id, access_token)

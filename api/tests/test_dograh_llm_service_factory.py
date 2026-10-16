@@ -6,6 +6,9 @@ import pytest
 from api.services.configuration.registry import ServiceProviders
 from api.services.pipecat.service_factory import create_llm_service
 
+# Explicit opt-in for these tests of the legacy managed provider.
+pytestmark = pytest.mark.usefixtures("mps_enabled")
+
 
 @pytest.mark.parametrize("model", ["default", "fast", "zen"])
 def test_create_dograh_llm_service_passes_model_and_usage_context(model):

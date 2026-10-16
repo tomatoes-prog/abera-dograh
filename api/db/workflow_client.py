@@ -8,7 +8,6 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import load_only, selectinload
 
 from api.db.base_client import BaseDBClient
-from api.errors.abera import AgentLimitExceeded
 from api.db.model_connection_client import ModelCatalogNotFound, ModelConnectionClient
 from api.db.models import (
     NamedModelConfigurationModel,
@@ -17,6 +16,7 @@ from api.db.models import (
     WorkflowModel,
     WorkflowRunModel,
 )
+from api.errors.abera import AgentLimitExceeded
 
 
 class WorkflowClient(BaseDBClient):

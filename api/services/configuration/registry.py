@@ -2498,13 +2498,17 @@ class OpenAIEmbeddingsConfiguration(BaseEmbeddingsConfiguration):
 
 @register_embeddings(provider=OPENAI_COMPATIBLE_PROVIDER)
 class OpenAICompatibleEmbeddingsConfiguration(BaseEmbeddingsConfiguration):
-    provider: Literal[ServiceProviders.OPENAI_COMPATIBLE] = ServiceProviders.OPENAI_COMPATIBLE
+    provider: Literal[ServiceProviders.OPENAI_COMPATIBLE] = (
+        ServiceProviders.OPENAI_COMPATIBLE
+    )
     model: str = Field(
-        min_length=1, max_length=200,
+        min_length=1,
+        max_length=200,
         description="Embedding model name supplied by your provider.",
     )
     base_url: str = Field(
-        min_length=1, max_length=2000,
+        min_length=1,
+        max_length=2000,
         description="Provider API base URL, including its version path, for example https://provider.example/v1. Do not include /embeddings or an API key.",
     )
 
@@ -2522,11 +2526,17 @@ class OpenAICompatibleEmbeddingsConfiguration(BaseEmbeddingsConfiguration):
         value = value.strip().rstrip("/")
         parsed = urlparse(value)
         if (
-            parsed.scheme not in {"http", "https"} or not parsed.hostname
-            or parsed.username or parsed.password or parsed.query or parsed.fragment
+            parsed.scheme not in {"http", "https"}
+            or not parsed.hostname
+            or parsed.username
+            or parsed.password
+            or parsed.query
+            or parsed.fragment
             or parsed.path.rstrip("/").endswith("/embeddings")
         ):
-            raise ValueError("Indica la URL base del proveedor, sin /embeddings, credenciales ni parámetros.")
+            raise ValueError(
+                "Indica la URL base del proveedor, sin /embeddings, credenciales ni parámetros."
+            )
         # Validate malformed ports before they can reach a network client.
         if parsed.port is not None and not 0 < parsed.port < 65536:
             raise ValueError("El puerto de la URL no es válido.")

@@ -10,7 +10,6 @@ from fastapi import HTTPException
 from loguru import logger
 
 from api.constants import MPS_API_URL
-from api.services.model_services.policy import require_mps_enabled
 from api.errors.failure import (
     ErrorSource,
     annotate_failure_metadata,
@@ -31,6 +30,7 @@ from api.services.configuration.registry import (
     ServiceType,
 )
 from api.services.configuration.temperature import resolve_temperature
+from api.services.model_services.policy import require_mps_enabled
 from api.services.pipecat.fallback_llm import FallbackLLMProcessor, FallbackRoute
 from api.services.pipecat.gemini_json_schema_adapter import (
     DograhGeminiJSONSchemaAdapter,

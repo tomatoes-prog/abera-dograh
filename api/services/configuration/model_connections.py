@@ -75,18 +75,29 @@ def _require_allowed_provider(provider):
         )
 
 
-def validate_embedding_connection_update(provider, existing_settings, settings, credentials):
+def validate_embedding_connection_update(
+    provider, existing_settings, settings, credentials
+):
     """A stored secret must never be forwarded to a newly selected endpoint."""
     if _provider(provider) != "openai_compatible":
         return
+
     def normalize(value):
         return (value or "").strip().rstrip("/")
-    if normalize(existing_settings.get("base_url")) == normalize(settings.get("base_url")):
+
+    if normalize(existing_settings.get("base_url")) == normalize(
+        settings.get("base_url")
+    ):
         return
     key = credentials.get("api_key")
     keys = key if isinstance(key, list) else [key]
-    if not keys or any(not isinstance(value, str) or not value.strip() or "***" in value for value in keys):
-        raise _invalid("Al cambiar la URL del proveedor de embeddings, vuelve a ingresar la API key.")
+    if not keys or any(
+        not isinstance(value, str) or not value.strip() or "***" in value
+        for value in keys
+    ):
+        raise _invalid(
+            "Al cambiar la URL del proveedor de embeddings, vuelve a ingresar la API key."
+        )
 
 
 def _validation_failure(role, exc):
@@ -272,7 +283,9 @@ async def validate_embedding_configuration(organization_id, service, created_by=
         raise _invalid(str(exc)) from None
 
 
-async def validate_saved_embedding_models(organization_id, connection, credentials, settings, created_by=None):
+async def validate_saved_embedding_models(
+    organization_id, connection, credentials, settings, created_by=None
+):
     """Check every active model affected by a custom endpoint/key change."""
     if connection.provider != "openai_compatible":
         return
@@ -280,14 +293,19 @@ async def validate_saved_embedding_models(organization_id, connection, credentia
     seen = set()
     for row in rows:
         selection = (row.configuration or {}).get("embeddings")
-        if not selection or selection.get("provider_connection_uuid") != connection.uuid:
+        if (
+            not selection
+            or selection.get("provider_connection_uuid") != connection.uuid
+        ):
             continue
         model_settings = selection.get("settings") or {}
         model = model_settings.get("model")
         if model in seen:
             continue
         seen.add(model)
-        service = _build_service("embeddings", connection.provider, credentials, settings, model_settings)
+        service = _build_service(
+            "embeddings", connection.provider, credentials, settings, model_settings
+        )
         await validate_embedding_configuration(organization_id, service, created_by)
 
 

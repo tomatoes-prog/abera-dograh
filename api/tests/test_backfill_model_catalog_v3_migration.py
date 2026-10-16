@@ -27,7 +27,10 @@ from api.schemas.model_connections import (
     CREDENTIAL_FIELDS,
     ModelConfigurationSpec,
 )
-from api.services.configuration.registry import REGISTRY, ServiceType, get_service_configuration
+from api.services.configuration.registry import (
+    ServiceType,
+    get_service_configuration,
+)
 
 _MIGRATION_PATH = (
     Path(__file__).resolve().parents[1]
@@ -404,12 +407,19 @@ async def test_backfill_is_atomic_and_preserves_historical_and_archived_settings
     with pytest.raises(ValueError, match="llm_override_without_provider_credentials"):
         await _run(test_engine)
     async with session_factory() as session:
-        assert await session.scalar(select(func.count()).select_from(ProviderConnectionModel).where(
-            ProviderConnectionModel.organization_id == organization_id
-        )) == 0
-        await session.execute(update(WorkflowDefinitionModel).where(
-            WorkflowDefinitionModel.id == ids["broken"]
-        ).values(workflow_configurations={}))
+        assert (
+            await session.scalar(
+                select(func.count())
+                .select_from(ProviderConnectionModel)
+                .where(ProviderConnectionModel.organization_id == organization_id)
+            )
+            == 0
+        )
+        await session.execute(
+            update(WorkflowDefinitionModel)
+            .where(WorkflowDefinitionModel.id == ids["broken"])
+            .values(workflow_configurations={})
+        )
         await session.commit()
     summary = await _run(test_engine)
     assert summary["organizations_without_default"] == []
@@ -481,7 +491,10 @@ async def test_backfill_is_atomic_and_preserves_historical_and_archived_settings
     assert "model_configuration_v2_override" in workflows[ids["overridden"]]
     assert workflows[ids["archived"]]["model_configuration_override"] == binding
     historical = definitions[ids["historical"]]["model_configuration_override"]
-    assert configurations[historical["model_configuration_uuid"]].configuration["mode"] == "realtime"
+    assert (
+        configurations[historical["model_configuration_uuid"]].configuration["mode"]
+        == "realtime"
+    )
     draft_binding = definitions[ids["draft"]]["model_configuration_override"]
     assert configurations[draft_binding["model_configuration_uuid"]].name == "Sales 2"
     assert configurations[draft_binding["model_configuration_uuid"]].configuration[

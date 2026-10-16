@@ -11,6 +11,9 @@ from api.db.model_connection_client import ModelCatalogConflict, ModelCatalogNot
 from api.routes import model_connections as routes
 from api.services.auth.depends import get_user_with_selected_organization
 
+# Explicit opt-in for these tests of the legacy managed provider.
+pytestmark = pytest.mark.usefixtures("mps_enabled")
+
 
 async def create_org(client):
     user, _ = await client.get_or_create_user_by_provider_id(str(uuid4()))

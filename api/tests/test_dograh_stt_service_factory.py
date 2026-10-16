@@ -14,6 +14,9 @@ from api.services.pipecat.service_factory import (
     stt_uses_external_turns,
 )
 
+# Explicit opt-in for these tests of the legacy managed provider.
+pytestmark = pytest.mark.usefixtures("mps_enabled")
+
 
 def _audio_config() -> AudioConfig:
     return AudioConfig(

@@ -28,11 +28,11 @@ from api.services.configuration.model_connections import (
     resolve_inline_model_configuration,
     resolve_model_configuration,
     validate_embedding_compatibility,
-    validate_embedding_connection_update,
     validate_embedding_configuration,
-    validate_saved_embedding_models,
+    validate_embedding_connection_update,
     validate_provider_connection,
     validate_provider_connection_credentials,
+    validate_saved_embedding_models,
 )
 from api.services.configuration.model_connections import (
     get_default_model_configuration as get_default,
@@ -294,9 +294,13 @@ async def update_configuration(
         resolved = await resolve_inline_model_configuration(
             user.selected_organization_id, request.configuration
         )
-        if existing.configuration.get("embeddings") != changes["configuration"].get("embeddings"):
+        if existing.configuration.get("embeddings") != changes["configuration"].get(
+            "embeddings"
+        ):
             await validate_embedding_configuration(
-                user.selected_organization_id, resolved.effective.embeddings, user.provider_id
+                user.selected_organization_id,
+                resolved.effective.embeddings,
+                user.provider_id,
             )
         default = await get_default(user.selected_organization_id)
         if (

@@ -14,6 +14,7 @@ import hashlib
 import hmac
 import json
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from urllib.parse import urlsplit
 
 import aiohttp
 from fastapi import HTTPException, Response
@@ -107,18 +108,22 @@ async def _graph_request(
     try:
         async with aiohttp.ClientSession() as session:
             request = getattr(session, method)
-            async with request(url, headers=headers, params=params) as response:
+            async with request(
+                url, headers=headers, params=params, allow_redirects=False
+            ) as response:
                 if response.status != 200:
-                    body = await response.text()
                     raise MetaGraphError(
-                        f"Meta Graph API {response.status}: {body}",
+                        f"Meta Graph API {response.status}",
                         status_code=response.status,
                     )
                 payload = await response.json()
     except MetaGraphError:
         raise
     except Exception as e:
-        raise MetaGraphError(f"Meta Graph API request failed: {e}") from e
+        # The exception may contain a pagination URL with an access token.
+        raise MetaGraphError(
+            f"Meta Graph API request failed ({type(e).__name__})"
+        ) from None
     return payload if isinstance(payload, dict) else {}
 
 
@@ -235,6 +240,19 @@ class WhatsAppProvider(TelephonyProvider):
                     "Meta answered the phone-number listing with an invalid next link"
                 )
             url = next_url or ""
+            if url:
+                parsed = urlsplit(url)
+                expected = urlsplit(
+                    f"{GRAPH_API_BASE_URL}/{self.waba_id}/phone_numbers"
+                )
+                if (parsed.scheme, parsed.netloc, parsed.path) != (
+                    expected.scheme,
+                    expected.netloc,
+                    expected.path,
+                ):
+                    raise ProviderPhoneNumberLookupError(
+                        "Meta returned an untrusted pagination URL"
+                    )
             params = None
             if not url:
                 return numbers

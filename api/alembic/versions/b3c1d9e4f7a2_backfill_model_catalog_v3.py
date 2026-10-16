@@ -129,7 +129,7 @@ VALUES
 
 
 class Unconvertible(ValueError):
-    """A payload the catalog cannot represent; the row keeps inheriting."""
+    """A payload the catalog cannot represent; migration must stop atomically."""
 
 
 def _as_object(value):
@@ -408,7 +408,9 @@ def migrate(connection):
     if invalid:
         # Fixed reason codes and row IDs only, never customer text or secrets.
         # Complete preflight before any INSERT or UPDATE.
-        raise ValueError(f"No se puede migrar el catálogo; revisa estas filas: {invalid}")
+        raise ValueError(
+            f"No se puede migrar el catálogo; revisa estas filas: {invalid}"
+        )
 
     connections = [c for catalog in catalogs.values() for c in catalog.connections]
     configurations = [

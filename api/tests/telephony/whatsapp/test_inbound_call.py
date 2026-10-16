@@ -118,6 +118,7 @@ def _build_mock_phone(
     phone.id = phone_id
     phone.address_normalized = address
     phone.is_active = is_active
+    phone.external_id = "106540352242922"
     phone.inbound_workflow_id = workflow_id
     return phone
 
@@ -154,9 +155,60 @@ class TestWhatsAppInboundConnect(IsolatedAsyncioTestCase):
         _clients.clear()
         _owned_calls.clear()
         _terminated_by_meta.clear()
-        # No Redis here: the connect claim is granted and the database
-        # duplicate check is the guard, as in a deployment without Redis.
-        self.enterContext(patch(f"{ROUTES}._get_redis", AsyncMock(return_value=None)))
+        redis = AsyncMock()
+        redis.set.return_value = True
+        self.enterContext(patch(f"{ROUTES}._get_redis", AsyncMock(return_value=redis)))
+
+    async def test_connect_retries_without_allocating_a_run_when_redis_is_unavailable(
+        self,
+    ):
+        for redis in (
+            None,
+            AsyncMock(set=AsyncMock(side_effect=ConnectionError("down"))),
+        ):
+            with self.subTest(redis=redis):
+                request = _build_request(
+                    _build_webhook_payload([_call("connect", "redis-down")]),
+                    app_secret="test_app_secret",
+                )
+                with (
+                    _config_lookup(_build_mock_config()),
+                    patch(f"{ROUTES}._get_redis", AsyncMock(return_value=redis)),
+                    patch.object(
+                        db_client, "create_workflow_run", AsyncMock()
+                    ) as create,
+                    patch(f"{CONCURRENCY}.acquire_org_slot", AsyncMock()) as acquire,
+                ):
+                    with self.assertRaises(HTTPException) as failure:
+                        await handle_whatsapp_webhook(request)
+                self.assertEqual(failure.exception.status_code, 503)
+                create.assert_not_awaited()
+                acquire.assert_not_awaited()
+
+    async def test_connect_cannot_use_another_accounts_phone_number_id(self):
+        request = _build_request(
+            _build_webhook_payload(
+                [_call("connect", "foreign-number")],
+                phone_number_id="another-accounts-number",
+            ),
+            app_secret="test_app_secret",
+        )
+        with (
+            _config_lookup(_build_mock_config()),
+            patch.object(
+                db_client, "get_workflow_run_by_call_id", AsyncMock(return_value=None)
+            ),
+            patch.object(
+                db_client,
+                "list_phone_numbers_for_config",
+                AsyncMock(return_value=[_build_mock_phone()]),
+            ),
+            patch(f"{ROUTES}._reject_whatsapp_call", AsyncMock()) as reject,
+            patch(f"{CONCURRENCY}.acquire_org_slot", AsyncMock()) as acquire,
+        ):
+            await handle_whatsapp_webhook(request)
+        reject.assert_awaited_once()
+        acquire.assert_not_awaited()
 
     async def test_connect_creates_workflow_run_and_answers_through_the_client(self):
         phone_number_id = "106540352242922"
@@ -542,6 +594,29 @@ class TestWhatsAppTerminate(IsolatedAsyncioTestCase):
         _clients.clear()
         _owned_calls.clear()
         _terminated_by_meta.clear()
+        self.phone_lookup = self.enterContext(
+            patch.object(
+                db_client,
+                "list_phone_numbers_for_config",
+                AsyncMock(return_value=[MagicMock(external_id="123")]),
+            )
+        )
+
+    async def test_valid_signature_cannot_close_another_organizations_number(self):
+        client = AsyncMock()
+        _clients["foreign-number"] = client
+        request = _build_request(
+            _build_webhook_payload(
+                [_call("terminate", "other-org-call")], phone_number_id="foreign-number"
+            ),
+            app_secret="test_app_secret",
+        )
+        with _config_lookup(_build_mock_config()):
+            with self.assertRaises(HTTPException) as failure:
+                await handle_whatsapp_webhook(request)
+        self.assertEqual(failure.exception.status_code, 403)
+        self.phone_lookup.assert_awaited_once_with(1)
+        client.handle_webhook_request.assert_not_awaited()
 
     async def test_terminate_is_handed_to_the_client_holding_the_call(self):
         """Pipecat's client closes the peer connection; the pipeline completes the run."""
