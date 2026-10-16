@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+from aiobotocore.response import StreamingBody
 from botocore.exceptions import ClientError
 from fastapi import HTTPException
 
@@ -80,9 +81,18 @@ async def test_managed_presign_cannot_bypass_quota(monkeypatch):
 ])
 async def test_bounded_download_enforces_header_and_actual_bytes(monkeypatch, tmp_path, advertised, parts, expected):
     fs, client = fs_with_client(monkeypatch)
-    body = AsyncMock()
-    body.__aenter__.return_value = body
-    body.read.side_effect = parts
+    raw_response = AsyncMock()
+    raw_response.__aenter__.return_value = raw_response
+    raw_response.__aexit__.return_value = False
+    raw_response.content.read.side_effect = parts
+
+    async def read_whole_response():
+        raise AssertionError("Read bounded chunks through StreamingBody")
+
+    raw_response.read = read_whole_response
+    # The real SDK context returns ClientResponse, whose read() takes no size.
+    # Retain StreamingBody itself to read bounded chunks and validate lengths.
+    body = StreamingBody(raw_response, str(advertised))
     client.get_object = AsyncMock(return_value={"ContentLength": advertised, "Body": body})
     path = tmp_path / "document.txt"
     if expected:
@@ -91,7 +101,7 @@ async def test_bounded_download_enforces_header_and_actual_bytes(monkeypatch, tm
     else:
         with pytest.raises(ValueError, match="supera"):
             await fs.adownload_file("knowledge_base/1/example.txt", str(path), max_size=4)
-    body.__aexit__.assert_awaited_once()
+    raw_response.__aexit__.assert_awaited_once()
 
 
 async def test_quota_store_failure_prevents_writes(monkeypatch):

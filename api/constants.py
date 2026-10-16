@@ -103,6 +103,10 @@ S3_REGION = os.environ.get("S3_REGION", "us-east-1")
 # S3_ADDRESSING_STYLE: "auto" (default), "path", or "virtual". Many S3-compatible
 #   servers and TLS setups require "path".
 S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL")
+# Optional browser-facing endpoint for signed links. Internal reads/writes keep
+# using S3_ENDPOINT_URL; sign against this host rather than rewriting a URL
+# afterwards, which would invalidate its signature.
+S3_PUBLIC_ENDPOINT_URL = os.environ.get("S3_PUBLIC_ENDPOINT_URL") or None
 S3_SIGNATURE_VERSION = os.environ.get("S3_SIGNATURE_VERSION")
 S3_ADDRESSING_STYLE = os.environ.get("S3_ADDRESSING_STYLE")
 

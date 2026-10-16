@@ -106,3 +106,15 @@ Antes de migrar se guardó un `pg_dump` completo de la base local. Se restauró 
 API, panel, PostgreSQL, Redis y almacenamiento quedaron saludables. Pasaron 18 comprobaciones HTTP de API directa y proxy del panel: autenticación, agentes, catálogo, conexiones sin secretos, configuraciones V3, configuración predeterminada y locale de acceso. También pasó la lectura autenticada del bucket local. En el navegador se comprobaron los agentes, proveedores y editor de modelos en español con la sesión existente, sin guardar cambios de configuración.
 
 Este arranque local no valida llamadas ni conexiones con proveedores reales. Se mantienen pendientes las comprobaciones externas enumeradas arriba. Los respaldos, secretos y registros locales permanecen fuera de Git.
+
+## Corrección de la carga de documentos en el navegador
+
+La prueba de carga completa detectó que los enlaces firmados usaban el host interno de Docker y que el bucket local no tenía reglas CORS. Se agregó `S3_PUBLIC_ENDPOINT_URL`, opcional, para firmar los enlaces GET/PUT directamente con el host accesible por el navegador. Las operaciones de la API mantienen `S3_ENDPOINT_URL` y los consumidores que solicitan enlaces internos conservan ese destino. No se reescriben enlaces después de firmarlos. Al omitir la nueva variable se conserva el comportamiento anterior.
+
+En esta instalación se usa `S3_PUBLIC_ENDPOINT_URL=http://localhost:9000`, mientras la API conserva su destino interno. El bucket permite GET, PUT y HEAD únicamente desde `http://localhost:3010` y `http://127.0.0.1:3010`, con los encabezados necesarios para estas cargas. Se guardó la configuración CORS anterior; la política de acceso a objetos no se modificó. Otros despliegues con almacenamiento compatible deben configurar sus propios orígenes, en lugar de reutilizar estos valores locales.
+
+Al continuar el procesamiento apareció otra incompatibilidad: el contexto de `StreamingBody` devuelve la respuesta HTTP subyacente, cuyo método `read()` no acepta un tamaño. La descarga acotada ahora conserva el wrapper del SDK y lee a través de él. Se mantienen el cierre del contexto, la comprobación de longitud y el límite de 5 MB. La prueba de regresión usa el `StreamingBody` real: reproduce dos fallos antes de la corrección y pasa después.
+
+Pasaron 57 pruebas de enlaces firmados, lecturas acotadas, cuotas, cargas administradas, parsing y recuperación local de documentos, usando Python 3.13, `api/.env.test` y PostgreSQL/Redis desechables. No se llamó a proveedores de embeddings ni se modificó la configuración de modelos.
+
+La repetición desde el navegador terminó con `prueba-documento-completo.md` en estado **Completado**, modo documento completo y cero fragmentos. La lectura del contenido respondió HTTP 200 y la herramienta de conocimiento recuperó su texto para el agente sin embeddings. Se archivó únicamente el registro ficticio del intento fallido de reproducción; el documento correcto queda disponible como evidencia local.
