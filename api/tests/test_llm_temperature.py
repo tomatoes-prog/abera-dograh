@@ -28,6 +28,10 @@ from api.services.pipecat.service_factory import (
 PROVIDERS = list(REGISTRY[ServiceType.LLM])
 
 
+# Explicit opt-in for tests of the legacy managed provider.
+pytestmark = pytest.mark.usefixtures("mps_enabled")
+
+
 def _config(provider, **overrides):
     return REGISTRY[ServiceType.LLM][provider](
         **{

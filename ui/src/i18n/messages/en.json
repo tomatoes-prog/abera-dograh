@@ -2940,6 +2940,11 @@
     "m937075de6ff6": "Israeli",
     "m1759fc26ea2f": "Saudi",
     "mf03153fce33d": "Add a provider",
-    "mecc40b6a46c9": "provider default"
+    "mecc40b6a46c9": "provider default",
+    "m4e385e788345": "Check your Voices read permission",
+    "m0dd806ae2b0f": "Invalid credential fields",
+    "maf1e11e664bd": "Configuration is unavailable",
+    "m06c7b29e4e50": "Refresh this configuration",
+    "m52c79c7b5ba0": "Not authorized"
   }
 }

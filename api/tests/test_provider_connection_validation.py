@@ -204,6 +204,7 @@ async def test_stale_revision_is_rejected_before_probing(api):
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("mps_enabled")
 async def test_dograh_checks_keep_organization_context(api, monkeypatch):
     validate = Mock(return_value=True)
     monkeypatch.setattr(

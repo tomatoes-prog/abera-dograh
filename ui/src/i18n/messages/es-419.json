@@ -2940,6 +2940,11 @@
     "m937075de6ff6": "Israelí",
     "m1759fc26ea2f": "Saudí",
     "mf03153fce33d": "Agregar un proveedor",
-    "mecc40b6a46c9": "valor predeterminado del proveedor"
+    "mecc40b6a46c9": "valor predeterminado del proveedor",
+    "m4e385e788345": "Revisa el permiso de lectura de voces de tu proveedor.",
+    "m0dd806ae2b0f": "Revisa los campos de las credenciales.",
+    "maf1e11e664bd": "Esta configuración no está disponible.",
+    "m06c7b29e4e50": "Actualiza esta configuración antes de guardar.",
+    "m52c79c7b5ba0": "No tienes autorización para esta operación."
   }
 }

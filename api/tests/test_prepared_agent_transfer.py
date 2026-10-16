@@ -17,6 +17,10 @@ from api.tests.test_model_connections import connection, pipeline
 catalog = catalog_fixture
 
 
+# Explicit opt-in for tests of the legacy managed provider.
+pytestmark = pytest.mark.usefixtures("mps_enabled")
+
+
 @pytest.fixture
 def factory(monkeypatch):
     instance = AgentRuntimeFactory(
