@@ -21,7 +21,6 @@ import { useParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
-import WorkflowLayout from '@/app/workflow/WorkflowLayout';
 import {
     getWorkflowApiV1WorkflowFetchWorkflowIdGet,
     getWorkflowRunApiV1WorkflowWorkflowIdRunsRunIdGet,
@@ -1012,7 +1011,7 @@ export default function WorkflowRunPage() {
     }
 
     return (
-        <WorkflowLayout>
+        <>
             {returnValue}
             {dialog}
 
@@ -1026,6 +1025,6 @@ export default function WorkflowRunPage() {
                     showNext={false}
                 />
             )}
-        </WorkflowLayout>
+        </>
     );
 }

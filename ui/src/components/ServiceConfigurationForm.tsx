@@ -169,8 +169,8 @@ function getOptionDisplayName(field: string, value: string, locale: UiLocale): s
 }
 
 function getNumberSchema(schema: SchemaProperty | undefined): SchemaProperty | undefined {
-    if (schema?.type === "number") return schema;
-    return schema?.anyOf?.find(option => option.type === "number");
+    if (schema?.type === "number" || schema?.type === "integer") return schema;
+    return schema?.anyOf?.find(option => option.type === "number" || option.type === "integer");
 }
 
 function getModelSchema(schema: SchemaProperty | undefined, model?: string, endpoint?: string): SchemaProperty | undefined {
@@ -998,7 +998,7 @@ export function ServiceConfigurationForm({
                 id={`${service}_${field}`}
                 type={numberSchema ? "number" : "text"}
                 {...(numberSchema && {
-                    step: "any",
+                    step: numberSchema.type === "integer" ? 1 : "any",
                     min: numberSchema.minimum,
                     max: numberSchema.maximum,
                 })}
