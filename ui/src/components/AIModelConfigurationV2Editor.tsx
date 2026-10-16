@@ -67,6 +67,7 @@ export interface ModelConfigurationDefaultsV2 {
 
 interface DograhFormState {
     api_key: string;
+    temperature: number | null;
     voice: string;
     speed: number;
     language: string;
@@ -194,6 +195,7 @@ function buildDograhState(
     if (configuredDograh) {
         return {
             api_key: String(configuredDograh.api_key || ""),
+            temperature: typeof configuredDograh.temperature === "number" ? configuredDograh.temperature : null,
             voice: String(configuredDograh.voice || fallback.voice),
             speed: numberOrDefault(configuredDograh.speed, fallback.speed),
             language: String(configuredDograh.language || fallback.language),
@@ -206,6 +208,7 @@ function buildDograhState(
         const stt = asRecord(effectiveConfiguration?.stt);
         return {
             api_key: firstApiKey(llm?.api_key || tts?.api_key || stt?.api_key),
+            temperature: typeof llm?.temperature === "number" ? llm.temperature : null,
             voice: String(tts?.voice || fallback.voice),
             speed: numberOrDefault(tts?.speed, fallback.speed),
             language: String(stt?.language || fallback.language),
@@ -214,6 +217,7 @@ function buildDograhState(
 
     return {
         api_key: "",
+        temperature: null,
         voice: fallback.voice,
         speed: fallback.speed,
         language: fallback.language,
@@ -365,6 +369,7 @@ export function AIModelConfigurationV2Editor({
     const [mode, setMode] = useState<ModelMode>(dograhEnabled ? "dograh" : "byok");
     const [dograh, setDograh] = useState<DograhFormState>(() => ({
         api_key: "",
+        temperature: null,
         voice: defaults.dograh.defaults.voice,
         speed: defaults.dograh.defaults.speed,
         language: defaults.dograh.defaults.language,
@@ -406,11 +411,15 @@ export function AIModelConfigurationV2Editor({
                     `Dograh speed must be between ${dograhSpeedRange.min} and ${dograhSpeedRange.max}.`,
                 );
             }
+            if (dograh.temperature !== null && (!Number.isFinite(dograh.temperature) || dograh.temperature < 0)) {
+                throw new Error("Temperature must be zero or greater, or blank for the provider default.");
+            }
             await onSave({
                 version: 2,
                 mode: "dograh",
                 dograh: {
                     api_key: dograh.api_key.trim(),
+                    temperature: dograh.temperature,
                     voice: dograh.voice,
                     speed: dograh.speed,
                     language: dograh.language,
@@ -549,6 +558,26 @@ export function AIModelConfigurationV2Editor({
                                             });
                                         }}
                                     />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="dograh-temperature">{copy("LLM Temperature")}</Label>
+                                    <Input
+                                        id="dograh-temperature"
+                                        type="number"
+                                        min={0}
+                                        step="any"
+                                        value={dograh.temperature ?? ""}
+                                        placeholder={copy("Provider default")}
+                                        onChange={(event) => {
+                                            const temperature = event.currentTarget.valueAsNumber;
+                                            setDograh({
+                                                ...dograh,
+                                                temperature: Number.isFinite(temperature) ? temperature : null,
+                                            });
+                                        }}
+                                    />
+                                    <p className="text-xs text-muted-foreground">{copy("Lower values give more predictable responses. Leave blank to use the provider default.")}</p>
                                 </div>
 
                                 <div className="space-y-2">

@@ -129,6 +129,12 @@ export type AwsBedrockLlmConfiguration = {
      */
     model?: string;
     /**
+     * Temperature
+     *
+     * Sampling temperature. Lower values give more predictable responses. Leave blank to use the provider default.
+     */
+    temperature?: number | null;
+    /**
      * Aws Access Key
      *
      * AWS access key ID with bedrock:InvokeModel permission.
@@ -209,7 +215,7 @@ export type AwsNovaSonicRealtimeLlmConfiguration = {
     /**
      * Temperature
      *
-     * Sampling temperature for Nova 2 Sonic (greater than 0, up to 1).
+     * Sampling temperature for Nova 2 Sonic (0 to 1).
      */
     temperature?: number;
     /**
@@ -362,6 +368,12 @@ export type AtlasCloudLlmService = {
      */
     model?: string;
     /**
+     * Temperature
+     *
+     * Sampling temperature. Lower values give more predictable responses. Leave blank to use the provider default.
+     */
+    temperature?: number | null;
+    /**
      * Base Url
      *
      * Atlas Cloud OpenAI-compatible API endpoint.
@@ -422,6 +434,12 @@ export type AzureLlmService = {
      * Azure deployment name (not the upstream OpenAI model id).
      */
     model?: string;
+    /**
+     * Temperature
+     *
+     * Sampling temperature. Lower values give more predictable responses. Leave blank to use the provider default.
+     */
+    temperature?: number | null;
     /**
      * Endpoint
      *
@@ -2108,6 +2126,12 @@ export type DeepgramTtsConfiguration = {
      */
     voice?: string;
     /**
+     * Speed
+     *
+     * Speaking rate multiplier (1.0 is normal speed). Leave blank to use Deepgram's default. Supported by Aura-2 English and Spanish voices; 0.9–1.5 is recommended for Spanish.
+     */
+    speed?: number | null;
+    /**
      * Base Url
      *
      * Deepgram API endpoint. This is what decides where your text is processed: use https://api.eu.deepgram.com to keep processing inside the EU, or https://api.au.deepgram.com for Australia. The same API key works on every regional endpoint.
@@ -2500,6 +2524,12 @@ export type DograhLlmService = {
      * Dograh-hosted model tier.
      */
     model?: string;
+    /**
+     * Temperature
+     *
+     * Sampling temperature. Lower values give more predictable responses. Leave blank to use the provider default. Limits depend on the hosted model.
+     */
+    temperature?: number | null;
 };
 
 /**
@@ -2510,6 +2540,12 @@ export type DograhManagedAiModelConfiguration = {
      * Api Key
      */
     api_key: string;
+    /**
+     * Temperature
+     *
+     * Sampling temperature. Lower values give more predictable responses. Leave blank to use the provider default. Limits depend on the hosted model.
+     */
+    temperature?: number | null;
     /**
      * Voice
      */
@@ -3019,6 +3055,12 @@ export type GoogleLlmService = {
      * Gemini model on Google AI Studio (not Vertex).
      */
     model?: string;
+    /**
+     * Temperature
+     *
+     * Sampling temperature. Lower values give more predictable responses. Leave blank to use the provider default.
+     */
+    temperature?: number | null;
 };
 
 /**
@@ -3165,6 +3207,12 @@ export type GoogleVertexLlmConfiguration = {
      * Gemini model on Vertex AI.
      */
     model?: string;
+    /**
+     * Temperature
+     *
+     * Sampling temperature. Lower values give more predictable responses. Leave blank to use the provider default.
+     */
+    temperature?: number | null;
     /**
      * Project Id
      *
@@ -3313,6 +3361,12 @@ export type GroqLlmService = {
      * Groq-hosted model identifier.
      */
     model?: string;
+    /**
+     * Temperature
+     *
+     * Sampling temperature. Lower values give more predictable responses. Leave blank to use the provider default.
+     */
+    temperature?: number | null;
 };
 
 /**
@@ -3399,6 +3453,12 @@ export type HopperLlmConfiguration = {
      * Hopper chat model.
      */
     model?: string;
+    /**
+     * Temperature
+     *
+     * Sampling temperature. Lower values give more predictable responses. Leave blank to use the provider default. Limits depend on the hosted model.
+     */
+    temperature?: number | null;
 };
 
 /**
@@ -3587,6 +3647,12 @@ export type HuggingFaceLlmConfiguration = {
      * Hugging Face chat-completion model identifier, optionally with provider suffix.
      */
     model?: string;
+    /**
+     * Temperature
+     *
+     * Sampling temperature. Lower values give more predictable responses. Leave blank to use the provider default.
+     */
+    temperature?: number | null;
     /**
      * Base Url
      *
@@ -4192,17 +4258,17 @@ export type MiniMaxLlmConfiguration = {
      */
     model?: string;
     /**
+     * Temperature
+     *
+     * Sampling temperature. Lower values give more predictable responses. Leave blank to use the provider default.
+     */
+    temperature?: number | null;
+    /**
      * Base Url
      *
      * MiniMax OpenAI-compatible API endpoint.
      */
     base_url?: string;
-    /**
-     * Temperature
-     *
-     * Sampling temperature. MiniMax requires > 0.
-     */
-    temperature?: number;
 };
 
 /**
@@ -4532,6 +4598,12 @@ export type OpenAillmService = {
      */
     model?: string;
     /**
+     * Temperature
+     *
+     * Sampling temperature. Lower values give more predictable responses. Leave blank to use the provider default.
+     */
+    temperature?: number | null;
+    /**
      * Base Url
      *
      * Override only if using an OpenAI-compatible API (e.g. local LLM, proxy).
@@ -4679,6 +4751,12 @@ export type OpenRouterLlmConfiguration = {
      * OpenRouter model slug in 'vendor/model' form.
      */
     model?: string;
+    /**
+     * Temperature
+     *
+     * Sampling temperature. Lower values give more predictable responses. Leave blank to use the provider default.
+     */
+    temperature?: number | null;
     /**
      * Base Url
      *
@@ -5814,17 +5892,17 @@ export type SarvamLlmConfiguration = {
      */
     model?: string;
     /**
+     * Temperature
+     *
+     * Sampling temperature. Lower values give more predictable responses. Leave blank to use the provider default.
+     */
+    temperature?: number | null;
+    /**
      * Base Url
      *
      * Sarvam API base URL.
      */
     base_url?: string;
-    /**
-     * Temperature
-     *
-     * Sampling temperature. Sarvam recommends 0.5 for balanced conversational responses.
-     */
-    temperature?: number;
 };
 
 /**
@@ -6135,6 +6213,12 @@ export type SpeachesLlmConfiguration = {
      * Model name as exposed by your OpenAI-compatible server.
      */
     model?: string;
+    /**
+     * Temperature
+     *
+     * Sampling temperature. Lower values give more predictable responses. Leave blank to use the provider default. Limits depend on your server and model.
+     */
+    temperature?: number | null;
     /**
      * Base Url
      *
@@ -7568,6 +7652,12 @@ export type UltravoxRealtimeLlmConfiguration = {
      * Ultravox voice name or voice ID.
      */
     voice?: string;
+    /**
+     * Temperature
+     *
+     * Sampling temperature. Lower values give more predictable responses.
+     */
+    temperature?: number;
 };
 
 /**
