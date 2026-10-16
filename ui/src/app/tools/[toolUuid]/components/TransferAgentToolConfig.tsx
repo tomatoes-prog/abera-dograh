@@ -108,6 +108,7 @@ export function TransferAgentToolConfig({
                     <Label className="text-xs text-muted-foreground">{copy("Spoken in the current agent's own voice, and waited for before the caller is handed over. Leave empty to hand over without saying anything.")}</Label>
                     <Input
                         id="transfer-agent-message"
+                        maxLength={500}
                         value={message}
                         onChange={(e) => onMessageChange(e.target.value)}
                         placeholder={copy("Let me connect you with the right person. One moment please.")}
