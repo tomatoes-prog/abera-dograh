@@ -398,6 +398,63 @@ async def _run(test_engine):
 
 
 @pytest.mark.asyncio
+async def test_full_agent_and_historical_overrides_migrate_without_an_org_default(
+    test_engine, seeded
+):
+    session_factory, ids = seeded
+    organization_id = ids["organization"]
+    async with session_factory() as session:
+        await session.execute(
+            OrganizationConfigurationModel.__table__.delete().where(
+                OrganizationConfigurationModel.organization_id == organization_id,
+            )
+        )
+        # Partial drafts have no effective base in this scenario; keep only
+        # the complete agent and historical configurations that worked before.
+        await session.execute(
+            update(WorkflowDefinitionModel)
+            .where(
+                WorkflowDefinitionModel.id.in_([ids["draft"], ids["broken"]]),
+            )
+            .values(workflow_configurations={})
+        )
+        await session.commit()
+    summary = await _run(test_engine)
+    assert summary["defaults"] == 0
+    assert summary["bindings"] == 4
+    async with session_factory() as session:
+        archived = await session.get(WorkflowModel, ids["archived"])
+        historical = await session.get(WorkflowDefinitionModel, ids["historical"])
+        for row in (archived, historical):
+            binding = row.workflow_configurations["model_configuration_override"]
+            configuration = await session.scalar(
+                select(NamedModelConfigurationModel).where(
+                    NamedModelConfigurationModel.organization_id == organization_id,
+                    NamedModelConfigurationModel.uuid
+                    == binding["model_configuration_uuid"],
+                )
+            )
+            assert configuration is not None
+        assert (
+            historical.workflow_configurations["model_configuration_v2_override"]
+            == BYOK_REALTIME_V2
+        )
+        assert (
+            await session.scalar(
+                select(func.count())
+                .select_from(OrganizationConfigurationModel)
+                .where(
+                    OrganizationConfigurationModel.organization_id == organization_id,
+                    OrganizationConfigurationModel.key
+                    == "MODEL_CONFIGURATION_DEFAULT_UUID",
+                )
+            )
+            == 0
+        )
+    assert (await _run(test_engine))["organizations"] == 0
+
+
+@pytest.mark.asyncio
 async def test_backfill_is_atomic_and_preserves_historical_and_archived_settings(
     test_engine, seeded
 ):

@@ -362,22 +362,14 @@ def migrate(connection):
             summary["organizations_without_default"].append(
                 (row.organization_id, str(exc))
             )
-    if not catalogs:
-        return summary
-
     bindings = {"workflows": [], "workflow_definitions": []}
     legacy_rows = connection.execute(
         sa.text(_LEGACY_ROWS_SQL),
         {"full_key": FULL_OVERRIDE_KEY, "partial_key": PARTIAL_OVERRIDE_KEY},
     ).all()
     for row in legacy_rows:
-        catalog = catalogs.get(row.organization_id)
         configuration = _as_object(row.configuration)
-        if (
-            catalog is None
-            or configuration is None
-            or configuration.get(BINDING_KEY) is not None
-        ):
+        if configuration is None or configuration.get(BINDING_KEY) is not None:
             continue
         try:
             full = _as_object(configuration.get(FULL_OVERRIDE_KEY))
@@ -393,6 +385,13 @@ def migrate(connection):
                 )
             else:
                 continue  # The key is present but empty: the row inherits.
+            if row.organization_id is None:
+                raise Unconvertible("workflow_without_organization")
+            # A full per-agent setup can work without an organization default.
+            # Such agents, including archived versions, must migrate too.
+            if row.organization_id not in catalogs:
+                catalogs[row.organization_id] = OrganizationCatalog(row.organization_id)
+            catalog = catalogs[row.organization_id]
             configuration_uuid = catalog.configuration(
                 mode, sections, row.name or f"Workflow {row.workflow_id}"
             )
