@@ -727,9 +727,6 @@ export const useWebSocketRTC = ({ workflowId, workflowRunId, accessToken, initia
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
                 },
-                query: {
-                    validity_ttl_seconds: 86400
-                },
             });
 
             if (response.error) {
