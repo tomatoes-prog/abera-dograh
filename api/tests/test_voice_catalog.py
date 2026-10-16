@@ -8,6 +8,7 @@ from fastapi import FastAPI, HTTPException
 from api.routes import user as user_routes
 from api.services.auth.depends import get_user
 from api.services.configuration import voice_catalog
+from api.services.mps_service_key_client import mps_service_key_client
 
 HttpClient = httpx.AsyncClient
 
@@ -351,7 +352,7 @@ async def test_timeout_is_actionable(connection, upstream):
 @pytest.fixture(autouse=True)
 def mps_not_used(monkeypatch):
     mock = AsyncMock(side_effect=AssertionError("External catalogs must never use MPS"))
-    monkeypatch.setattr(user_routes.mps_service_key_client, "get_voices", mock)
+    monkeypatch.setattr(mps_service_key_client, "get_voices", mock)
     return mock
 
 
@@ -643,29 +644,15 @@ async def test_sarvam_reuses_model_options_without_external_requests(
 
 
 @pytest.mark.asyncio
-async def test_only_dograh_uses_mps_without_a_byok_connection(client, mps_not_used):
-    mps_not_used.side_effect = None
-    mps_not_used.return_value = {
-        "provider": "dograh",
-        "voices": [{"voice_id": "dg:voice", "name": "Dograh voice"}],
-        "facets": {"languages": ["en"]},
-    }
+async def test_managed_voice_catalog_fails_closed_without_requesting_mps(
+    client, mps_not_used
+):
     response = await client.get(
         "/user/configurations/voices/dograh", params={"language": "en"}
     )
-    assert response.status_code == 200
-    assert response.json()["voices"][0]["voice_id"] == "dg:voice"
-    assert response.json()["facets"]["languages"] == ["en"]
-    mps_not_used.assert_awaited_once_with(
-        provider="dograh",
-        model=None,
-        language="en",
-        q=None,
-        gender=None,
-        accent=None,
-        organization_id=42,
-        created_by="user-42",
-    )
+    assert response.status_code == 422
+    assert "proveedor propio" in response.json()["detail"]
+    mps_not_used.assert_not_awaited()
 
 
 def test_dynamic_voice_fields_are_backed_by_catalog_adapters():

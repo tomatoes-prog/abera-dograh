@@ -1,6 +1,6 @@
 """Reproducible, provider-free ASGI benchmark for the old and new catalogs.
 
-Run with Python 3.13 and api/.env.test in an isolated test environment:
+Run on Linux with Python 3.13 and api/.env.test in an isolated test environment:
     python -m scripts.benchmark_model_catalog --label before --output result.json
 
 No lifespan/startup or provider calls run. Authentication is replaced only for

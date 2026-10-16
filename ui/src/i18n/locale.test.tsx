@@ -78,6 +78,7 @@ describe("LATAM interface locale", () => {
     expect(apiErrorMessage({detail: "Invalid email or password"}, copy)).toBe("Revisa tu correo y contraseña.");
     expect(apiErrorMessage({detail: [{msg: "Field required", loc: ["body", "secret"]}]}, copy)).toBe("Ocurrió un error. Inténtalo de nuevo.");
     expect(apiErrorMessage({detail: "Private customer detail"}, copy)).not.toContain("Private customer detail");
+    expect(apiErrorMessage({detail: "ElevenLabs could not list voices. Check the connection's API key and its Voices read permission."}, copy)).toContain("permiso de lectura");
   });
   it("localizes metadata without changing defaults, schema keys or option values", () => {
     const property: PropertySpec = {name: "prompt", type: "options", display_name: "System Prompt", description: "", default: "Save", options: [{label: "Always", value: "always"}], placeholder: "{{initial_context.phone_number}}"};
