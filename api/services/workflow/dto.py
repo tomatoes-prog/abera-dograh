@@ -901,6 +901,7 @@ class WebhookNodeData(BaseNodeData):
                 PropertyOption(value="openai", label="OpenAI"),
                 PropertyOption(value="azure", label="Azure OpenAI"),
                 PropertyOption(value="openrouter", label="OpenRouter"),
+                PropertyOption(value="google", label="Google Gemini"),
                 PropertyOption(value="anthropic", label="Anthropic"),
             ],
             "display_options": DisplayOptions(show={"qa_use_workflow_llm": [False]}),
@@ -1102,7 +1103,9 @@ class ReactFlowDTO(BaseModel):
                     line_errors.append(
                         dict(
                             loc=("edges", idx),
-                            type=PydanticCustomError("missing_node", "Edge references missing node"),
+                            type=PydanticCustomError(
+                                "missing_node", "Edge references missing node"
+                            ),
                             msg="Edge references missing node",
                             input=edge.model_dump(mode="python"),
                             ctx={"edge_id": edge.id, "endpoint": endpoint},

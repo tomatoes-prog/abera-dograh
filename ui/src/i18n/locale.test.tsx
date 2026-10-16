@@ -9,7 +9,7 @@ import { formatCalendarDate, formatDateTime } from "@/lib/dateTime";
 import { copyFor } from "./catalog";
 import { LOCALE_COOKIE, resolveUiLocale } from "./config";
 import { apiErrorMessage } from "./errors";
-import { languageDisplayName } from "./format";
+import { languageDisplayName, voiceAccentLabel, voiceGenderLabel } from "./format";
 import { LocaleProvider, useCopy } from "./LocaleProvider";
 import { LocaleSwitcher } from "./LocaleSwitcher";
 import sources from "./messages/sources.json";
@@ -59,7 +59,7 @@ describe("LATAM interface locale", () => {
     for (const locale of ["es-419", "en"] as const) {
       const copy = copyFor(locale);
       for (const source of Object.keys(sources)) {
-        const result = copy(source, {value0: 2, value1: "s", value2: 10});
+        const result = copy(source, {value0: 2, value1: "s", value2: 10, variables: "{{order_id}}", names: "OpenAI", count: 2, role: "TTS"});
         expect(result.length, source).toBeGreaterThan(0);
       }
       expect(copy("{{initial_context.phone_number}}")).toBe("{{initial_context.phone_number}}");
@@ -78,6 +78,7 @@ describe("LATAM interface locale", () => {
     expect(apiErrorMessage({detail: "Invalid email or password"}, copy)).toBe("Revisa tu correo y contraseña.");
     expect(apiErrorMessage({detail: [{msg: "Field required", loc: ["body", "secret"]}]}, copy)).toBe("Ocurrió un error. Inténtalo de nuevo.");
     expect(apiErrorMessage({detail: "Private customer detail"}, copy)).not.toContain("Private customer detail");
+    expect(apiErrorMessage({detail: "ElevenLabs could not list voices. Check the connection's API key and its Voices read permission."}, copy)).toContain("permiso de lectura");
   });
   it("localizes metadata without changing defaults, schema keys or option values", () => {
     const property: PropertySpec = {name: "prompt", type: "options", display_name: "System Prompt", description: "", default: "Save", options: [{label: "Always", value: "always"}], placeholder: "{{initial_context.phone_number}}"};
@@ -100,5 +101,12 @@ describe("LATAM interface locale", () => {
     expect(formatCalendarDate("2026-07-23", "es-419")).toContain("23");
     expect(formatCalendarDate("2026-07-23", "es-419")).toContain("jul");
     expect(formatDateTime("2026-07-23T03:00:00Z", "America/Bogota", "es-419")).toContain("22");
+  });
+  it("translates voice traits while preserving unknown provider identifiers", () => {
+    const copy = copyFor("es-419");
+    expect(voiceGenderLabel("female", copy)).toBe("Femenina");
+    expect(voiceAccentLabel("co", copy)).toBe("Colombiano");
+    expect(voiceGenderLabel("custom-provider-value", copy)).toBe("custom-provider-value");
+    expect(voiceAccentLabel("custom-accent", copy)).toBe("custom-accent");
   });
 });

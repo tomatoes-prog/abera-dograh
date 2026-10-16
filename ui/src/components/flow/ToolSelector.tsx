@@ -67,6 +67,24 @@ function withDiscoveredTools(
     };
 }
 
+/** Opens the tool's details page in a new tab without toggling the row it sits in. */
+function ToolDetailsLink({ tool }: { tool: ToolResponse }) {
+    const copy = useCopy();
+    return (
+        <Link
+            href={`/tools/${tool.tool_uuid}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={copy("Open {value0} details", {value0: tool.name})}
+            title={copy("Open tool details")}
+            className="shrink-0 p-1 rounded text-muted-foreground hover:text-foreground"
+            onClick={(e) => e.stopPropagation()}
+        >
+            <ExternalLink className="h-3.5 w-3.5" />
+        </Link>
+    );
+}
+
 export function ToolSelector({
     value,
     onChange,
@@ -209,6 +227,7 @@ export function ToolSelector({
                                                 </span>
                                             )}
                                         </div>
+                                        <ToolDetailsLink tool={tool} />
                                     </label>
                                 );
                             })}
@@ -248,6 +267,7 @@ export function ToolSelector({
                                             </div>
                                             <span className="text-xs text-muted-foreground shrink-0">
                                                 {selected.length}/{fns.length}{copy(" tools")}</span>
+                                            <ToolDetailsLink tool={tool} />
                                         </summary>
 
                                         <div className="mt-3 pl-9 grid gap-2">

@@ -727,16 +727,13 @@ export const useWebSocketRTC = ({ workflowId, workflowRunId, accessToken, initia
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
                 },
-                query: {
-                    validity_ttl_seconds: 86400
-                },
             });
 
             if (response.error) {
                 const isServiceUnavailable = response.response?.status === 503;
                 const message = copy(detailFromError(response.error, isServiceUnavailable
-                        ? 'Dograh is temporarily unavailable. Please try again later.'
-                        : 'API Key Error'));
+                        ? copy("Dograh is temporarily unavailable. Please try again later.")
+                        : copy("API Key Error")));
 
                 if (isServiceUnavailable) {
                     // MPS is a Dograh-owned dependency. Do not tell the customer

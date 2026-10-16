@@ -4,8 +4,8 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
 
 import { BrandLogo } from "@/components/BrandLogo";
 import { type EventBannerEvent, events } from "@/config/event-banner.config";
-import { captureAnalyticsEvent } from "@/lib/analytics";
 import { useCopy } from "@/i18n/LocaleProvider";
+import { captureAnalyticsEvent } from "@/lib/analytics";
 
 // Site-wide event announcement bar, ported from the dograh.com landing page.
 // Sits ABOVE the app chrome in the root layout and is sticky at top-0, so the

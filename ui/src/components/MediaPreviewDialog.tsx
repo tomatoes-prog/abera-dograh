@@ -1,7 +1,8 @@
 'use client';
 
-import { Headphones, Loader2 } from 'lucide-react';
+import { Copy, Headphones, Loader2 } from 'lucide-react';
 import { useCallback, useState } from 'react';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -13,8 +14,9 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { PostHogEvent } from '@/constants/posthog-events';
-import { captureAnalyticsEvent } from '@/lib/analytics';
 import { useCopy } from "@/i18n/LocaleProvider";
+import { captureAnalyticsEvent } from '@/lib/analytics';
+import { copyTextToClipboard } from '@/lib/clipboard';
 import { downloadFile, getSignedUrl } from '@/lib/files';
 
 
@@ -51,6 +53,9 @@ export function MediaPreviewDialog() {
             if (transcriptResult) {
                 try {
                     const response = await fetch(transcriptResult);
+                    if (!response.ok) {
+                        throw new Error(`Failed to fetch transcript: ${response.status}`);
+                    }
                     const text = await response.text();
                     setTranscriptContent(text);
                     captureAnalyticsEvent(PostHogEvent.TRANSCRIPT_VIEWED, {
@@ -60,13 +65,25 @@ export function MediaPreviewDialog() {
                     });
                 } catch (error) {
                     console.error('Error fetching transcript:', error);
+                    toast.error(copy("Failed to load transcript"));
                 }
             }
 
             setMediaLoading(false);
         },
-        [],
+        [copy],
     );
+
+    const copyTranscript = async () => {
+        if (mediaLoading || !transcriptContent) return;
+
+        try {
+            await copyTextToClipboard(transcriptContent);
+            toast.success(copy("Transcript copied to clipboard"));
+        } catch {
+            toast.error(copy("Failed to copy transcript"));
+        }
+    };
 
     return {
         openPreview,
@@ -99,9 +116,17 @@ export function MediaPreviewDialog() {
                     )}
 
                     {!mediaLoading && transcriptContent && (
-                        <pre className="w-full h-[60vh] overflow-auto border rounded-md mt-4 p-4 bg-muted text-sm whitespace-pre-wrap font-mono">
-                            {transcriptContent}
-                        </pre>
+                        <div className="mt-4 space-y-2">
+                            <div className="flex items-center justify-between gap-2">
+                                <span className="text-sm font-medium">{copy("Transcript")}</span>
+                                <Button variant="outline" size="sm" onClick={copyTranscript}>
+                                    <Copy className="h-4 w-4" />
+                                    {copy("Copy transcript")}</Button>
+                            </div>
+                            <pre className="w-full h-[60vh] overflow-auto border rounded-md p-4 bg-muted text-sm whitespace-pre-wrap font-mono">
+                                {transcriptContent}
+                            </pre>
+                        </div>
                     )}
 
                     {!mediaLoading && !audioSignedUrl && !transcriptContent && (

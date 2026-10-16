@@ -25,6 +25,7 @@ class S3FileSystem(BaseFileSystem):
         addressing_style: Optional[str] = None,
         key_prefix: str = "",
         storage_limit_bytes: int | None = None,
+        public_endpoint_url: Optional[str] = None,
     ):
         """Initialize S3 filesystem.
 
@@ -37,6 +38,8 @@ class S3FileSystem(BaseFileSystem):
                 ``"s3v4"``). ``None`` keeps botocore's default signing behavior.
             addressing_style: Optional S3 addressing style (``"path"`` /
                 ``"virtual"`` / ``"auto"``). ``None`` keeps botocore's default.
+            public_endpoint_url: Browser-accessible endpoint used only when
+                signing GET/PUT URLs. Reads and writes use ``endpoint_url``.
         """
         if storage_limit_bytes is not None and (storage_limit_bytes < 1 or not key_prefix):
             raise ValueError("Managed storage requires a positive limit and tenant prefix")
@@ -45,6 +48,7 @@ class S3FileSystem(BaseFileSystem):
         self.key_prefix = key_prefix.strip("/")
         self.region_name = region_name
         self.endpoint_url = endpoint_url
+        self.public_endpoint_url = public_endpoint_url
         self.session = aioboto3.Session()
 
         # Build a botocore Config only when an override is requested so that the
@@ -61,15 +65,18 @@ class S3FileSystem(BaseFileSystem):
             return file_path
         return f"{self.key_prefix}/{file_path.lstrip('/')}"
 
-    def _client_kwargs(self) -> Dict[str, Any]:
+    def _client_kwargs(self, *, for_presigning: bool = False) -> Dict[str, Any]:
         """Common kwargs for every ``session.client("s3", ...)`` call.
 
         Only includes ``endpoint_url`` / ``config`` when configured, so default
         deployments behave exactly as before.
         """
         kwargs: Dict[str, Any] = {"region_name": self.region_name}
-        if self.endpoint_url:
-            kwargs["endpoint_url"] = self.endpoint_url
+        endpoint_url = (
+            self.public_endpoint_url if for_presigning else None
+        ) or self.endpoint_url
+        if endpoint_url:
+            kwargs["endpoint_url"] = endpoint_url
         if self._config is not None:
             kwargs["config"] = self._config
         return kwargs
@@ -133,7 +140,9 @@ class S3FileSystem(BaseFileSystem):
         disposition on the response.
         """
         try:
-            async with self.session.client("s3", **self._client_kwargs()) as s3_client:
+            async with self.session.client(
+                "s3", **self._client_kwargs(for_presigning=not use_internal_endpoint)
+            ) as s3_client:
                 params = {"Bucket": self.bucket_name, "Key": self._key(file_path)}
 
                 # Make artifacts viewable inline in the browser when requested
@@ -198,7 +207,9 @@ class S3FileSystem(BaseFileSystem):
         if self.storage_limit_bytes is not None:
             raise ValueError("Managed uploads must use the quota-controlled proxy")
         try:
-            async with self.session.client("s3", **self._client_kwargs()) as s3_client:
+            async with self.session.client(
+                "s3", **self._client_kwargs(for_presigning=True)
+            ) as s3_client:
                 url = await s3_client.generate_presigned_url(
                     "put_object",
                     Params={
@@ -220,7 +231,11 @@ class S3FileSystem(BaseFileSystem):
                     await s3_client.download_file(self.bucket_name, self._key(source_path), local_path)
                 else:
                     response = await s3_client.get_object(Bucket=self.bucket_name, Key=self._key(source_path))
-                    async with response["Body"] as body:
+                    # StreamingBody.__aenter__ returns the underlying HTTP
+                    # response, whose read() does not accept a chunk size.
+                    # Keep the SDK wrapper for bounded reads and length checks.
+                    body = response["Body"]
+                    async with body:
                         if response.get("ContentLength", 0) > max_size:
                             raise ValueError("El documento supera el límite de 5 MB.")
                         received = 0

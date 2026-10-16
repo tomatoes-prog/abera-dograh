@@ -9,8 +9,8 @@ import type { WorkflowResponse, WorkflowVersionResponse } from '@/client/types.g
 import { FlowEdge, FlowNode } from '@/components/flow/types';
 import SpinLoader from '@/components/SpinLoader';
 import { PostHogEvent } from '@/constants/posthog-events';
-import { captureAnalyticsEvent } from '@/lib/analytics';
 import { useCopy } from "@/i18n/LocaleProvider";
+import { captureAnalyticsEvent } from '@/lib/analytics';
 import { detailFromError } from '@/lib/apiError';
 import { useAuth } from '@/lib/auth';
 import logger from '@/lib/logger';

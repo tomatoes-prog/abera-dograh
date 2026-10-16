@@ -10,8 +10,8 @@ import { SidebarInset, SidebarProvider, useSidebar } from "@/components/ui/sideb
 import { PostHogEvent } from "@/constants/posthog-events";
 import { useAppConfig } from "@/context/AppConfigContext";
 import { LeadFormsProvider } from "@/context/LeadFormsContext";
-import { captureAnalyticsEvent } from "@/lib/analytics";
 import { useCopy } from "@/i18n/LocaleProvider";
+import { captureAnalyticsEvent } from "@/lib/analytics";
 
 import { AppSidebar } from "./AppSidebar";
 import { GitHubStarBadge } from "./GitHubStarBadge";
