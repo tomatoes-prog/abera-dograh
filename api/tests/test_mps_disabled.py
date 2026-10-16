@@ -71,6 +71,17 @@ async def test_abera_never_bootstraps_vendor_services_even_if_flag_is_enabled(
     read.assert_not_awaited()
 
 
+def test_warm_catalog_cannot_reuse_another_deployments_provider_policy(monkeypatch):
+    monkeypatch.setattr(constants, "DEPLOYMENT_MODE", "oss")
+    monkeypatch.setattr(constants, "ENABLE_DOGRAH_MPS", True)
+    assert "dograh" in model_connection_catalog()["services"]["llm"]
+    monkeypatch.setattr(constants, "DEPLOYMENT_MODE", "abera")
+    assert "dograh" not in model_connection_catalog()["services"]["llm"]
+    monkeypatch.setattr(constants, "DEPLOYMENT_MODE", "oss")
+    monkeypatch.setattr(constants, "ENABLE_DOGRAH_MPS", False)
+    assert "dograh" not in model_connection_catalog()["services"]["llm"]
+
+
 @pytest.mark.asyncio
 async def test_bootstrap_does_not_mint_keys_or_provision_sip(monkeypatch):
     monkeypatch.setattr(organization_bootstrap, "DEPLOYMENT_MODE", "oss")

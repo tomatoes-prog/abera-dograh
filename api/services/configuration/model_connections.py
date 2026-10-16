@@ -6,6 +6,7 @@ index; hydration reads the connection's current credentials.
 
 from copy import deepcopy
 from dataclasses import dataclass
+from functools import lru_cache
 from secrets import choice
 from types import SimpleNamespace
 from urllib.parse import urlparse
@@ -131,15 +132,26 @@ def split_service_configuration(service):
 
 
 def model_connection_catalog():
+    # Registry schemas are static application metadata, never tenant settings
+    # or credentials. Include the classes and deployment policy in the key so
+    # registration changes and MPS-disabled deployments cannot reuse another
+    # catalog. No endpoint mutates this cache or changes the registry.
+    registry = tuple(
+        (role, tuple(REGISTRY[ServiceType[role.upper()]].values())) for role in ROLES
+    )
+    allow_dograh = constants.DEPLOYMENT_MODE != "abera" and constants.ENABLE_DOGRAH_MPS
+    return _model_connection_catalog(registry, allow_dograh)
+
+
+@lru_cache(maxsize=4)
+def _model_connection_catalog(registry, allow_dograh):
     services = {}
-    for role in ROLES:
+    for role, schemas in registry:
         providers = {}
-        for cls in REGISTRY[ServiceType[role.upper()]].values():
+        for cls in schemas:
             schema = cls.model_json_schema(mode="validation")
             provider = cls.provider_definition
-            if provider.id == "dograh" and (
-                constants.DEPLOYMENT_MODE == "abera" or not constants.ENABLE_DOGRAH_MPS
-            ):
+            if provider.id == "dograh" and not allow_dograh:
                 continue
             properties = schema.get("properties", {})
             required = schema.get("required", [])

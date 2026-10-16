@@ -38,7 +38,9 @@ async def benchmark(requests: int, concurrency: int) -> dict:
     sizes = []
     semaphore = asyncio.Semaphore(concurrency)
     try:
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://benchmark.test") as client:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://benchmark.test"
+        ) as client:
             for _ in range(20):
                 response = await client.get(path)
                 response.raise_for_status()
@@ -70,7 +72,9 @@ async def benchmark(requests: int, concurrency: int) -> dict:
         "median_ms": round(statistics.median(durations), 3),
         "p95_ms": round(sorted(durations)[int(len(durations) * 0.95) - 1], 3),
         "response_bytes": sizes[0],
-        "peak_rss_mib": round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024, 2),
+        "peak_rss_mib": round(
+            resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024, 2
+        ),
     }
 
 
@@ -83,7 +87,10 @@ def main():
     args = parser.parse_args()
     if args.requests < 20 or args.concurrency < 1:
         parser.error("Use at least 20 requests and one concurrent request")
-    result = {"label": args.label, **asyncio.run(benchmark(args.requests, args.concurrency))}
+    result = {
+        "label": args.label,
+        **asyncio.run(benchmark(args.requests, args.concurrency)),
+    }
     args.output.write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result))
 
