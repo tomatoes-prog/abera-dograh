@@ -46,6 +46,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { TOOL_DOCUMENTATION_URLS } from "@/constants/documentation";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { detailFromError } from "@/lib/apiError";
 import { useAuth } from "@/lib/auth";
 
@@ -79,6 +80,7 @@ import {
     TransferCallToolConfig,
 } from "./components";
 
+
 function normalizeParameterType(value: string | null | undefined): ParameterType {
     switch (value) {
         case "number":
@@ -97,6 +99,7 @@ function headersToRows(headers: Record<string, string> | undefined | null): KeyV
 }
 
 export default function ToolDetailPage() {
+    const copy = useCopy();
     const { toolUuid } = useParams<{ toolUuid: string }>();
     const { user, getAccessToken, redirectToLogin, loading } = useAuth();
     const router = useRouter();
@@ -221,12 +224,12 @@ export default function ToolDetailPage() {
                 populateFormFromTool(response.data);
             }
         } catch (err) {
-            setError("Failed to fetch tool");
+            setError(copy("Failed to fetch tool"));
             console.error("Error fetching tool:", err);
         } finally {
             setIsLoading(false);
         }
-    }, [loading, user, toolUuid, getAccessToken]);
+    }, [loading, user, toolUuid, getAccessToken, copy]);
 
     const populateFormFromTool = (tool: ToolResponse) => {
         setName(tool.name);
@@ -471,18 +474,18 @@ export default function ToolDetailPage() {
             // No validation needed for built-in tools
         } else if (tool.category === "transfer_agent") {
             if (!transferAgentWorkflowId) {
-                setError("Choose the agent to transfer to");
+                setError(copy("Choose the agent to transfer to"));
                 return;
             }
         } else if (tool.category === "transfer_call") {
             if (transferDestinationSource === "static" && !normalizedTransferDestination) {
-                setError("Please enter a transfer destination");
+                setError(copy("Please enter a transfer destination"));
                 return;
             }
             if (transferDestinationSource === "dynamic") {
                 const resolverUrlValidation = validateUrl(transferResolverUrl);
                 if (!resolverUrlValidation.valid) {
-                    setError(resolverUrlValidation.error || "Invalid resolver URL");
+                    setError(resolverUrlValidation.error || copy("Invalid resolver URL"));
                     return;
                 }
 
@@ -490,40 +493,40 @@ export default function ToolDetailPage() {
                     (p) => !p.name.trim() || !p.description.trim()
                 );
                 if (invalidTransferParams.length > 0) {
-                    setError("All resolver arguments must have a name and description");
+                    setError(copy("All resolver arguments must have a name and description"));
                     return;
                 }
                 const transferParamNames = transferParameters
                     .map((p) => p.name.trim())
                     .filter(Boolean);
                 if (new Set(transferParamNames).size !== transferParamNames.length) {
-                    setError("Resolver argument names must be unique");
+                    setError(copy("Resolver argument names must be unique"));
                     return;
                 }
                 const invalidPresetTransferParams = transferPresetParameters.filter(
                     (p) => !p.name.trim() || !p.valueTemplate.trim()
                 );
                 if (invalidPresetTransferParams.length > 0) {
-                    setError("All resolver preset parameters must have a name and a value");
+                    setError(copy("All resolver preset parameters must have a name and a value"));
                     return;
                 }
                 const transferPresetParamNames = transferPresetParameters
                     .map((p) => p.name.trim())
                     .filter(Boolean);
                 if (new Set(transferPresetParamNames).size !== transferPresetParamNames.length) {
-                    setError("Resolver preset parameter names must be unique");
+                    setError(copy("Resolver preset parameter names must be unique"));
                     return;
                 }
             }
             if (transferDestinationSource === "context_mapping") {
                 if (transferContextDestinationRules.length === 0) {
-                    setError("Add at least one context routing rule");
+                    setError(copy("Add at least one context routing rule"));
                     return;
                 }
                 for (const [index, rule] of transferContextDestinationRules.entries()) {
                     const ruleLabel = `rule ${index + 1}`;
                     if (!rule.context_path.trim()) {
-                        setError(`Please enter a context field for ${ruleLabel}`);
+                        setError(copy("Please enter a context field for {value0}", {value0: ruleLabel}));
                         return;
                     }
                     if (
@@ -533,7 +536,7 @@ export default function ToolDetailPage() {
                         )
                     ) {
                         setError(
-                            `Add at least one complete context value to destination mapping in ${ruleLabel}`
+                            copy("Add at least one complete context value to destination mapping in {value0}", {value0: ruleLabel})
                         );
                         return;
                     }
@@ -541,7 +544,7 @@ export default function ToolDetailPage() {
                         route.context_value.trim().toLocaleLowerCase()
                     );
                     if (new Set(routeValues).size !== routeValues.length) {
-                        setError(`Destination mapping context values must be unique in ${ruleLabel}`);
+                        setError(copy("Destination mapping context values must be unique in {value0}", {value0: ruleLabel}));
                         return;
                     }
                 }
@@ -549,30 +552,30 @@ export default function ToolDetailPage() {
         } else if (tool.category === "mcp") {
             // Validate MCP server URL (must be http(s))
             if (!mcpUrl.trim()) {
-                setError("Please enter the MCP server URL");
+                setError(copy("Please enter the MCP server URL"));
                 return;
             }
             if (!MCP_URL_PATTERN.test(mcpUrl.trim())) {
-                setError("MCP server URL must start with http:// or https://");
+                setError(copy("MCP server URL must start with http:// or https://"));
                 return;
             }
         } else if (tool.category !== "end_call") {
             // Validate URL for HTTP API tools
             const urlValidation = validateUrl(url);
             if (!urlValidation.valid) {
-                setError(urlValidation.error || "Invalid URL");
+                setError(urlValidation.error || copy("Invalid URL"));
                 return;
             }
 
             // Validate parameters have names
             const invalidParams = parameters.filter((p) => !p.name.trim());
             if (invalidParams.length > 0) {
-                setError("All parameters must have a name");
+                setError(copy("All parameters must have a name"));
                 return;
             }
             const paramNames = parameters.map((p) => p.name.trim()).filter(Boolean);
             if (new Set(paramNames).size !== paramNames.length) {
-                setError("Parameter names must be unique");
+                setError(copy("Parameter names must be unique"));
                 return;
             }
 
@@ -580,7 +583,7 @@ export default function ToolDetailPage() {
                 (p) => !p.name.trim() || !p.valueTemplate.trim()
             );
             if (invalidPresetParams.length > 0) {
-                setError("All preset parameters must have a name and a value");
+                setError(copy("All preset parameters must have a name and a value"));
                 return;
             }
             if (
@@ -588,7 +591,7 @@ export default function ToolDetailPage() {
                 bodyTemplateEnabled &&
                 (!isBodyTemplateValid || bodyTemplate === null)
             ) {
-                setError("Body template must be a valid JSON object");
+                setError(copy("Body template must be a valid JSON object"));
                 return;
             }
         }
@@ -776,7 +779,7 @@ export default function ToolDetailPage() {
             });
 
             if (response.error) {
-                setError(detailFromError(response.error, "Failed to save tool"));
+                setError(detailFromError(response.error, copy("Failed to save tool")));
                 return;
             }
 
@@ -805,7 +808,7 @@ export default function ToolDetailPage() {
                 }
             }
         } catch (err) {
-            setError("Failed to save tool");
+            setError(copy("Failed to save tool"));
             console.error("Error saving tool:", err);
         } finally {
             setIsSaving(false);
@@ -888,11 +891,10 @@ const data = await response.json();`;
     if (!tool) {
         return (
             <PageShell className="text-center">
-                <h1 className="text-2xl font-bold mb-4">Tool not found</h1>
+                <h1 className="text-2xl font-bold mb-4">{copy("Tool not found")}</h1>
                 <Button onClick={() => router.push("/tools")}>
                     <ArrowLeft className="w-4 h-4 mr-2" />
-                    Back to Tools
-                </Button>
+                    {copy("Back to Tools")}</Button>
             </PageShell>
         );
     }
@@ -935,8 +937,7 @@ const data = await response.json();`;
                             onClick={() => router.push("/tools")}
                         >
                             <ArrowLeft className="w-4 h-4 mr-2" />
-                            Back
-                        </Button>
+                            {copy("Back")}</Button>
                         <div className="flex items-center gap-3">
                             <div
                                 className="w-10 h-10 rounded-lg flex items-center justify-center"
@@ -961,8 +962,7 @@ const data = await response.json();`;
                                 onClick={() => setShowCodeDialog(true)}
                             >
                                 <Code className="w-4 h-4 mr-2" />
-                                View Code
-                            </Button>
+                                {copy("View Code")}</Button>
                         )}
                         {TOOL_DOCUMENTATION_URLS[tool.category] && (
                             <a
@@ -971,8 +971,7 @@ const data = await response.json();`;
                                 rel="noopener noreferrer"
                                 className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
                             >
-                                Docs
-                                <ExternalLink className="h-3.5 w-3.5" />
+                                {copy("Docs")}<ExternalLink className="h-3.5 w-3.5" />
                             </a>
                         )}
                     </div>
@@ -984,7 +983,7 @@ const data = await response.json();`;
                         onNameChange={setName}
                         description={description}
                         onDescriptionChange={setDescription}
-                        title="Calculator Configuration"
+                        title={copy("Calculator Configuration")}
                         subtitle="Built-in calculator for arithmetic operations. No additional configuration needed."
                     />
                 ) : isEndCallTool ? (
@@ -1067,38 +1066,36 @@ const data = await response.json();`;
                 ) : isMcpTool ? (
                     <Card>
                         <CardHeader>
-                            <CardTitle>MCP Server Configuration</CardTitle>
+                            <CardTitle>{copy("MCP Server Configuration")}</CardTitle>
                             <CardDescription>
-                                Configure the MCP server endpoint. Its tools become available to the agent.
-                            </CardDescription>
+                                {copy("Configure the MCP server endpoint. Its tools become available to the agent.")}</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className="space-y-2">
-                                <Label htmlFor="mcp-name">Tool Name</Label>
+                                <Label htmlFor="mcp-name">{copy("Tool Name")}</Label>
                                 <Input
                                     id="mcp-name"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
-                                    placeholder="e.g., Customer MCP Server"
+                                    placeholder={copy("e.g., Customer MCP Server")}
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="mcp-description">Description</Label>
+                                <Label htmlFor="mcp-description">{copy("Description")}</Label>
                                 <p className="text-xs text-muted-foreground">
-                                    Provide a description which makes it easy for LLM to understand what this tool does
-                                </p>
+                                    {copy("Provide a description which makes it easy for LLM to understand what this tool does")}</p>
                                 <Textarea
                                     id="mcp-description"
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
-                                    placeholder="What does this MCP server provide?"
+                                    placeholder={copy("What does this MCP server provide?")}
                                     rows={3}
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="mcp-url">MCP Server URL</Label>
+                                <Label htmlFor="mcp-url">{copy("MCP Server URL")}</Label>
                                 <Input
                                     id="mcp-url"
                                     value={mcpUrl}
@@ -1108,7 +1105,7 @@ const data = await response.json();`;
                             </div>
 
                             <div className="space-y-2">
-                                <Label>Transport</Label>
+                                <Label>{copy("Transport")}</Label>
                                 <Input
                                     value="Streamable HTTP"
                                     disabled
@@ -1119,21 +1116,20 @@ const data = await response.json();`;
                             <CredentialSelector
                                 value={mcpCredentialUuid}
                                 onChange={setMcpCredentialUuid}
-                                label="Credential (Optional)"
-                                description="Select a credential for authenticating with the MCP server, or leave empty for no auth."
+                                label={copy("Credential (Optional)")}
+                                description={copy("Select a credential for authenticating with the MCP server, or leave empty for no auth.")}
                             />
 
                             <div className="space-y-2">
-                                <Label htmlFor="mcp-tools-filter">Tools Filter (Optional)</Label>
+                                <Label htmlFor="mcp-tools-filter">{copy("Tools Filter (Optional)")}</Label>
                                 <Input
                                     id="mcp-tools-filter"
                                     value={mcpToolsFilter}
                                     onChange={(e) => setMcpToolsFilter(e.target.value)}
-                                    placeholder="e.g., tool_one, tool_two"
+                                    placeholder={copy("e.g., tool_one, tool_two")}
                                 />
                                 <p className="text-xs text-muted-foreground">
-                                    Comma-separated list of tool names to allow. Leave empty to expose all tools from the server.
-                                </p>
+                                    {copy("Comma-separated list of tool names to allow. Leave empty to expose all tools from the server.")}</p>
                             </div>
                         </CardContent>
                     </Card>
@@ -1192,8 +1188,7 @@ const data = await response.json();`;
 
                 {saveSuccess && (
                     <div className="mt-4 p-4 bg-green-500/10 border border-green-500/20 rounded-lg text-green-600">
-                        Tool saved successfully!
-                    </div>
+                        {copy("Tool saved successfully!")}</div>
                 )}
 
                 <div className="flex justify-end gap-2 mt-6">
@@ -1204,13 +1199,11 @@ const data = await response.json();`;
                                     <span className="inline-flex" tabIndex={0}>
                                         <Button type="button" variant="outline" disabled>
                                             <FlaskConical className="w-4 h-4 mr-2" />
-                                            Test Tool
-                                        </Button>
+                                            {copy("Test Tool")}</Button>
                                     </span>
                                 </TooltipTrigger>
                                 <TooltipContent side="top">
-                                    Save the tool before testing.
-                                </TooltipContent>
+                                    {copy("Save the tool before testing.")}</TooltipContent>
                             </Tooltip>
                         ) : (
                             <Button
@@ -1220,21 +1213,18 @@ const data = await response.json();`;
                                 disabled={isSaving}
                             >
                                 <FlaskConical className="w-4 h-4 mr-2" />
-                                Test Tool
-                            </Button>
+                                {copy("Test Tool")}</Button>
                         )
                     )}
                     <Button onClick={handleSave} disabled={isSaving}>
                         {isSaving ? (
                             <>
                                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Saving...
-                            </>
+                                {copy("Saving...")}</>
                         ) : (
                             <>
                                 <Save className="w-4 h-4 mr-2" />
-                                Save
-                            </>
+                                {copy("Save")}</>
                         )}
                     </Button>
                 </div>
@@ -1244,10 +1234,9 @@ const data = await response.json();`;
             <Dialog open={showCodeDialog} onOpenChange={setShowCodeDialog}>
                 <DialogContent className="max-w-2xl">
                     <DialogHeader>
-                        <DialogTitle>Code Preview</DialogTitle>
+                        <DialogTitle>{copy("Code Preview")}</DialogTitle>
                         <DialogDescription>
-                            JavaScript code to make this API call
-                        </DialogDescription>
+                            {copy("JavaScript code to make this API call")}</DialogDescription>
                     </DialogHeader>
                     <div className="bg-muted rounded-lg p-4 font-mono text-sm overflow-auto max-h-96">
                         <pre>{getCodeSnippet()}</pre>

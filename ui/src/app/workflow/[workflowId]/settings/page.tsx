@@ -11,6 +11,7 @@ import { PageShell } from "@/components/layout/PageShell";
 import SpinLoader from "@/components/SpinLoader";
 import { Button } from "@/components/ui/button";
 import { UnsavedChangesProvider, useUnsavedChangesContext } from "@/context/UnsavedChangesContext";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { useAuth } from "@/lib/auth";
 import logger from "@/lib/logger";
 import { type WorkflowConfigurations } from "@/types/workflow-configurations";
@@ -18,11 +19,13 @@ import { type WorkflowConfigurations } from "@/types/workflow-configurations";
 import { useWorkflowState } from "../hooks/useWorkflowState";
 import { WorkflowSettingsSections } from "./WorkflowSettingsSections";
 
+
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
 export default function WorkflowSettingsPage() {
+    const copy = useCopy();
     const params = useParams();
     const { user, redirectToLogin, loading: authLoading } = useAuth();
     const [workflow, setWorkflow] = useState<WorkflowResponse | undefined>(undefined);
@@ -44,21 +47,21 @@ export default function WorkflowSettingsPage() {
                 });
                 setWorkflow(response.data);
             } catch (err) {
-                setError("Failed to fetch workflow");
+                setError(copy("Failed to fetch workflow"));
                 logger.error(`Error fetching workflow settings: ${err}`);
             } finally {
                 setLoading(false);
             }
         };
         if (user) fetchWorkflow();
-    }, [params.workflowId, user]);
+    }, [params.workflowId, user, copy]);
 
     if (loading || authLoading) return <SpinLoader />;
 
     if (error || !workflow) {
         return (
             <div className="flex min-h-screen items-center justify-center">
-                <div className="text-lg text-destructive">{error || "Workflow not found"}</div>
+                <div className="text-lg text-destructive">{error || copy("Workflow not found")}</div>
             </div>
         );
     }
@@ -94,6 +97,7 @@ function WorkflowSettingsInner({
     workflow: WorkflowResponse;
     user: { id: string; email?: string };
 }) {
+    const copy = useCopy();
     const router = useRouter();
     const { confirmNavigate } = useUnsavedChangesContext();
     const workflowId = workflow.id;
@@ -143,7 +147,7 @@ function WorkflowSettingsInner({
                     <ArrowLeft className="h-4 w-4" />
                 </Button>
                 <div>
-                    <p className="text-xs text-muted-foreground">Workflow Settings</p>
+                    <p className="text-xs text-muted-foreground">{copy("Workflow Settings")}</p>
                     <h1 className="text-sm font-semibold">{workflowName}</h1>
                 </div>
             </header>

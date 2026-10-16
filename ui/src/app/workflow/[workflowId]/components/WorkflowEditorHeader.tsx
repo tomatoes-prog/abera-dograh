@@ -26,8 +26,8 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { useSidebar } from "@/components/ui/sidebar";
-import { useCopy } from "@/i18n/LocaleProvider";
 import { useUnsavedChangesContext } from "@/context/UnsavedChangesContext";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { copyTextToClipboard } from "@/lib/clipboard";
 
 import { PublishWorkflowPopover } from "./PublishWorkflowPopover";

@@ -206,7 +206,7 @@ export default function ToolsPage() {
             });
 
             if (response.error) {
-                setCreateError(copy(detailFromError(response.error, "Failed to create tool")));
+                setCreateError(copy(detailFromError(response.error, copy("Failed to create tool"))));
                 return;
             }
 

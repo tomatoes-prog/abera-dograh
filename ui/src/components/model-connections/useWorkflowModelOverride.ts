@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { useCopy } from "@/i18n/LocaleProvider";
 import type { WorkflowConfigurations } from "@/types/workflow-configurations";
 
 import { cleanConfiguration, emptyConfiguration } from "./configuration";
 import type { ConfigurationSpec } from "./types";
 import { useModelConnections } from "./useModelConnections";
 import { customOverride, describeWorkflowModel, followOverride, isComplete, summarizeConfiguration, withOverride } from "./workflowModelOverride";
+
 
 const SAVE_DELAY_MS = 400;
 
@@ -25,6 +27,7 @@ export function useWorkflowModelOverride({ workflowName, workflowConfigurations,
     workflowConfigurations: WorkflowConfigurations;
     onSave: (configurations: WorkflowConfigurations, workflowName: string) => Promise<void>;
 }) {
+    const copy = useCopy();
     const connections = useModelConnections();
     const { catalog, configurations, defaultUuid } = connections;
     const binding = useMemo(
@@ -64,7 +67,7 @@ export function useWorkflowModelOverride({ workflowName, workflowConfigurations,
                 await onSave(next, latest.current.workflowName);
                 return true;
             } catch (cause) {
-                if (mounted.current) setError(cause instanceof Error ? cause.message : "Failed to save model settings");
+                if (mounted.current) setError(cause instanceof Error ? cause.message : copy("Failed to save model settings"));
                 return false;
             } finally {
                 if (mounted.current) setSaving(false);
@@ -73,7 +76,7 @@ export function useWorkflowModelOverride({ workflowName, workflowConfigurations,
         const result = queue.current.then(run, run);
         queue.current = result;
         return result;
-    }, [onSave]);
+    }, [onSave, copy]);
 
     const flush = useCallback(async () => {
         if (timer.current) { clearTimeout(timer.current); timer.current = null; }

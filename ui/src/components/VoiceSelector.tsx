@@ -9,9 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { detailFromError } from "@/lib/apiError";
+import { apiErrorMessage } from "@/i18n/errors";
+import { languageDisplayName, voiceAccentLabel, voiceGenderLabel } from "@/i18n/format";
+import { useCopy, useUiLocale } from "@/i18n/LocaleProvider";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+
 
 type VoiceCatalogProvider = GetVoicesApiV1UserConfigurationsVoicesProviderGetData["path"]["provider"];
 const ALL_FILTER_VALUE = "__all__";
@@ -39,6 +42,8 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
     showFilters = false,
     className,
 }) => {
+    const copy = useCopy();
+    const { locale } = useUiLocale();
     const { user, loading: authLoading } = useAuth();
     const userId = user?.id;
     const [isOpen, setIsOpen] = useState(false);
@@ -61,7 +66,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
         // The backend's voice_catalog field metadata opts providers into this control.
         const providerKey = provider as VoiceCatalogProvider;
         if (providerKey !== "dograh" && !providerConnectionUuid) {
-            setError("Select a provider connection to load voices.");
+            setError(copy("Select a provider connection to load voices."));
             return;
         }
         let active = true;
@@ -80,13 +85,13 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
                 });
                 if (!active) return;
                 if (response.error) {
-                    setError(detailFromError(response.error, "Failed to load voices"));
+                    setError(apiErrorMessage(response.error, copy, "Failed to load voices"));
                 } else {
                     setVoices(response.data?.voices || []);
                 }
             } catch {
                 if (!active) return;
-                setError("Failed to load voices");
+                setError(copy("Failed to load voices"));
                 setVoices([]);
             } finally {
                 if (active) setIsLoading(false);
@@ -96,7 +101,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
             active = false;
             controller.abort();
         };
-    }, [provider, providerConnectionUuid, model, language, authLoading, userId, reload]);
+    }, [provider, providerConnectionUuid, model, language, authLoading, userId, reload, copy]);
 
     // Cleanup audio on unmount or when popover closes
     useEffect(() => {
@@ -152,7 +157,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
 
     const getSelectedVoiceName = () => {
         const voice = voices.find((v) => v.voice_id === value);
-        return voice?.name || value || "Select a voice";
+        return voice?.name || value || copy("Select a voice");
     };
 
     const playPreview = (previewUrl: string, voiceId: string) => {
@@ -204,7 +209,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
                         disabled={isLoading || authLoading || !userId}
                     >
                         <span className="truncate">
-                            {isLoading ? "Loading voices..." : getSelectedVoiceName()}
+                            {isLoading ? copy("Loading voices...") : getSelectedVoiceName()}
                         </span>
                         {isLoading ? (
                             <Loader2 className="ml-2 h-4 w-4 shrink-0 animate-spin" />
@@ -218,7 +223,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
                         <div className="relative">
                             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
-                                placeholder="Search voices..."
+                                placeholder={copy("Search voices...")}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="pl-8"
@@ -229,13 +234,13 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
                             <div className="grid gap-2 sm:grid-cols-3">
                                 <Select value={genderFilter} onValueChange={setGenderFilter}>
                                     <SelectTrigger className="h-8">
-                                        <SelectValue placeholder="Gender" />
+                                        <SelectValue placeholder={copy("Gender")} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value={ALL_FILTER_VALUE}>All genders</SelectItem>
+                                        <SelectItem value={ALL_FILTER_VALUE}>{copy("All genders")}</SelectItem>
                                         {genderOptions.map((gender) => (
                                             <SelectItem key={gender} value={gender} className="capitalize">
-                                                {gender}
+                                                {voiceGenderLabel(gender, copy)}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -243,13 +248,13 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
 
                                 <Select value={languageFilter} onValueChange={setLanguageFilter}>
                                     <SelectTrigger className="h-8">
-                                        <SelectValue placeholder="Language" />
+                                        <SelectValue placeholder={copy("Language")} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value={ALL_FILTER_VALUE}>All languages</SelectItem>
+                                        <SelectItem value={ALL_FILTER_VALUE}>{copy("All languages")}</SelectItem>
                                         {languageOptions.map((voiceLanguage) => (
                                             <SelectItem key={voiceLanguage} value={voiceLanguage} className="uppercase">
-                                                {voiceLanguage}
+                                                {languageDisplayName(voiceLanguage, locale)}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -257,13 +262,13 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
 
                                 <Select value={accentFilter} onValueChange={setAccentFilter}>
                                     <SelectTrigger className="h-8">
-                                        <SelectValue placeholder="Accent" />
+                                        <SelectValue placeholder={copy("Accent")} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value={ALL_FILTER_VALUE}>All accents</SelectItem>
+                                        <SelectItem value={ALL_FILTER_VALUE}>{copy("All accents")}</SelectItem>
                                         {accentOptions.map((accent) => (
                                             <SelectItem key={accent} value={accent} className="uppercase">
-                                                {accent}
+                                                {voiceAccentLabel(accent, copy)}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -275,7 +280,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
                             {error ? (
                                 <div className="py-4 text-center">
                                     <p role="alert" className="text-sm text-red-500">{error}</p>
-                                    <Button type="button" variant="ghost" size="sm" onClick={() => setReload(value => value + 1)}>Retry</Button>
+                                    <Button type="button" variant="ghost" size="sm" onClick={() => setReload(value => value + 1)}>{copy("Retry")}</Button>
                                 </div>
                             ) : isLoading ? (
                                 <div className="flex items-center justify-center py-4">
@@ -283,8 +288,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
                                 </div>
                             ) : filteredVoices.length === 0 ? (
                                 <p className="text-sm text-muted-foreground text-center py-4">
-                                    No voices found
-                                </p>
+                                    {copy("No voices found")}</p>
                             ) : (
                                 filteredVoices.map((voice) => (
                                     <div
@@ -302,7 +306,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
                                                 </p>
                                                 {voice.gender && (
                                                     <span className="text-xs text-muted-foreground capitalize">
-                                                        {voice.gender}
+                                                        {voiceGenderLabel(voice.gender, copy)}
                                                     </span>
                                                 )}
                                             </div>
@@ -314,12 +318,12 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
                                             <div className="flex items-center gap-2 mt-1">
                                                 {voice.accent && (
                                                     <span className="text-xs bg-secondary px-1.5 py-0.5 rounded capitalize">
-                                                        {voice.accent}
+                                                        {voiceAccentLabel(voice.accent, copy)}
                                                     </span>
                                                 )}
                                                 {voice.language && (
                                                     <span className="text-xs bg-secondary px-1.5 py-0.5 rounded uppercase">
-                                                        {voice.language}
+                                                        {languageDisplayName(voice.language, locale)}
                                                     </span>
                                                 )}
                                             </div>
@@ -350,8 +354,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
 
                         <div className="pt-2 border-t flex justify-end">
                             <p className="text-xs text-muted-foreground">
-                                {filteredVoices.length} of {voices.length} voices
-                            </p>
+                                {filteredVoices.length} {copy(" of ")}{voices.length} {copy(" voices")}</p>
                         </div>
                     </div>
                 </PopoverContent>

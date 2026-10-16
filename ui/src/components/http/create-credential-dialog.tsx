@@ -24,8 +24,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { detailFromError } from "@/lib/apiError";
 import { useAuth } from "@/lib/auth";
+
 
 interface CreateCredentialDialogProps {
     open: boolean;
@@ -80,6 +82,7 @@ function CredentialDialogForm({
     credential,
     onUpdated,
 }: CreateCredentialDialogProps) {
+    const copy = useCopy();
     const { getAccessToken } = useAuth();
 
     const [name, setName] = useState(credential?.name ?? "");
@@ -125,7 +128,7 @@ function CredentialDialogForm({
                 });
 
             if (response.error) {
-                setError(detailFromError(response.error, "Failed to save credential"));
+                setError(detailFromError(response.error, copy("Failed to save credential")));
                 return;
             }
 
@@ -136,7 +139,7 @@ function CredentialDialogForm({
             }
         } catch (err) {
             setError(
-                err instanceof Error ? err.message : "Failed to save credential"
+                err instanceof Error ? err.message : copy("Failed to save credential")
             );
         } finally {
             setIsCreating(false);
@@ -155,11 +158,11 @@ function CredentialDialogForm({
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>{credential ? "Edit Credential" : "Add Credential"}</DialogTitle>
+                    <DialogTitle>{credential ? copy("Edit Credential") : copy("Add Credential")}</DialogTitle>
                     <DialogDescription>
                         {credential
-                            ? "Update this credential. Changes apply everywhere it is used."
-                            : "Create a credential for authenticating tools and webhooks."}
+                            ? copy("Update this credential. Changes apply everywhere it is used.")
+                            : copy("Create a credential for authenticating tools and webhooks.")}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -172,27 +175,27 @@ function CredentialDialogForm({
 
                 <fieldset disabled={isCreating} className="min-w-0 space-y-4 py-4">
                     <div className="grid gap-2">
-                        <Label htmlFor="cred-name">Name *</Label>
+                        <Label htmlFor="cred-name">{copy("Name *")}</Label>
                         <Input
                             id="cred-name"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            placeholder="My API Key"
+                            placeholder={copy("My API Key")}
                         />
                     </div>
 
                     <div className="grid gap-2">
-                        <Label htmlFor="cred-description">Description</Label>
+                        <Label htmlFor="cred-description">{copy("Description")}</Label>
                         <Input
                             id="cred-description"
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
-                            placeholder="Optional description"
+                            placeholder={copy("Optional description")}
                         />
                     </div>
 
                     <div className="grid gap-2">
-                        <Label htmlFor="cred-type">Credential Type</Label>
+                        <Label htmlFor="cred-type">{copy("Credential Type")}</Label>
                         <Select
                             disabled={!!credential || isCreating}
                             value={credentialType}
@@ -205,11 +208,11 @@ function CredentialDialogForm({
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="none">No Authentication</SelectItem>
-                                <SelectItem value="bearer_token">Bearer Token</SelectItem>
-                                <SelectItem value="api_key">API Key</SelectItem>
-                                <SelectItem value="basic_auth">Basic Auth</SelectItem>
-                                <SelectItem value="custom_header">Custom Header</SelectItem>
+                                <SelectItem value="none">{copy("No Authentication")}</SelectItem>
+                                <SelectItem value="bearer_token">{copy("Bearer Token")}</SelectItem>
+                                <SelectItem value="api_key">{copy("API Key")}</SelectItem>
+                                <SelectItem value="basic_auth">{copy("Basic Auth")}</SelectItem>
+                                <SelectItem value="custom_header">{copy("Custom Header")}</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -225,11 +228,10 @@ function CredentialDialogForm({
                                         setCredentialData({});
                                     }}
                                 />
-                                <Label htmlFor="replace-authentication">Replace authentication details</Label>
+                                <Label htmlFor="replace-authentication">{copy("Replace authentication details")}</Label>
                             </div>
                             <p className="text-xs text-muted-foreground">
-                                Saved values are hidden. Leave this unchecked to keep them.
-                            </p>
+                                {copy("Saved values are hidden. Leave this unchecked to keep them.")}</p>
                         </div>
                     )}
 
@@ -259,8 +261,7 @@ function CredentialDialogForm({
                         onClick={handleClose}
                         disabled={isCreating}
                     >
-                        Cancel
-                    </Button>
+                        {copy("Cancel")}</Button>
                     <Button
                         onClick={handleCreate}
                         disabled={!canSave || isCreating}
@@ -268,10 +269,9 @@ function CredentialDialogForm({
                         {isCreating ? (
                             <>
                                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                Saving...
-                            </>
+                                {copy("Saving...")}</>
                         ) : (
-                            credential ? "Save Changes" : "Create"
+                            credential ? copy("Save Changes") : copy("Create")
                         )}
                     </Button>
                 </DialogFooter>

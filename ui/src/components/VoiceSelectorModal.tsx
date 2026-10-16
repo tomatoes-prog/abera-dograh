@@ -15,11 +15,14 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ACCENT_DISPLAY_NAMES } from "@/constants/accents";
-import { LANGUAGE_DISPLAY_NAMES } from "@/constants/languages";
-import { detailFromError } from "@/lib/apiError";
+import type { Copy } from "@/i18n/catalog";
+import type { UiLocale } from "@/i18n/config";
+import { apiErrorMessage } from "@/i18n/errors";
+import { languageDisplayName, voiceAccentLabel, voiceGenderLabel } from "@/i18n/format";
+import { useCopy, useUiLocale } from "@/i18n/LocaleProvider";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+
 
 const ALL_FILTER_VALUE = "__all__";
 
@@ -49,17 +52,9 @@ interface VoiceSelectorModalProps {
     className?: string;
 }
 
-const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
-
-const accentLabel = (code?: string | null) =>
-    code ? ACCENT_DISPLAY_NAMES[code.toLowerCase()] || capitalize(code) : "";
-const languageLabel = (code?: string | null) =>
-    code ? LANGUAGE_DISPLAY_NAMES[code] || code.toUpperCase() : "";
-const genderLabel = (gender?: string | null) => (gender ? capitalize(gender) : "");
-
-/** Build the "Accent · Gender · Language" trait line shown under a voice name. */
-function voiceTraits(voice: VoiceInfo): string {
-    return [accentLabel(voice.accent), genderLabel(voice.gender), languageLabel(voice.language)]
+/** Display provider traits in the interface locale, keeping voice names intact. */
+function voiceTraits(voice: VoiceInfo, copy: Copy, locale: UiLocale): string {
+    return [voiceAccentLabel(voice.accent, copy), voiceGenderLabel(voice.gender, copy), voice.language ? languageDisplayName(voice.language, locale) : ""]
         .filter(Boolean)
         .join(" · ");
 }
@@ -79,6 +74,8 @@ export const VoiceSelectorModal: React.FC<VoiceSelectorModalProps> = ({
     model,
     className,
 }) => {
+    const copy = useCopy();
+    const { locale, copy: displayCopy } = useUiLocale();
     const { user, loading: authLoading } = useAuth();
     const userId = user?.id;
     const [isOpen, setIsOpen] = useState(false);
@@ -166,7 +163,7 @@ export const VoiceSelectorModal: React.FC<VoiceSelectorModalProps> = ({
                 if (id !== requestId.current) return; // a newer request superseded this one
 
                 if (response.error) {
-                    setError(detailFromError(response.error, "Failed to load voices"));
+                    setError(apiErrorMessage(response.error, copy, "Failed to load voices"));
                     setVoices([]);
                 } else {
                     setVoices(response.data?.voices ?? []);
@@ -180,12 +177,12 @@ export const VoiceSelectorModal: React.FC<VoiceSelectorModalProps> = ({
                 }
             } catch {
                 if (id !== requestId.current) return;
-                setError("Failed to load voices");
+                setError(copy("Failed to load voices"));
                 setVoices([]);
             } finally { if (id === requestId.current) setIsLoading(false); }
         })();
         return () => { requestId.current += 1; };
-    }, [isOpen, provider, providerConnectionUuid, model, gender, accent, language, debouncedSearch, authLoading, userId]);
+    }, [isOpen, provider, providerConnectionUuid, model, gender, accent, language, debouncedSearch, authLoading, userId, copy]);
 
     // Stop any preview when the modal closes / unmounts.
     useEffect(() => {
@@ -201,16 +198,16 @@ export const VoiceSelectorModal: React.FC<VoiceSelectorModalProps> = ({
             .sort((a, b) => a.label.localeCompare(b.label));
 
     const genderOptions = useMemo(
-        () => toSortedOptions(facets.genders, gender, genderLabel),
-        [facets.genders, gender],
+        () => toSortedOptions(facets.genders, gender, value => voiceGenderLabel(value, displayCopy)),
+        [facets.genders, gender, displayCopy],
     );
     const accentOptions = useMemo(
-        () => toSortedOptions(facets.accents, accent, accentLabel),
-        [facets.accents, accent],
+        () => toSortedOptions(facets.accents, accent, value => voiceAccentLabel(value, displayCopy)),
+        [facets.accents, accent, displayCopy],
     );
     const languageOptions = useMemo(
-        () => toSortedOptions(facets.languages, language, languageLabel),
-        [facets.languages, language],
+        () => toSortedOptions(facets.languages, language, value => languageDisplayName(value, locale)),
+        [facets.languages, language, locale],
     );
 
     const openModal = () => {
@@ -251,8 +248,8 @@ export const VoiceSelectorModal: React.FC<VoiceSelectorModalProps> = ({
         setIsOpen(false);
     };
 
-    const triggerLabel = selectedVoiceInfo?.name || value || "Select a voice";
-    const triggerTraits = selectedVoiceInfo ? voiceTraits(selectedVoiceInfo) : "";
+    const triggerLabel = selectedVoiceInfo?.name || value || copy("Select a voice");
+    const triggerTraits = selectedVoiceInfo ? voiceTraits(selectedVoiceInfo, copy, locale) : "";
 
     return (
         <div className={cn("space-y-2", className)}>
@@ -276,18 +273,18 @@ export const VoiceSelectorModal: React.FC<VoiceSelectorModalProps> = ({
             <Dialog open={isOpen} onOpenChange={setIsOpen}>
                 <DialogContent className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
                     <DialogHeader className="border-b px-6 py-4">
-                        <DialogTitle>Select Voice</DialogTitle>
-                        <DialogDescription className="sr-only">Preview voices, select one, then choose Use this voice.</DialogDescription>
+                        <DialogTitle>{copy("Select Voice")}</DialogTitle>
+                        <DialogDescription className="sr-only">{copy("Preview voices, select one, then choose Use this voice.")}</DialogDescription>
                     </DialogHeader>
 
                     {/* Filter row: Gender · Accent · Language · Search */}
                     <div className="flex flex-wrap items-center gap-2 border-b px-6 py-3">
                         <Select value={gender} onValueChange={setGender}>
                             <SelectTrigger className="h-9 w-[130px]">
-                                <SelectValue placeholder="Gender" />
+                                <SelectValue placeholder={copy("Gender")} />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value={ALL_FILTER_VALUE}>All genders</SelectItem>
+                                <SelectItem value={ALL_FILTER_VALUE}>{copy("All genders")}</SelectItem>
                                 {genderOptions.map((option) => (
                                     <SelectItem key={option.value} value={option.value}>
                                         {option.label}
@@ -298,10 +295,10 @@ export const VoiceSelectorModal: React.FC<VoiceSelectorModalProps> = ({
 
                         <Select value={accent} onValueChange={setAccent}>
                             <SelectTrigger className="h-9 w-[140px]">
-                                <SelectValue placeholder="Accent" />
+                                <SelectValue placeholder={copy("Accent")} />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value={ALL_FILTER_VALUE}>All accents</SelectItem>
+                                <SelectItem value={ALL_FILTER_VALUE}>{copy("All accents")}</SelectItem>
                                 {accentOptions.map((option) => (
                                     <SelectItem key={option.value} value={option.value}>
                                         {option.label}
@@ -312,10 +309,10 @@ export const VoiceSelectorModal: React.FC<VoiceSelectorModalProps> = ({
 
                         <Select value={language} onValueChange={setLanguage}>
                             <SelectTrigger className="h-9 w-[150px]">
-                                <SelectValue placeholder="Language" />
+                                <SelectValue placeholder={copy("Language")} />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value={ALL_FILTER_VALUE}>All languages</SelectItem>
+                                <SelectItem value={ALL_FILTER_VALUE}>{copy("All languages")}</SelectItem>
                                 {languageOptions.map((option) => (
                                     <SelectItem key={option.value} value={option.value}>
                                         {option.label}
@@ -325,7 +322,7 @@ export const VoiceSelectorModal: React.FC<VoiceSelectorModalProps> = ({
                         </Select>
 
                         <Input
-                            placeholder="Search voices..."
+                            placeholder={copy("Search voices...")}
                             value={searchInput}
                             onChange={(event) => setSearchInput(event.target.value)}
                             className="h-9 min-w-[160px] flex-1"
@@ -342,8 +339,7 @@ export const VoiceSelectorModal: React.FC<VoiceSelectorModalProps> = ({
                             </div>
                         ) : voices.length === 0 ? (
                             <p className="py-10 text-center text-sm text-muted-foreground">
-                                No voices match these filters
-                            </p>
+                                {copy("No voices match these filters")}</p>
                         ) : (
                             <div className="grid gap-2 sm:grid-cols-2">
                                 {voices.map((voice) => {
@@ -362,7 +358,7 @@ export const VoiceSelectorModal: React.FC<VoiceSelectorModalProps> = ({
                                             <span
                                                 role="button"
                                                 tabIndex={voice.preview_url ? 0 : -1}
-                                                aria-label={isPlaying ? "Stop preview" : "Play preview"}
+                                                aria-label={isPlaying ? copy("Stop preview") : copy("Play preview")}
                                                 onClick={(event) => {
                                                     event.stopPropagation();
                                                     playPreview(voice);
@@ -392,13 +388,13 @@ export const VoiceSelectorModal: React.FC<VoiceSelectorModalProps> = ({
                                                     <span className="truncate text-sm font-medium">{voice.name}</span>
                                                     {isSelected && <Check className="h-4 w-4 shrink-0 text-primary" />}
                                                 </span>
-                                                {voiceTraits(voice) && (
+                                                {voiceTraits(voice, copy, locale) && (
                                                     <span className="truncate text-xs text-muted-foreground">
-                                                        {voiceTraits(voice)}
+                                                        {voiceTraits(voice, copy, locale)}
                                                     </span>
                                                 )}
                                                 <span className="truncate text-[11px] text-muted-foreground/70">
-                                                    ID: {voice.voice_id}
+                                                    {copy("ID: ")}{voice.voice_id}
                                                 </span>
                                             </span>
                                         </button>
@@ -411,19 +407,17 @@ export const VoiceSelectorModal: React.FC<VoiceSelectorModalProps> = ({
                     {/* Footer */}
                     <div className="flex flex-wrap items-center justify-between gap-3 border-t px-6 py-3">
                         <span className="text-xs text-muted-foreground">
-                            {!isLoading && !error ? `${voices.length} voices` : ""}
+                            {!isLoading && !error ? copy("{value0} voices", {value0: voices.length}) : ""}
                         </span>
                         <div className="ml-auto flex items-center gap-2">
                             <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
-                                Cancel
-                            </Button>
+                                {copy("Cancel")}</Button>
                             <Button
                                 type="button"
                                 onClick={commitSelection}
                                 disabled={!pendingVoiceId}
                             >
-                                Use this voice
-                            </Button>
+                                {copy("Use this voice")}</Button>
                         </div>
                     </div>
                 </DialogContent>

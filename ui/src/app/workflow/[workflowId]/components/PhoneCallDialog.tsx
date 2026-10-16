@@ -91,7 +91,7 @@ export const PhoneCallDialog = ({
         const result =
             await getPreferencesApiV1OrganizationsPreferencesGet();
         if (result.error) {
-            throw new Error(copy(detailFromError(result.error, "Failed to load phone preferences")));
+            throw new Error(copy(detailFromError(result.error, copy("Failed to load phone preferences"))));
         }
         return result.data || {};
     }, [copy]);
@@ -271,7 +271,7 @@ export const PhoneCallDialog = ({
             });
 
         if (result.error) {
-            throw new Error(copy(detailFromError(result.error, "Failed to save phone preferences")));
+            throw new Error(copy(detailFromError(result.error, copy("Failed to save phone preferences"))));
         }
         if (!result.data) {
             throw new Error("Failed to save phone preferences");

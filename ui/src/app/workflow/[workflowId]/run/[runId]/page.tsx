@@ -35,9 +35,9 @@ import { conversationItemsFromRealtimeFeedbackEvents } from '@/components/workfl
 import { PostHogEvent } from '@/constants/posthog-events';
 import { WORKFLOW_RUN_MODES } from '@/constants/workflowRunModes';
 import { useOrganizationTimezone } from '@/hooks/useOrganizationTimezone';
-import { captureAnalyticsEvent } from '@/lib/analytics';
 import { useCopy } from "@/i18n/LocaleProvider";
 import { useUiLocale } from "@/i18n/LocaleProvider";
+import { captureAnalyticsEvent } from '@/lib/analytics';
 import { useAuth } from '@/lib/auth';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { formatDateTime } from '@/lib/dateTime';
@@ -596,7 +596,7 @@ function SplitTracksSection({
                             value={currentTime}
                             onChange={(event) => void seekTo(Number(event.target.value))}
                             disabled={!canSeek}
-                            aria-label="Playback position"
+                            aria-label={copy("Playback position")}
                             aria-valuetext={`${formatPlaybackTime(currentTime)} of ${formatPlaybackTime(timeline.duration)}`}
                             className="h-5 min-w-0 flex-1 cursor-pointer accent-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50"
                         />
@@ -604,15 +604,15 @@ function SplitTracksSection({
                             {formatPlaybackTime(timeline.duration)}
                         </span>
                     </div>
-                    <div className="flex items-center justify-center gap-3" role="group" aria-label="Playback controls">
+                    <div className="flex items-center justify-center gap-3" role="group" aria-label={copy("Playback controls")}>
                         <Button
                             type="button"
                             variant="ghost"
                             size="sm"
                             onClick={() => skipPlayback(-PLAYBACK_SKIP_SECONDS)}
                             disabled={!canSeek || currentTime <= 0}
-                            aria-label={`Skip backward ${PLAYBACK_SKIP_SECONDS} seconds`}
-                            title={`Skip backward ${PLAYBACK_SKIP_SECONDS} seconds`}
+                            aria-label={copy("Skip backward {value0} seconds", {value0: PLAYBACK_SKIP_SECONDS})}
+                            title={copy("Skip backward {value0} seconds", {value0: PLAYBACK_SKIP_SECONDS})}
                             className="gap-1.5"
                         >
                             <RotateCcw className="h-4 w-4" />
@@ -624,7 +624,7 @@ function SplitTracksSection({
                             variant={isPlaying ? 'default' : 'outline'}
                             onClick={togglePlayback}
                             disabled={!canPlay}
-                            aria-label={isPlaying ? `Pause ${playbackTargetLabel}` : `Play ${playbackTargetLabel}`}
+                            aria-label={isPlaying ? copy("Pause {value0}", {value0: playbackTargetLabel}) : copy("Play {value0}", {value0: playbackTargetLabel})}
                             className="h-10 w-10 shrink-0"
                         >
                             {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
@@ -635,8 +635,8 @@ function SplitTracksSection({
                             size="sm"
                             onClick={() => skipPlayback(PLAYBACK_SKIP_SECONDS)}
                             disabled={!canSeek || currentTime >= timeline.duration}
-                            aria-label={`Skip forward ${PLAYBACK_SKIP_SECONDS} seconds`}
-                            title={`Skip forward ${PLAYBACK_SKIP_SECONDS} seconds`}
+                            aria-label={copy("Skip forward {value0} seconds", {value0: PLAYBACK_SKIP_SECONDS})}
+                            title={copy("Skip forward {value0} seconds", {value0: PLAYBACK_SKIP_SECONDS})}
                             className="gap-1.5"
                         >
                             <RotateCw className="h-4 w-4" />

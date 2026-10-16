@@ -101,7 +101,7 @@ describe("configuration modes", () => {
     it("keeps hints for Flux locales and omits them for other transcriber languages", () => {
         render(<Editor />);
         fireEvent.click(screen.getByRole("checkbox", { name: "Spanish" }));
-        selectOption("Language", "English (UK)");
+        selectOption("Language", "British English");
         expect(screen.getByRole("checkbox", { name: "Spanish" }).getAttribute("aria-checked")).toBe("true");
         fireEvent.click(screen.getByRole("button", { name: "Save" }));
         expect(onSubmit.mock.lastCall?.[0].stt.settings).toEqual({ language: "en-GB", language_hints: ["es"] });
@@ -197,7 +197,7 @@ describe("adding a provider", () => {
         render(<Editor />);
         chooseMode("BYOK");
         selectOption(providerSelect("TTS"), /Add a provider/);
-        const dialog = screen.getByRole("dialog", { name: "Add a TTS provider" });
+        const dialog = screen.getByRole("dialog", { name: "Add a provider for TTS" });
         // Only TTS providers, the ones not connected yet first.
         expect(within(dialog).getByLabelText("Provider").textContent).toBe("ElevenLabs");
         fireEvent.keyDown(within(dialog).getByLabelText("Provider"), { key: "ArrowDown" });

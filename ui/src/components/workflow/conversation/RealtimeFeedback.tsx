@@ -1,5 +1,7 @@
 "use client";
 
+import { useCopy } from "@/i18n/LocaleProvider";
+
 import {
     conversationItemsFromLiveFeedback,
     conversationItemsFromRealtimeFeedbackEvents,
@@ -12,6 +14,7 @@ import type {
     WorkflowRunLogs,
 } from "./types";
 import { countConversationMessages } from "./utils";
+
 
 interface LiveModeProps {
     mode: "live";
@@ -29,6 +32,7 @@ interface HistoricalModeProps {
 type RealtimeFeedbackProps = LiveModeProps | HistoricalModeProps;
 
 export function RealtimeFeedback(props: RealtimeFeedbackProps) {
+    const copy = useCopy();
     let items;
     let status: ConversationStatus;
     let title: string;
@@ -42,15 +46,15 @@ export function RealtimeFeedback(props: RealtimeFeedbackProps) {
         status = "ended";
         title = "Call Transcript";
         emptyState = {
-            title: "No conversation recorded",
-            subtitle: "Real-time feedback events were not captured for this call",
+            title: copy("No conversation recorded"),
+            subtitle: copy("Real-time feedback events were not captured for this call"),
         };
     } else {
         items = conversationItemsFromLiveFeedback(props.messages);
         status = props.isCallActive ? "live" : props.isCallCompleted ? "ended" : "ready";
         title = "Live Transcript";
         emptyState = {
-            title: "No messages yet",
+            title: copy("No messages yet"),
             subtitle: props.isCallActive
                 ? "Start speaking to see the transcript"
                 : "Start the call to begin the conversation",

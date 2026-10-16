@@ -66,9 +66,9 @@ import {
 import { useAppConfig } from "@/context/AppConfigContext";
 import { useOrgConfig } from "@/context/OrgConfigContext";
 import { useOrganizationTimezone } from "@/hooks/useOrganizationTimezone";
+import { apiErrorMessage } from "@/i18n/errors";
 import { useCopy } from "@/i18n/LocaleProvider";
 import { useUiLocale } from "@/i18n/LocaleProvider";
-import { detailFromError } from "@/lib/apiError";
 import { useAuth } from "@/lib/auth";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { formatDateTime } from "@/lib/dateTime";
@@ -146,8 +146,8 @@ export default function TelephonyConfigurationDetailPage() {
         }),
       ]);
 
-      if (cfgRes.error) throw new Error(copy(detailFromError(cfgRes.error)));
-      if (numbersRes.error) throw new Error(copy(detailFromError(numbersRes.error)));
+      if (cfgRes.error) throw new Error(copy(apiErrorMessage(cfgRes.error, copy)));
+      if (numbersRes.error) throw new Error(copy(apiErrorMessage(numbersRes.error, copy)));
 
       setConfig(cfgRes.data ?? null);
       setPhoneNumbers(numbersRes.data?.phone_numbers ?? []);
@@ -172,7 +172,7 @@ export default function TelephonyConfigurationDetailPage() {
           path: { config_id: config.id },
         },
       );
-      if (res.error) throw new Error(copy(detailFromError(res.error)));
+      if (res.error) throw new Error(copy(apiErrorMessage(res.error, copy)));
       toast.success(copy("Set as default outbound"));
       fetchAll();
     } catch (err) {
@@ -190,7 +190,7 @@ export default function TelephonyConfigurationDetailPage() {
           path: { config_id: config.id },
         },
       );
-      if (res.error) throw new Error(copy(detailFromError(res.error)));
+      if (res.error) throw new Error(copy(apiErrorMessage(res.error, copy)));
       toast.success(copy("Reactivated — reconnecting within a minute"));
       fetchAll();
     } catch (err) {
@@ -209,7 +209,7 @@ export default function TelephonyConfigurationDetailPage() {
           path: { config_id: configId, phone_number_id: n.id },
         },
       );
-      if (res.error) throw new Error(copy(detailFromError(res.error)));
+      if (res.error) throw new Error(copy(apiErrorMessage(res.error, copy)));
       toast.success(copy("{value0} is now the default caller ID", {value0: n.address}));
       fetchAll();
     } catch (err) {
@@ -230,7 +230,7 @@ export default function TelephonyConfigurationDetailPage() {
           path: { config_id: config.id },
         },
       );
-      if (res.error) throw new Error(detailFromError(res.error));
+      if (res.error) throw new Error(apiErrorMessage(res.error, copy));
       const outcome = res.data;
       const created = outcome?.created.length ?? 0;
       const updated = outcome?.updated.length ?? 0;
@@ -241,20 +241,20 @@ export default function TelephonyConfigurationDetailPage() {
         `${updated} refreshed`,
         ...(skipped.length > 0 ? [`${skipped.length} skipped`] : []),
       ];
-      toast.success(`Numbers refreshed: ${parts.join(", ")}`);
+      toast.success(copy("Numbers refreshed: {value0}", {value0: parts.join(", ")}));
       for (const s of skipped) {
-        toast.warning(`${s.address} skipped: ${s.reason}`);
+        toast.warning(copy("{value0} skipped: {value1}", {value0: s.address, value1: s.reason}));
       }
       if (missing.length > 0) {
         toast.warning(
-          `${missing.length} number${missing.length === 1 ? " is" : "s are"} no longer listed by the provider: ${missing
+          copy("{value0} number{value1} no longer listed by the provider: {value2}", {value0: missing.length, value1: missing.length === 1 ? " is" : "s are", value2: missing
             .map((n) => n.address)
-            .join(", ")}`,
+            .join(", ")}),
         );
       }
       fetchAll();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to refresh numbers");
+      toast.error(err instanceof Error ? err.message : copy("Failed to refresh numbers"));
     } finally {
       setSyncingNumbers(false);
     }
@@ -273,7 +273,7 @@ export default function TelephonyConfigurationDetailPage() {
           },
         },
       );
-      if (res.error) throw new Error(copy(detailFromError(res.error)));
+      if (res.error) throw new Error(copy(apiErrorMessage(res.error, copy)));
       toast.success(copy("Phone number deleted"));
       setPhoneDeleteTarget(null);
       fetchAll();
@@ -405,15 +405,12 @@ export default function TelephonyConfigurationDetailPage() {
           )}
           {webhookVerifyToken ? (
             <div className="space-y-2 rounded-md border border-dashed p-3">
-              <p className="text-sm font-medium">Webhook for your Meta app</p>
+              <p className="text-sm font-medium">{copy("Webhook for your Meta app")}</p>
               <p className="text-xs text-muted-foreground">
-                Paste both into the app&apos;s webhook settings and verify, then
-                subscribe to the <code>calls</code> field. Until you do, calls to
-                your number never reach Dograh.
-              </p>
+                {copy("Paste both into the app's webhook settings and verify, then subscribe to the ")}<code>calls</code> {copy(" field. Until you do, calls to your number never reach Dograh.")}</p>
               {[
-                { label: "Callback URL", value: providerWebhookUrl },
-                { label: "Verify token", value: webhookVerifyToken },
+                { label: copy("Callback URL"), value: providerWebhookUrl },
+                { label: copy("Verify token"), value: webhookVerifyToken },
               ].map(({ label, value }) => (
                 <div key={label} className="space-y-1">
                   <p className="text-xs text-muted-foreground">{label}</p>
@@ -421,10 +418,10 @@ export default function TelephonyConfigurationDetailPage() {
                     type="button"
                     onClick={() => {
                       copyTextToClipboard(value)
-                        .then(() => toast.success(`${label} copied`))
-                        .catch(() => toast.error("Failed to copy"));
+                        .then(() => toast.success(copy("{value0} copied", {value0: label})))
+                        .catch(() => toast.error(copy("Failed to copy")));
                     }}
-                    title="Click to copy"
+                    title={copy("Click to copy")}
                     className="group flex w-full items-center gap-2 rounded-md border bg-muted/20 p-2 text-left font-mono text-xs transition-colors hover:bg-muted/40"
                   >
                     <code className="flex-1 truncate">{value}</code>
@@ -435,17 +432,17 @@ export default function TelephonyConfigurationDetailPage() {
             </div>
           ) : (
             <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Inbound webhook URL</p>
+              <p className="text-xs text-muted-foreground">{copy("Inbound webhook URL")}</p>
               <button
                 type="button"
                 onClick={() => {
                   const url = inboundWebhookUrl;
                   copyTextToClipboard(url)
-                    .then(() => toast.success("Inbound webhook URL copied"))
-                    .catch(() => toast.error("Failed to copy URL"));
+                    .then(() => toast.success(copy("Inbound webhook URL copied")))
+                    .catch(() => toast.error(copy("Failed to copy URL")));
                 }}
-                title="Click to copy inbound webhook URL"
-                aria-label="Copy inbound webhook URL"
+                title={copy("Click to copy inbound webhook URL")}
+                aria-label={copy("Copy inbound webhook URL")}
                 className="inline-flex items-center gap-1 self-start rounded font-mono text-xs text-muted-foreground hover:text-foreground"
               >
                 <span className="truncate">{inboundWebhookUrl}</span>
@@ -485,11 +482,11 @@ export default function TelephonyConfigurationDetailPage() {
       <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div className="space-y-1">
-            <CardTitle>Phone numbers</CardTitle>
+            <CardTitle>{copy("Phone numbers")}</CardTitle>
             <CardDescription>
               {config.supports_outbound === false
-                ? "Numbers this configuration answers calls on."
-                : "Numbers used as caller ID for outbound and accepted for inbound matching. SIP URIs and extensions are supported alongside PSTN numbers."}{" "}
+                ? copy("Numbers this configuration answers calls on.")
+                : copy("Numbers used as caller ID for outbound and accepted for inbound matching. SIP URIs and extensions are supported alongside PSTN numbers.")}{" "}
               <a
                 href="https://docs.dograh.com/integrations/telephony/inbound"
                 target="_blank"
@@ -510,27 +507,24 @@ export default function TelephonyConfigurationDetailPage() {
                 <RefreshCw
                   className={`h-4 w-4 mr-2 ${syncingNumbers ? "animate-spin" : ""}`}
                 />
-                Refresh numbers
-              </Button>
+                {copy("Refresh numbers")}</Button>
             )}
             <Button size="sm" onClick={() => openPhoneDialog(null)}>
-              <Plus className="h-4 w-4 mr-2" /> Add phone number
-            </Button>
+              <Plus className="h-4 w-4 mr-2" /> {copy(" Add phone number")}</Button>
           </div>
         </CardHeader>
         <CardContent>
           {phoneNumbers.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No phone numbers yet.{" "}
+              {copy("No phone numbers yet.")}{" "}
               {config.supports_phone_number_sync
-                ? "Click Refresh numbers to import the numbers on your account, or add one"
-                : "Add one"}{" "}
-              to start{" "}
+                ? copy("Click Refresh numbers to import the numbers on your account, or add one")
+                : copy("Add one")}{" "}
+              {copy("to start")}{" "}
               {config.supports_outbound === false
-                ? "receiving"
-                : "placing or receiving"}{" "}
-              calls on this configuration.
-            </p>
+                ? copy("receiving")
+                : copy("placing or receiving")}{" "}
+              {copy("calls on this configuration.")}</p>
           ) : (
             <Table>
               <TableHeader>

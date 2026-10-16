@@ -10,7 +10,6 @@ import { dateFnsLocale } from "@/i18n/format";
 import { useCopy } from "@/i18n/LocaleProvider";
 import { useUiLocale } from "@/i18n/LocaleProvider";
 
-
 import { EditVersionMetadataPopover } from "./EditVersionMetadataPopover";
 
 interface VersionHistoryPanelProps {

@@ -5,6 +5,8 @@ import { useId } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useCopy } from "@/i18n/LocaleProvider";
+
 
 interface VersionMetadataFieldsProps {
     versionName: string;
@@ -15,19 +17,20 @@ interface VersionMetadataFieldsProps {
 }
 
 export function VersionMetadataFields({ versionName, description, onVersionNameChange, onDescriptionChange, disabled }: VersionMetadataFieldsProps) {
+    const copy = useCopy();
     const id = useId();
 
     return (
         <>
             <div className="space-y-1.5">
                 <Label htmlFor={`${id}-name`} className="text-xs">
-                    Version name <span className="font-normal text-gray-400">(optional)</span>
+                    {copy("Version name ")}<span className="font-normal text-gray-400">{copy("(optional)")}</span>
                 </Label>
                 <Input
                     id={`${id}-name`}
                     value={versionName}
                     onChange={(event) => onVersionNameChange(event.target.value)}
-                    placeholder="e.g. Improved greeting"
+                    placeholder={copy("e.g. Improved greeting")}
                     maxLength={100}
                     disabled={disabled}
                     className="h-8 border-[#3a3a3a] bg-[#222]"
@@ -35,13 +38,13 @@ export function VersionMetadataFields({ versionName, description, onVersionNameC
             </div>
             <div className="space-y-1.5">
                 <Label htmlFor={`${id}-description`} className="text-xs">
-                    Change description <span className="font-normal text-gray-400">(optional)</span>
+                    {copy("Change description ")}<span className="font-normal text-gray-400">{copy("(optional)")}</span>
                 </Label>
                 <Textarea
                     id={`${id}-description`}
                     value={description}
                     onChange={(event) => onDescriptionChange(event.target.value)}
-                    placeholder="What changed?"
+                    placeholder={copy("What changed?")}
                     maxLength={500}
                     rows={2}
                     disabled={disabled}

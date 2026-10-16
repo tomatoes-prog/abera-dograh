@@ -30,8 +30,8 @@ import {
 import { useNodeSpecs } from "@/components/flow/renderer";
 import { FlowEdge, FlowNode, FlowNodeData, NodeType } from "@/components/flow/types";
 import { PostHogEvent } from "@/constants/posthog-events";
-import { captureAnalyticsEvent } from "@/lib/analytics";
 import { useCopy } from "@/i18n/LocaleProvider";
+import { captureAnalyticsEvent } from "@/lib/analytics";
 import { detailFromError } from "@/lib/apiError";
 import logger from '@/lib/logger';
 import { getNextNodeId, getRandomId } from "@/lib/utils";
@@ -568,7 +568,7 @@ export const useWorkflowState = ({
             });
             if (response.error) {
                 throw new Error(
-                    copy(detailFromError(response.error, "Failed to save template variables")),
+                    copy(detailFromError(response.error, copy("Failed to save template variables"))),
                 );
             }
             setTemplateContextVariables(variables);
@@ -649,7 +649,7 @@ export const useWorkflowState = ({
                 },
             });
             if (response.error) {
-                throw new Error(copy(detailFromError(response.error, "Failed to save dictionary")));
+                throw new Error(copy(detailFromError(response.error, copy("Failed to save dictionary"))));
             }
             setDictionary(newDictionary);
             setWorkflowConfigurations(updatedConfigurations);

@@ -4,12 +4,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getDefaultModelConfiguration, getModelConnectionCatalog, listNamedModelConfigurations, listProviderConnections } from "@/client/sdk.gen";
 import { useOrgConfig } from "@/context/OrgConfigContext";
-import { detailFromError } from "@/lib/apiError";
+import { apiErrorMessage } from "@/i18n/errors";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { useAuth } from "@/lib/auth";
 
 import type { ModelConnectionCatalog, NamedModelConfiguration, ProviderConnection } from "./types";
 
+
 export function useModelConnections({ includeArchived = false }: { includeArchived?: boolean } = {}) {
+    const copy = useCopy();
     const { user, loading: authLoading } = useAuth();
     const { orgContext, loading: organizationLoading } = useOrgConfig();
     const [catalog, setCatalog] = useState<ModelConnectionCatalog | null>(null);
@@ -28,7 +31,7 @@ export function useModelConnections({ includeArchived = false }: { includeArchiv
         if (authLoading || organizationLoading) return;
         if (!userId || organizationId == null) {
             setLoading(false);
-            setError(!userId ? "Sign in to manage model configurations." : "Select an organization to manage model configurations.");
+            setError(!userId ? copy("Sign in to manage model configurations.") : copy("Select an organization to manage model configurations."));
             return;
         }
         const currentRequest = ++request.current;
@@ -43,7 +46,7 @@ export function useModelConnections({ includeArchived = false }: { includeArchiv
             ]);
             if (currentRequest !== request.current) return;
             for (const response of [catalogResult, connectionsResult, configurationsResult, defaultResult]) {
-                if (response.error) throw new Error(detailFromError(response.error, "Failed to load model configurations"));
+                if (response.error) throw new Error(apiErrorMessage(response.error, copy, "Failed to load model configurations"));
             }
             if (!catalogResult.data || !connectionsResult.data || !configurationsResult.data || !defaultResult.data) throw new Error("Failed to load model configurations");
             setCatalog(catalogResult.data as unknown as ModelConnectionCatalog);
@@ -51,11 +54,11 @@ export function useModelConnections({ includeArchived = false }: { includeArchiv
             setConfigurations(configurationsResult.data as NamedModelConfiguration[]);
             setDefaultUuid(defaultResult.data.model_configuration_uuid);
         } catch (cause) {
-            if (currentRequest === request.current) setError(cause instanceof Error ? cause.message : "Failed to load model configurations");
+            if (currentRequest === request.current) setError(cause instanceof Error ? cause.message : copy("Failed to load model configurations"));
         } finally {
             if (currentRequest === request.current) setLoading(false);
         }
-    }, [authLoading, userId, organizationLoading, organizationId, includeArchived]);
+    }, [authLoading, userId, organizationLoading, organizationId, includeArchived, copy]);
 
     useEffect(() => {
         // Keep the current catalog visible when refreshConfig toggles loading.

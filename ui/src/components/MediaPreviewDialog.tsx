@@ -14,8 +14,8 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { PostHogEvent } from '@/constants/posthog-events';
-import { captureAnalyticsEvent } from '@/lib/analytics';
 import { useCopy } from "@/i18n/LocaleProvider";
+import { captureAnalyticsEvent } from '@/lib/analytics';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { downloadFile, getSignedUrl } from '@/lib/files';
 
@@ -65,13 +65,13 @@ export function MediaPreviewDialog() {
                     });
                 } catch (error) {
                     console.error('Error fetching transcript:', error);
-                    toast.error('Failed to load transcript');
+                    toast.error(copy("Failed to load transcript"));
                 }
             }
 
             setMediaLoading(false);
         },
-        [],
+        [copy],
     );
 
     const copyTranscript = async () => {
@@ -79,9 +79,9 @@ export function MediaPreviewDialog() {
 
         try {
             await copyTextToClipboard(transcriptContent);
-            toast.success('Transcript copied to clipboard');
+            toast.success(copy("Transcript copied to clipboard"));
         } catch {
-            toast.error('Failed to copy transcript');
+            toast.error(copy("Failed to copy transcript"));
         }
     };
 
@@ -118,11 +118,10 @@ export function MediaPreviewDialog() {
                     {!mediaLoading && transcriptContent && (
                         <div className="mt-4 space-y-2">
                             <div className="flex items-center justify-between gap-2">
-                                <span className="text-sm font-medium">Transcript</span>
+                                <span className="text-sm font-medium">{copy("Transcript")}</span>
                                 <Button variant="outline" size="sm" onClick={copyTranscript}>
                                     <Copy className="h-4 w-4" />
-                                    Copy transcript
-                                </Button>
+                                    {copy("Copy transcript")}</Button>
                             </div>
                             <pre className="w-full h-[60vh] overflow-auto border rounded-md p-4 bg-muted text-sm whitespace-pre-wrap font-mono">
                                 {transcriptContent}

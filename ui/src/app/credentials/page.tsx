@@ -14,8 +14,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { detailFromError } from "@/lib/apiError";
 import { useAuth } from "@/lib/auth";
+
 
 const TYPE_LABELS: Record<WebhookCredentialType, string> = {
     none: "No Authentication",
@@ -28,6 +30,7 @@ const TYPE_LABELS: Record<WebhookCredentialType, string> = {
 const typeLabel = (type: string) => TYPE_LABELS[type as WebhookCredentialType] ?? type;
 
 export default function CredentialsPage() {
+    const copy = useCopy();
     const { user, loading: authLoading, getAccessToken, redirectToLogin } = useAuth();
     const [credentials, setCredentials] = useState<CredentialResponse[]>([]);
     const [loading, setLoading] = useState(true);
@@ -55,17 +58,17 @@ export default function CredentialsPage() {
                 const response = await listCredentialsApiV1CredentialsGet({
                     headers: { Authorization: `Bearer ${token}` },
                 });
-                if (response.error) throw new Error(detailFromError(response.error, "Failed to load credentials"));
+                if (response.error) throw new Error(detailFromError(response.error, copy("Failed to load credentials")));
                 if (!cancelled) setCredentials(response.data ?? []);
             } catch (cause) {
-                if (!cancelled) setError(cause instanceof Error ? cause.message : "Failed to load credentials");
+                if (!cancelled) setError(cause instanceof Error ? cause.message : copy("Failed to load credentials"));
             } finally {
                 if (!cancelled) setLoading(false);
             }
         };
         void fetchCredentials();
         return () => { cancelled = true; };
-    }, [authLoading, user, getAccessToken, reload]);
+    }, [authLoading, user, getAccessToken, reload, copy]);
 
     const deleteCredential = async () => {
         if (!deleteTarget || deleting) return;
@@ -77,10 +80,10 @@ export default function CredentialsPage() {
                 headers: { Authorization: `Bearer ${token}` },
                 path: { credential_uuid: deleteTarget.uuid },
             });
-            if (response.error) throw new Error(detailFromError(response.error, "Failed to delete credential"));
+            if (response.error) throw new Error(detailFromError(response.error, copy("Failed to delete credential")));
             setCredentials((current) => current.filter((item) => item.uuid !== deleteTarget.uuid));
             setDeleteTarget(null);
-            toast.success("Credential deleted");
+            toast.success(copy("Credential deleted"));
         } catch (cause) {
             setDeleteError(cause instanceof Error ? cause.message : "Failed to delete credential");
         } finally {
@@ -95,34 +98,33 @@ export default function CredentialsPage() {
 
     return (
         <>
-            <PageLayout title="Credentials" description="Manage reusable authentication for your tools and webhooks.">
-                <PageSection title="Your Credentials"
-                    description="Save external credentials once and use them across your organization in tools and webhooks."
+            <PageLayout title={copy("Credentials")} description={copy("Manage reusable authentication for your tools and webhooks.")}>
+                <PageSection title={copy("Your Credentials")}
+                    description={copy("Save external credentials once and use them across your organization in tools and webhooks.")}
                     actions={<Button onClick={() => setCreateOpen(true)} disabled={authLoading || !user || loading || !!error}>
-                        <Plus className="h-4 w-4" />Add Credential
-                    </Button>}
+                        <Plus className="h-4 w-4" />{copy("Add Credential")}</Button>}
                     toolbar={<div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input aria-label="Search credentials" placeholder="Search credentials..." value={search} onChange={(event) => setSearch(event.target.value)} className="pl-10" />
+                        <Input aria-label={copy("Search credentials")} placeholder={copy("Search credentials...")} value={search} onChange={(event) => setSearch(event.target.value)} className="pl-10" />
                     </div>}>
 
                     {authLoading || !user || loading ? (
-                        <div className="space-y-4" role="status" aria-label="Loading credentials">
+                        <div className="space-y-4" role="status" aria-label={copy("Loading credentials")}>
                             {[1, 2, 3].map((item) => <Skeleton key={item} className="h-24 w-full rounded-lg" />)}
                         </div>
                     ) : error ? (
                         <div role="alert" className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
                             <p>{error}</p>
-                            <Button variant="outline" size="sm" className="mt-3" onClick={() => setReload((value) => value + 1)}>Retry</Button>
+                            <Button variant="outline" size="sm" className="mt-3" onClick={() => setReload((value) => value + 1)}>{copy("Retry")}</Button>
                         </div>
                     ) : filtered.length === 0 ? (
                         <div className="py-12 text-center">
                             <ShieldCheck className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-                            <p className="mb-4 text-muted-foreground">{query ? "No credentials match your search" : "No credentials yet"}</p>
+                            <p className="mb-4 text-muted-foreground">{query ? copy("No credentials match your search") : copy("No credentials yet")}</p>
                             {query ? (
-                                <Button variant="outline" onClick={() => setSearch("")}>Clear Search</Button>
+                                <Button variant="outline" onClick={() => setSearch("")}>{copy("Clear Search")}</Button>
                             ) : (
-                                <Button onClick={() => setCreateOpen(true)}>Add Your First Credential</Button>
+                                <Button onClick={() => setCreateOpen(true)}>{copy("Add Your First Credential")}</Button>
                             )}
                         </div>
                     ) : (
@@ -137,13 +139,12 @@ export default function CredentialsPage() {
                                             <Badge variant="secondary">{typeLabel(item.credential_type)}</Badge>
                                         </div>
                                         {item.description && <p className="break-words text-sm text-muted-foreground">{item.description}</p>}
-                                        <p className="text-xs text-muted-foreground">Created {new Date(item.created_at).toLocaleDateString()}</p>
+                                        <p className="text-xs text-muted-foreground">{copy("Created ")}{new Date(item.created_at).toLocaleDateString()}</p>
                                     </div>
                                     <div className={`${LIST_ROW_ACTIONS_CLASS} shrink-0 self-end sm:self-auto`}>
-                                        <Button variant="ghost" size="sm" aria-label={`Edit ${item.name}`} onClick={() => setEditTarget(item)}>
-                                            <Pencil className="h-4 w-4" />Edit
-                                        </Button>
-                                        <Button variant="ghost" size="icon" aria-label={`Delete ${item.name}`} className="text-destructive hover:text-destructive" onClick={() => { setDeleteError(null); setDeleteTarget(item); }}>
+                                        <Button variant="ghost" size="sm" aria-label={copy("Edit {value0}", {value0: item.name})} onClick={() => setEditTarget(item)}>
+                                            <Pencil className="h-4 w-4" />{copy("Edit")}</Button>
+                                        <Button variant="ghost" size="icon" aria-label={copy("Delete {value0}", {value0: item.name})} className="text-destructive hover:text-destructive" onClick={() => { setDeleteError(null); setDeleteTarget(item); }}>
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
                                     </div>
@@ -156,26 +157,25 @@ export default function CredentialsPage() {
             <CreateCredentialDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={(credential) => {
                 setCredentials((current) => [credential, ...current]);
                 setSearch("");
-                toast.success("Credential created");
+                toast.success(copy("Credential created"));
             }} />
             <CreateCredentialDialog open={!!editTarget} credential={editTarget ?? undefined} onOpenChange={(open) => { if (!open) setEditTarget(null); }} onUpdated={(credential) => {
                 setCredentials((current) => current.map((item) => item.uuid === credential.uuid ? credential : item));
-                toast.success("Credential updated");
+                toast.success(copy("Credential updated"));
             }} />
             <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open && !deleting) setDeleteTarget(null); }}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Delete credential?</AlertDialogTitle>
+                        <AlertDialogTitle>{copy("Delete credential?")}</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Delete &quot;{deleteTarget?.name}&quot;? Tools and webhooks using this credential will need another credential to authenticate.
-                        </AlertDialogDescription>
+                            {copy("Delete \"")}{deleteTarget?.name}{copy("\"? Tools and webhooks using this credential will need another credential to authenticate.")}</AlertDialogDescription>
                     </AlertDialogHeader>
                     {deleteError && <p role="alert" className="text-sm text-destructive">{deleteError}</p>}
                     <AlertDialogFooter>
-                        <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel disabled={deleting}>{copy("Cancel")}</AlertDialogCancel>
                         <Button variant="destructive" disabled={deleting} onClick={deleteCredential}>
                             {deleting && <Loader2 className="h-4 w-4 animate-spin" />}
-                            {deleting ? "Deleting..." : "Delete"}
+                            {deleting ? copy("Deleting...") : copy("Delete")}
                         </Button>
                     </AlertDialogFooter>
                 </AlertDialogContent>

@@ -36,8 +36,8 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { apiErrorMessage } from "@/i18n/errors";
 import { useCopy } from "@/i18n/LocaleProvider";
-import { detailFromError } from "@/lib/apiError";
 import { useAuth } from "@/lib/auth";
 import { copyTextToClipboard } from "@/lib/clipboard";
 
@@ -213,7 +213,7 @@ export function ConfigFormDialog({
             body: { name: name || undefined, config: configPayload },
           },
         );
-        if (res.error) throw new Error(copy(detailFromError(res.error, "Failed to save configuration")));
+        if (res.error) throw new Error(copy(apiErrorMessage(res.error, copy, "Failed to save configuration")));
         toast.success(copy("Configuration updated"));
       } else {
         const res = await createTelephonyConfigurationApiV1OrganizationsTelephonyConfigsPost(
@@ -229,7 +229,7 @@ export function ConfigFormDialog({
             },
           },
         );
-        if (res.error) throw new Error(copy(detailFromError(res.error, "Failed to save configuration")));
+        if (res.error) throw new Error(copy(apiErrorMessage(res.error, copy, "Failed to save configuration")));
         toast.success(copy("Configuration created"));
       }
       onOpenChange(false);

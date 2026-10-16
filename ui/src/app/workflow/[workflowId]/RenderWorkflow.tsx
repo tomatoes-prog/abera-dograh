@@ -22,8 +22,8 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useOnboarding } from '@/context/OnboardingContext';
-import { useCopy } from "@/i18n/LocaleProvider";
 import { UnsavedChangesProvider, useUnsavedChangesContext } from '@/context/UnsavedChangesContext';
+import { useCopy } from "@/i18n/LocaleProvider";
 import { detailFromError } from '@/lib/apiError';
 import { WorkflowConfigurations } from '@/types/workflow-configurations';
 
@@ -220,7 +220,7 @@ function WorkflowEditor({
                 query: { limit: VERSIONS_PAGE_SIZE + 1, offset: 0 },
             });
             if (response.error) {
-                toast.error(copy(detailFromError(response.error, "Failed to load version history")));
+                toast.error(copy(detailFromError(response.error, copy("Failed to load version history"))));
                 return;
             }
             const data = response.data;
@@ -256,7 +256,7 @@ function WorkflowEditor({
                 query: { limit: VERSIONS_PAGE_SIZE + 1, offset: versions.length },
             });
             if (response.error) {
-                toast.error(copy(detailFromError(response.error, "Failed to load more versions")));
+                toast.error(copy(detailFromError(response.error, copy("Failed to load more versions"))));
                 return;
             }
             const data = response.data;
@@ -292,7 +292,7 @@ function WorkflowEditor({
                 query: { limit: 2, offset: selectedIndex },
             });
             if (response.error) {
-                toast.error(copy(detailFromError(response.error, "Failed to compare workflow versions")));
+                toast.error(copy(detailFromError(response.error, copy("Failed to compare workflow versions"))));
                 return;
             }
 

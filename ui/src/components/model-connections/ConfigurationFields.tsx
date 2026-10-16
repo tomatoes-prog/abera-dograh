@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useCopy } from "@/i18n/LocaleProvider";
 import { cn } from "@/lib/utils";
 
 import { compatibleConnections, configurationForMode, configurationMode, dograhConfiguration, resetDependentFields, selectionForConnection } from "./configuration";
@@ -13,6 +14,7 @@ import { AddProviderDialog, type ProviderOption, ProviderSelect } from "./Provid
 import { SchemaFields } from "./SchemaFields";
 import type { ConfigurationEditorMode, ConfigurationSpec, FieldSchema, ModelConnectionCatalog, ProviderConnection, ServiceRole, ServiceSelection } from "./types";
 import { MODE_LABELS, ROLE_LABELS } from "./types";
+
 
 export type ConfigurationFieldsDensity = "full" | "compact";
 
@@ -27,7 +29,6 @@ const MODES: { value: ConfigurationEditorMode; description: string }[] = [
 const SERVICE_TAB = "-mb-px h-auto min-w-0 flex-1 flex-col items-start gap-0.5 rounded-none border-0 border-b-2 border-transparent px-3 py-2.5 text-left sm:px-4 text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none dark:data-[state=active]:border-primary dark:data-[state=active]:bg-transparent";
 
 // Read aloud, "LLM", "STT" and "Embedding" take "an".
-const ROLE_ARTICLES: Record<ServiceRole, string> = { llm: "an", stt: "an", tts: "a", realtime: "a", embeddings: "an" };
 
 type AddTarget = ServiceRole | "dograh";
 
@@ -40,22 +41,23 @@ function hasFields(schema: FieldSchema | undefined): schema is FieldSchema {
     return Boolean(schema && Object.keys(schema.properties || {}).length);
 }
 
-function listNames(names: string[]): string | undefined {
+function listNames(names: string[], copy: ReturnType<typeof useCopy>): string | undefined {
     if (!names.length) return undefined;
-    return names.length > 3 ? `${names.slice(0, 3).join(", ")} and ${names.length - 3} more` : names.join(", ");
+    return names.length > 3 ? copy("{names} and {count} more", {names: names.slice(0, 3).join(", "), count: names.length - 3}) : names.join(", ");
 }
 
-function ModeChoice({ value, onChange }: { value: ConfigurationEditorMode; onChange: (value: string) => void }) {
+function ModeChoice({ value, onChange, allowDograh }: { value: ConfigurationEditorMode; onChange: (value: string) => void; allowDograh: boolean }) {
+    const copy = useCopy();
     const id = useId();
-    return <RadioGroupPrimitive.Root aria-label="Mode" value={value} onValueChange={onChange} className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-        {MODES.map(option => <RadioGroupPrimitive.Item key={option.value} value={option.value} aria-labelledby={`${id}-${option.value}`} aria-describedby={`${id}-${option.value}-description`}
+    return <RadioGroupPrimitive.Root aria-label={copy("Mode")} value={value} onValueChange={onChange} className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        {MODES.filter(option => option.value !== "dograh" || allowDograh).map(option => <RadioGroupPrimitive.Item key={option.value} value={option.value} aria-labelledby={`${id}-${option.value}`} aria-describedby={`${id}-${option.value}-description`}
             className="group flex items-start gap-3 rounded-lg border bg-card p-3 text-left outline-none transition-[color,border-color,box-shadow] hover:border-foreground/25 focus-visible:ring-[3px] focus-visible:ring-ring/50 data-[state=checked]:border-primary data-[state=checked]:ring-1 data-[state=checked]:ring-primary">
             <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border border-input group-data-[state=checked]:border-primary">
                 <RadioGroupPrimitive.Indicator className="size-2 rounded-full bg-primary" />
             </span>
             <span className="min-w-0 space-y-0.5">
-                <span id={`${id}-${option.value}`} className="block text-sm font-medium">{MODE_LABELS[option.value]}</span>
-                <span id={`${id}-${option.value}-description`} className="block text-xs leading-snug text-muted-foreground">{option.description}</span>
+                <span id={`${id}-${option.value}`} className="block text-sm font-medium">{copy(MODE_LABELS[option.value])}</span>
+                <span id={`${id}-${option.value}-description`} className="block text-xs leading-snug text-muted-foreground">{copy(option.description)}</span>
             </span>
         </RadioGroupPrimitive.Item>)}
     </RadioGroupPrimitive.Root>;
@@ -87,6 +89,7 @@ export function ConfigurationFields({ configuration, catalog, connections, onCha
     /** Setting names to show for each service; everything else stays as it is. */
     fields?: string[];
 }) {
+    const copy = useCopy();
     const compact = density === "compact";
     const [unconfiguredMode, setUnconfiguredMode] = useState<ConfigurationEditorMode>("cascade");
     // The tab the user opened; until then, the mode's first service.
@@ -122,7 +125,7 @@ export function ConfigurationFields({ configuration, catalog, connections, onCha
         return () => node.removeEventListener("invalid", reveal, true);
     }, []);
 
-    const providerTitle = (role: ServiceRole, provider: string) => catalog.services[role]?.[provider]?.title || provider;
+    const providerTitle = (role: ServiceRole, provider: string) => copy(catalog.services[role]?.[provider]?.title || provider);
     const providerOption = (role: ServiceRole, connection: ProviderConnection): ProviderOption => {
         const label = providerTitle(role, connection.provider);
         const name = connection.name.trim();
@@ -155,14 +158,14 @@ export function ConfigurationFields({ configuration, catalog, connections, onCha
         : Object.keys(catalog.services[target] || {}).filter(provider => provider !== "dograh")
             .sort((a, b) => Number(connected.has(a)) - Number(connected.has(b)));
     // Named under the add entry, so the list shows what else is available.
-    const addHint = (role: ServiceRole) => listNames(addProviderKeys(role).filter(provider => !connected.has(provider)).map(provider => providerTitle(role, provider)));
+    const addHint = (role: ServiceRole) => listNames(addProviderKeys(role).filter(provider => !connected.has(provider)).map(provider => providerTitle(role, provider)), copy);
     const connectionAdded = (connection: ProviderConnection) => {
         const target = adding;
         // Added to the list in the same update that chooses it, so the mode
         // is never read without it.
         onConnectionAdded?.(connection);
         setAdding(null);
-        toast.success("Provider connection saved");
+        toast.success(copy("Provider connection saved"));
         if (target === "dograh") onChange(dograhConfiguration(catalog, connection, configuration, connections));
         else if (target) changeSelection(target, selectionForConnection(catalog, target, connection, configuration[target], connections));
     };
@@ -186,9 +189,9 @@ export function ConfigurationFields({ configuration, catalog, connections, onCha
                 values={configuration[role]?.settings || {}} onChange={(name, value) => changeSetting(role, name, value, fullSchema)} />;
         })}
         <div className="space-y-1.5">
-            <Label htmlFor="dograh-provider-connection">Dograh account</Label>
+            <Label htmlFor="dograh-provider-connection">{copy("Dograh account")}</Label>
             <ProviderSelect id="dograh-provider-connection" required value={dograhValue} onValueChange={changeDograhConnection}
-                placeholder="Choose an account" addLabel="Add a Dograh account" onAdd={() => setAdding("dograh")}
+                placeholder={copy("Choose an account")} addLabel={copy("Add a Dograh account")} onAdd={() => setAdding("dograh")}
                 options={dograhConnections.map(connection => ({ value: connection.uuid, label: connection.name }))} />
         </div>
     </div>;
@@ -202,17 +205,16 @@ export function ConfigurationFields({ configuration, catalog, connections, onCha
         const schema = restrictSchema(fullSchema, fields);
         const isEmbedding = role === "embeddings";
         return <div className="space-y-4">
-            {role === "llm" && mode === "realtime" && <p className="text-xs text-muted-foreground">The realtime model holds the conversation. This text LLM handles variable extraction and other background tasks.</p>}
+            {role === "llm" && mode === "realtime" && <p className="text-xs text-muted-foreground">{copy("The realtime model holds the conversation. This text LLM handles variable extraction and other background tasks.")}</p>}
             {isEmbedding && <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={Boolean(selection)} onChange={event => changeSelection(role,
                     event.target.checked ? (options[0] ? selectionForConnection(catalog, role, options[0]) : { provider_connection_uuid: "", settings: {} }) : null)} />
-                Enable embeddings
-            </label>}
+                {copy("Enable embeddings")}</label>}
             {(!isEmbedding || selection) && <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                    <Label htmlFor={`connection-${role}`}>Provider</Label>
-                    <ProviderSelect id={`connection-${role}`} required value={connection?.uuid || ""} placeholder="Choose a provider"
-                        options={options.map(item => providerOption(role, item))} addLabel="Add a provider" addHint={addHint(role)} onAdd={() => setAdding(role)}
+                    <Label htmlFor={`connection-${role}`}>{copy("Provider")}</Label>
+                    <ProviderSelect id={`connection-${role}`} required value={connection?.uuid || ""} placeholder={copy("Choose a provider")}
+                        options={options.map(item => providerOption(role, item))} addLabel={copy("Add a provider")} addHint={addHint(role)} onAdd={() => setAdding(role)}
                         onValueChange={value => {
                             const next = connections.find(item => item.uuid === value);
                             if (next) changeSelection(role, selectionForConnection(catalog, role, next, selection, connections));
@@ -221,7 +223,7 @@ export function ConfigurationFields({ configuration, catalog, connections, onCha
                 {schema && selection && <SchemaFields key={`${connection?.uuid}:${connection?.revision}`} className="contents" provider={connection?.provider} providerConnectionUuid={connection?.uuid} role={role} schema={schema}
                     values={selection.settings} context={connection?.connection_settings} onChange={(name, value) => changeSetting(role, name, value, fullSchema)} />}
             </div>}
-            {isEmbedding && <p className="text-xs text-muted-foreground">Use the embedding model that indexed this workflow’s knowledge base. Changing it does not reindex documents.</p>}
+            {isEmbedding && <p className="text-xs text-muted-foreground">{copy("Use the embedding model that indexed this workflow’s knowledge base. Changing it does not reindex documents.")}</p>}
             {role === "llm" && llmActions && connection?.provider !== "dograh" && <div className="flex justify-end border-t pt-4">{llmActions}</div>}
         </div>;
     };
@@ -229,19 +231,20 @@ export function ConfigurationFields({ configuration, catalog, connections, onCha
     // Each tab names the provider its picker shows, or that it needs one.
     const tabSummary = (role: ServiceRole): { text: string; missing: boolean } => {
         const selection = configuration[role];
-        if (role === "embeddings" && !selection) return { text: "Off", missing: false };
+        if (role === "embeddings" && !selection) return { text: copy("Off"), missing: false };
         const connection = serviceOptions(role).find(item => item.uuid === selection?.provider_connection_uuid);
-        return connection ? { text: providerTitle(role, connection.provider), missing: false } : { text: "Choose a provider", missing: true };
+        return connection ? { text: providerTitle(role, connection.provider), missing: false } : { text: copy("Choose a provider"), missing: true };
     };
 
     return <div ref={root} className={compact ? "space-y-3" : "space-y-4"}>
-        <ModeChoice value={mode} onChange={changeMode} />
+        <ModeChoice value={mode} onChange={changeMode} allowDograh={Boolean(catalog.services.llm?.dograh)} />
+        {mode === "dograh" && !catalog.services.llm?.dograh && <p role="alert" className="rounded-md border p-3 text-sm">{copy("This account used Dograh's managed services. Configure your own providers to continue; your agents and files are preserved.")}</p>}
         {mode === "dograh" ? dograhPanel : <Tabs value={currentRole} onValueChange={value => setActiveRole(value as ServiceRole)} className="gap-0 overflow-hidden rounded-lg border bg-card">
-            <TabsList aria-label="Services" className="flex h-auto w-full justify-start rounded-none border-b bg-transparent p-0">
+            <TabsList aria-label={copy("Services")} className="flex h-auto w-full justify-start rounded-none border-b bg-transparent p-0">
                 {roles.map(role => {
                     const summary = tabSummary(role);
                     return <TabsTrigger key={role} value={role} className={SERVICE_TAB} aria-labelledby={`${id}-${role}`} aria-describedby={`${id}-${role}-summary`}>
-                        <span id={`${id}-${role}`} className="text-sm font-medium">{ROLE_LABELS[role]}</span>{" "}
+                        <span id={`${id}-${role}`} className="text-sm font-medium">{copy(ROLE_LABELS[role])}</span>{" "}
                         <span id={`${id}-${role}-summary`} className={cn("max-w-full truncate text-xs font-normal", summary.missing ? "text-amber-700 dark:text-amber-400" : "text-muted-foreground")}>{summary.text}</span>
                     </TabsTrigger>;
                 })}
@@ -251,7 +254,7 @@ export function ConfigurationFields({ configuration, catalog, connections, onCha
             </TabsContent>)}
         </Tabs>}
         {adding && <AddProviderDialog open onOpenChange={open => { if (!open) setAdding(null); }} catalog={catalog}
-            title={adding === "dograh" ? "Add a Dograh account" : `Add ${ROLE_ARTICLES[adding]} ${ROLE_LABELS[adding]} provider`}
+            title={adding === "dograh" ? copy("Add a Dograh account") : copy("Add a provider for {role}", {role: copy(ROLE_LABELS[adding])})}
             providerKeys={addProviderKeys(adding)} role={adding === "dograh" ? undefined : adding} onSaved={connectionAdded} />}
     </div>;
 }

@@ -69,13 +69,14 @@ function withDiscoveredTools(
 
 /** Opens the tool's details page in a new tab without toggling the row it sits in. */
 function ToolDetailsLink({ tool }: { tool: ToolResponse }) {
+    const copy = useCopy();
     return (
         <Link
             href={`/tools/${tool.tool_uuid}`}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label={`Open ${tool.name} details`}
-            title="Open tool details"
+            aria-label={copy("Open {value0} details", {value0: tool.name})}
+            title={copy("Open tool details")}
             className="shrink-0 p-1 rounded text-muted-foreground hover:text-foreground"
             onClick={(e) => e.stopPropagation()}
         >

@@ -10,21 +10,27 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { VoiceSelector } from "@/components/VoiceSelector";
 import { VoiceSelectorModal } from "@/components/VoiceSelectorModal";
-import { LANGUAGE_DISPLAY_NAMES } from "@/constants/languages";
+import type { Copy } from "@/i18n/catalog";
+import type { UiLocale } from "@/i18n/config";
+import { languageDisplayName } from "@/i18n/format";
+import { useCopy } from "@/i18n/LocaleProvider";
+import { useUiLocale } from "@/i18n/LocaleProvider";
 
 import { fieldForModel, isFieldVisible, resolveFieldSchema, schemaDefaults } from "./configuration";
 import { ConfigurationSelect } from "./ConfigurationSelect";
 import type { FieldSchema, ServiceRole } from "./types";
 
+
 const PROVIDER_DEFAULT = "__provider_default__";
 
-function optionLabel(name: string, value: string, schema: FieldSchema) {
-    if (schema.option_labels?.[value]) return schema.option_labels[value];
-    if (name === "language" || name === "language_hints") return LANGUAGE_DISPLAY_NAMES[value] || value;
+function optionLabel(name: string, value: string, schema: FieldSchema, copy: Copy, locale: UiLocale) {
+    if (schema.option_labels?.[value]) return copy(schema.option_labels[value]);
+    if (name === "language" || name === "language_hints") return languageDisplayName(value, locale);
     return value;
 }
 
 function JsonInput({ id, value, onChange, required }: { id: string; value: unknown; onChange: (value: unknown) => void; required: boolean }) {
+    const copy = useCopy();
     const serialized = value === undefined ? "" : JSON.stringify(value, null, 2);
     const [text, setText] = useState(serialized);
     useEffect(() => { setText(serialized); }, [serialized]);
@@ -35,25 +41,26 @@ function JsonInput({ id, value, onChange, required }: { id: string; value: unkno
             const parsed = next.trim() ? JSON.parse(next) : undefined;
             event.target.setCustomValidity("");
             onChange(parsed);
-        } catch { event.target.setCustomValidity("Enter valid JSON."); }
+        } catch { event.target.setCustomValidity(copy("Enter valid JSON.")); }
     }} />;
 }
 
 function StringListInput({ id, name, values, onChange, secret, required }: {
     id: string; name: string; values: string[]; onChange: (values: string[]) => void; secret: boolean; required: boolean;
 }) {
+    const copy = useCopy();
     const label = name === "api_key" ? "API key" : name.replaceAll("_", " ");
     return <div className="space-y-2">
         {values.map((value, index) => <div key={index} className="flex gap-2">
             <Input id={index === 0 ? id : `${id}-${index}`} aria-label={index ? `${label} ${index + 1}` : undefined}
                 type={secret ? "password" : "text"} autoComplete={secret ? "new-password" : "off"}
-                placeholder={`Enter ${label}`} value={value} required={required && index === 0}
+                placeholder={copy("Enter {value0}", {value0: label})} value={value} required={required && index === 0}
                 onChange={event => onChange(values.map((item, i) => i === index ? event.target.value : item))} />
-            {(!secret || values.length > 1) && <Button type="button" variant="ghost" size="icon" className="shrink-0" aria-label={`Remove ${label} ${index + 1}`}
+            {(!secret || values.length > 1) && <Button type="button" variant="ghost" size="icon" className="shrink-0" aria-label={copy("Remove {value0} {value1}", {value0: label, value1: index + 1})}
                 onClick={() => onChange(values.filter((_, i) => i !== index))}><X className="h-4 w-4" /></Button>}
         </div>)}
         <Button type="button" variant="outline" size="sm" onClick={() => onChange([...values, ""])}>
-            <Plus className="h-4 w-4" />{name === "api_key" ? "Add API Key" : `Add ${label}`}
+            <Plus className="h-4 w-4" />{name === "api_key" ? copy("Add API Key") : copy("Add {value0}", {value0: label})}
         </Button>
     </div>;
 }
@@ -62,7 +69,9 @@ function ValueInput({ id, name, schema, value, onChange, secret, required, provi
     id: string; name: string; schema: FieldSchema; value: unknown; onChange: (value: unknown) => void;
     secret: boolean; required: boolean; provider?: string; providerConnectionUuid?: string; model?: string; language?: string;
 }) {
+    const copy = useCopy();
     const alternatives = schema.anyOf || [schema];
+    const { locale } = useUiLocale();
     const nullable = alternatives.some(option => option.type === "null");
     const concrete = alternatives.find(option => option.type !== "null") || schema;
     const numeric = alternatives.find(option => option.type === "number" || option.type === "integer");
@@ -84,7 +93,7 @@ function ValueInput({ id, name, schema, value, onChange, secret, required, provi
         if (choices?.length) return <div role="group" aria-labelledby={`${id}-label`} className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {[...choices, ...values.filter(item => !choices.includes(item))].map(option => <div key={option} className="flex items-center gap-2">
                 <Checkbox id={`${id}-${option}`} checked={values.includes(option)} onCheckedChange={checked => onChange(checked === true ? [...values, option] : values.filter(item => item !== option))} />
-                <Label htmlFor={`${id}-${option}`} className="cursor-pointer text-sm font-normal">{optionLabel(name, option, schema)}</Label>
+                <Label htmlFor={`${id}-${option}`} className="cursor-pointer text-sm font-normal">{optionLabel(name, option, schema, copy, locale)}</Label>
             </div>)}
         </div>;
         return <StringListInput id={id} name={name} secret={secret} required={required} values={values} onChange={onChange} />;
@@ -92,13 +101,13 @@ function ValueInput({ id, name, schema, value, onChange, secret, required, provi
     if (numeric && !enumerated) {
         return <Input id={id} type="number" value={value == null ? "" : String(value)} required={required && !nullable}
             min={schema.minimum ?? numeric.minimum} max={schema.maximum ?? numeric.maximum}
-            step={numeric.type === "integer" ? 1 : "any"} placeholder={nullable ? "Provider default" : undefined}
+            step={numeric.type === "integer" ? 1 : "any"} placeholder={nullable ? copy("Provider default") : undefined}
             onChange={event => onChange(event.target.value === "" ? (nullable ? null : undefined) : Number(event.target.value))} />;
     }
     if (concrete.type === "boolean") {
         return <ConfigurationSelect id={id} value={value == null ? (nullable ? PROVIDER_DEFAULT : "") : String(value)}
             onValueChange={next => onChange(next === PROVIDER_DEFAULT ? null : next === "true")}
-            options={[...(nullable ? [{ value: PROVIDER_DEFAULT, label: "Provider default" }] : []), { value: "true", label: "Enabled" }, { value: "false", label: "Disabled" }]} />;
+            options={[...(nullable ? [{ value: PROVIDER_DEFAULT, label: copy("Provider default") }] : []), { value: "true", label: copy("Enabled") }, { value: "false", label: copy("Disabled") }]} />;
     }
     if (concrete.type === "object" || concrete.properties) return <JsonInput id={id} value={value} onChange={onChange} required={required} />;
     if (schema.multiline) return <Textarea id={id} rows={4} required={required} autoComplete="off" spellCheck={false} className="font-mono text-xs"
@@ -109,25 +118,25 @@ function ValueInput({ id, name, schema, value, onChange, secret, required, provi
         // browsing available until the user explicitly chooses manual entry.
         const customInput = schema.allow_custom_input && (custom || (!voiceCatalog && Boolean(current && !options?.includes(current))));
         return <div className="space-y-2">
-            {customInput ? <Input id={id} value={current} required={required} placeholder={`Enter ${name.replaceAll("_", " ")}`} onChange={event => onChange(event.target.value)} />
+            {customInput ? <Input id={id} value={current} required={required} placeholder={copy("Enter {value0}", {value0: name.replaceAll("_", " ")})} onChange={event => onChange(event.target.value)} />
                 : voiceCatalog && provider ? (schema.voice_catalog === "dialog"
                     ? <VoiceSelectorModal id={id} provider={provider} providerConnectionUuid={providerConnectionUuid} value={current} onChange={onChange} model={model} />
                     : <VoiceSelector id={id} provider={provider} providerConnectionUuid={providerConnectionUuid} value={current} onChange={onChange} model={model} language={language} />)
                 : <ConfigurationSelect id={id} value={value == null && nullable ? PROVIDER_DEFAULT : current} required={required}
-                    placeholder={`Select ${name.replaceAll("_", " ")}`} onValueChange={next => onChange(next === PROVIDER_DEFAULT ? null : numeric ? Number(next) : next)}
-                    options={[...(nullable ? [{ value: PROVIDER_DEFAULT, label: "Provider default" }] : []),
-                        ...[...(options || []), ...(!schema.allow_custom_input && current && !options?.includes(current) ? [current] : [])].map(option => ({ value: option, label: optionLabel(name, option, schema) }))]} />}
+                    placeholder={copy("Select {value0}", {value0: name.replaceAll("_", " ")})} onValueChange={next => onChange(next === PROVIDER_DEFAULT ? null : numeric ? Number(next) : next)}
+                    options={[...(nullable ? [{ value: PROVIDER_DEFAULT, label: copy("Provider default") }] : []),
+                        ...[...(options || []), ...(!schema.allow_custom_input && current && !options?.includes(current) ? [current] : [])].map(option => ({ value: option, label: optionLabel(name, option, schema, copy, locale) }))]} />}
             {schema.allow_custom_input && <div className="flex items-center gap-2">
                 <Checkbox id={`${id}-custom`} checked={Boolean(customInput)} onCheckedChange={checked => {
                     setCustom(checked === true);
                     if (!checked && !voiceCatalog) onChange(options?.[0]);
                 }} />
-                <Label htmlFor={`${id}-custom`} className="cursor-pointer text-sm font-normal">Enter Custom Value</Label>
+                <Label htmlFor={`${id}-custom`} className="cursor-pointer text-sm font-normal">{copy("Enter Custom Value")}</Label>
             </div>}
         </div>;
     }
     return <Input id={id} type={secret ? "password" : "text"} value={value == null ? "" : String(value)} required={required}
-        autoComplete={secret ? "new-password" : "off"} placeholder={nullable ? "Provider default" : undefined}
+        autoComplete={secret ? "new-password" : "off"} placeholder={nullable ? copy("Provider default") : undefined}
         onChange={event => onChange(event.target.value || (nullable ? null : ""))} />;
 }
 
@@ -138,6 +147,7 @@ export function SchemaFields({ schema, values, onChange, secret = false, configu
     /** "contents" lays the fields into the parent's two-column grid. */
     className?: string;
 }) {
+    const copy = useCopy();
     const prefix = useId();
     const [replacing, setReplacing] = useState<string[]>([]);
     const resolvedValues = { ...schemaDefaults(schema), ...values };
@@ -150,7 +160,7 @@ export function SchemaFields({ schema, values, onChange, secret = false, configu
             const editing = !configured || replacing.includes(name);
             const removing = configured && values[name] === null;
             const suggestions = field.model_options?.[String(resolvedValues.model || "")];
-            const label = field.title || name.replaceAll("_", " ");
+            const label = copy(field.title || name.replaceAll("_", " "));
             const fullWidth = field.multiline || field.type === "array" || field.anyOf?.some(option => option.type === "array") || (role === "tts" && name === "voice");
             // Remount a dependent input when what it depends on changes, so local
             // control state such as manual entry does not outlive the old choice.
@@ -165,19 +175,19 @@ export function SchemaFields({ schema, values, onChange, secret = false, configu
                     value={Object.hasOwn(values, name) ? values[name] : field.default} secret={secret}
                     required={Boolean(schema.required?.includes(name))} onChange={value => onChange(name, value)} />
                     : <div className="flex h-10 items-center justify-between rounded-md border px-3 text-sm">
-                        <span className="text-muted-foreground">{removing ? "Will be removed" : "Configured"}</span>
-                        {removing ? <Button type="button" size="sm" variant="ghost" onClick={() => onChange(name, undefined)}>Keep existing credential</Button> : <div className="flex">
-                            {!schema.required?.includes(name) && <Button type="button" size="sm" variant="ghost" onClick={() => onChange(name, null)}>Remove</Button>}
-                            <Button type="button" size="sm" variant="ghost" onClick={() => setReplacing(previous => [...previous, name])}>Replace</Button>
+                        <span className="text-muted-foreground">{removing ? copy("Will be removed") : copy("Configured")}</span>
+                        {removing ? <Button type="button" size="sm" variant="ghost" onClick={() => onChange(name, undefined)}>{copy("Keep existing credential")}</Button> : <div className="flex">
+                            {!schema.required?.includes(name) && <Button type="button" size="sm" variant="ghost" onClick={() => onChange(name, null)}>{copy("Remove")}</Button>}
+                            <Button type="button" size="sm" variant="ghost" onClick={() => setReplacing(previous => [...previous, name])}>{copy("Replace")}</Button>
                         </div>}
                     </div>}
                 {configured && editing && <button type="button" className="text-xs underline" onClick={() => {
                     setReplacing(previous => previous.filter(field => field !== name));
                     onChange(name, undefined);
-                }}>Keep existing credential</button>}
-                {(field.description || field.docs_url) && <p className="text-xs text-muted-foreground">{field.description}{" "}
+                }}>{copy("Keep existing credential")}</button>}
+                {(field.description || field.docs_url) && <p className="text-xs text-muted-foreground">{copy(field.description || "")}{" "}
                     {field.docs_url && <a href={field.docs_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline">
-                        {field.docs_label || "Learn more"}<ExternalLink className="h-3 w-3" />
+                        {field.docs_label ? copy(field.docs_label) : copy("Learn more")}<ExternalLink className="h-3 w-3" />
                     </a>}
                 </p>}
             </div>;

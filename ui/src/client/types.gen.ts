@@ -661,6 +661,20 @@ export type CampaignsResponse = {
 };
 
 /**
+ * ChangePasswordRequest
+ */
+export type ChangePasswordRequest = {
+    /**
+     * Current Password
+     */
+    current_password: string;
+    /**
+     * New Password
+     */
+    new_password: string;
+};
+
+/**
  * ChunkResponseSchema
  *
  * Response schema for a document chunk.
@@ -1713,6 +1727,10 @@ export type DocumentUploadRequestSchema = {
      */
     filename: string;
     /**
+     * File Size Bytes
+     */
+    file_size_bytes?: number | null;
+    /**
      * Mime Type
      *
      * MIME type of the file
@@ -2186,6 +2204,10 @@ export type HealthResponse = {
      * Signup Enabled
      */
     signup_enabled: boolean;
+    /**
+     * Dograh Mps Enabled
+     */
+    dograh_mps_enabled?: boolean;
     /**
      * Stack Project Id
      */
@@ -3559,7 +3581,7 @@ export type ProcessDocumentRequestSchema = {
      *
      * Retrieval mode: 'chunked' for vector search or 'full_document' for full text retrieval
      */
-    retrieval_mode?: string;
+    retrieval_mode?: 'chunked' | 'full_document';
 };
 
 /**
@@ -6321,6 +6343,36 @@ export type VobizConfigurationRequest = {
 };
 
 /**
+ * VoiceCatalogueRequest
+ */
+export type VoiceCatalogueRequest = {
+    /**
+     * Api Key
+     */
+    api_key?: string | null;
+    /**
+     * Model
+     */
+    model?: string | null;
+    /**
+     * Language
+     */
+    language?: string | null;
+    /**
+     * Q
+     */
+    q?: string | null;
+    /**
+     * Gender
+     */
+    gender?: string | null;
+    /**
+     * Accent
+     */
+    accent?: string | null;
+};
+
+/**
  * VoiceFacets
  *
  * Distinct selector values across a provider's full voice catalog.
@@ -6612,6 +6664,12 @@ export type WorkflowConfigurationDefaults = {
      * Context Compaction Enabled
      */
     context_compaction_enabled?: boolean;
+    /**
+     * Realtime History Compaction Turns
+     *
+     * Realtime only: summarize and delete server-side history every N completed turns, keeping recent turns verbatim. 0 disables.
+     */
+    realtime_history_compaction_turns?: number;
     /**
      * Tts Cache Enabled
      *
@@ -9998,6 +10056,50 @@ export type GetVoicesApiV1UserConfigurationsVoicesProviderGetResponses = {
 };
 
 export type GetVoicesApiV1UserConfigurationsVoicesProviderGetResponse = GetVoicesApiV1UserConfigurationsVoicesProviderGetResponses[keyof GetVoicesApiV1UserConfigurationsVoicesProviderGetResponses];
+
+export type QueryVoicesApiV1UserConfigurationsVoicesProviderPostData = {
+    body: VoiceCatalogueRequest;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path: {
+        /**
+         * Provider
+         */
+        provider: 'elevenlabs' | 'deepgram' | 'sarvam' | 'cartesia' | 'dograh' | 'rime';
+    };
+    query?: never;
+    url: '/api/v1/user/configurations/voices/{provider}';
+};
+
+export type QueryVoicesApiV1UserConfigurationsVoicesProviderPostErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type QueryVoicesApiV1UserConfigurationsVoicesProviderPostError = QueryVoicesApiV1UserConfigurationsVoicesProviderPostErrors[keyof QueryVoicesApiV1UserConfigurationsVoicesProviderPostErrors];
+
+export type QueryVoicesApiV1UserConfigurationsVoicesProviderPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: VoicesResponse;
+};
+
+export type QueryVoicesApiV1UserConfigurationsVoicesProviderPostResponse = QueryVoicesApiV1UserConfigurationsVoicesProviderPostResponses[keyof QueryVoicesApiV1UserConfigurationsVoicesProviderPostResponses];
 
 export type GetCampaignTrafficStatsApiV1CampaignCampaignIdTrafficStatsGetData = {
     body?: never;
@@ -15900,6 +16002,43 @@ export type GetCurrentUserApiV1AuthMeGetResponses = {
 };
 
 export type GetCurrentUserApiV1AuthMeGetResponse = GetCurrentUserApiV1AuthMeGetResponses[keyof GetCurrentUserApiV1AuthMeGetResponses];
+
+export type ChangePasswordApiV1AuthPasswordChangePostData = {
+    body: ChangePasswordRequest;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/password/change';
+};
+
+export type ChangePasswordApiV1AuthPasswordChangePostErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ChangePasswordApiV1AuthPasswordChangePostError = ChangePasswordApiV1AuthPasswordChangePostErrors[keyof ChangePasswordApiV1AuthPasswordChangePostErrors];
+
+export type ChangePasswordApiV1AuthPasswordChangePostResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
 
 export type ListNodeTypesApiV1NodeTypesGetData = {
     body?: never;

@@ -28,8 +28,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { apiErrorMessage } from "@/i18n/errors";
 import { useCopy } from "@/i18n/LocaleProvider";
-import { detailFromError } from "@/lib/apiError";
 import { useAuth } from "@/lib/auth";
 
 
@@ -170,7 +170,7 @@ export function PhoneNumberDialog({
             },
           },
         );
-        if (res.error) throw new Error(copy(detailFromError(res.error, "Failed to save phone number")));
+        if (res.error) throw new Error(copy(apiErrorMessage(res.error, copy, "Failed to save phone number")));
         providerSync = res.data?.provider_sync;
         toast.success(copy("Phone number updated"));
       } else {
@@ -189,7 +189,7 @@ export function PhoneNumberDialog({
             },
           },
         );
-        if (res.error) throw new Error(copy(detailFromError(res.error, "Failed to save phone number")));
+        if (res.error) throw new Error(copy(apiErrorMessage(res.error, copy, "Failed to save phone number")));
         providerSync = res.data?.provider_sync;
         toast.success(copy("Phone number added"));
       }

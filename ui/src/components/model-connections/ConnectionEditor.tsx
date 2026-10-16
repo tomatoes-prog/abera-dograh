@@ -6,12 +6,14 @@ import { createProviderConnection, updateProviderConnection } from "@/client/sdk
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { detailFromError } from "@/lib/apiError";
+import { apiErrorMessage } from "@/i18n/errors";
+import { useCopy } from "@/i18n/LocaleProvider";
 
 import { connectionProviders, schemaDefaults } from "./configuration";
 import { ConfigurationSelect } from "./ConfigurationSelect";
 import { SchemaFields } from "./SchemaFields";
 import type { ModelConnectionCatalog, ProviderCatalogEntry, ProviderConnection, ServiceRole } from "./types";
+
 
 // The providers to offer, in the order of `keys` when given, so the first is chosen to start.
 function forService(providers: Record<string, ProviderCatalogEntry>, catalog: ModelConnectionCatalog, keys?: string[], role?: ServiceRole) {
@@ -36,6 +38,7 @@ export function ConnectionEditor({ catalog, connection, onSaved, providerKeys, r
     /** Inside a dialog, which supplies the heading. */
     embedded?: boolean;
 }) {
+    const copy = useCopy();
     const providers = forService(connectionProviders(catalog), catalog, providerKeys, role);
     const initialProvider = connection?.provider || Object.keys(providers)[0] || "";
     const [provider, setProvider] = useState(initialProvider);
@@ -70,38 +73,38 @@ export function ConnectionEditor({ catalog, connection, onSaved, providerKeys, r
             const result = connection
                 ? await updateProviderConnection({ path: { connection_uuid: connection.uuid }, body: { ...body, revision: connection.revision } })
                 : await createProviderConnection({ body: { ...body, provider } });
-            if (result.error) throw new Error(detailFromError(result.error, "Failed to save provider connection"));
+            if (result.error) throw new Error(apiErrorMessage(result.error, copy, "Failed to save provider connection"));
             if (!result.data) throw new Error("Failed to save provider connection");
             await onSaved(result.data.uuid, result.data);
-        } catch (cause) { setError(cause instanceof Error ? cause.message : "Failed to save provider connection"); }
+        } catch (cause) { setError(cause instanceof Error ? cause.message : copy("Failed to save provider connection")); }
         finally { setSaving(false); }
     }}>
         {!embedded && <div className="space-y-2">
-            <h1 className="text-2xl font-bold">{connection ? "Edit Provider Connection" : "Add Provider"}</h1>
-            <p className="text-sm text-muted-foreground">Connect provider accounts, like OpenAI, Google Gemini, ElevenLabs using API Keys, then reuse it in your model configurations.</p>
+            <h1 className="text-2xl font-bold">{connection ? copy("Edit Provider Connection") : copy("Add Provider")}</h1>
+            <p className="text-sm text-muted-foreground">{copy("Connect provider accounts, like OpenAI, Google Gemini, ElevenLabs using API Keys, then reuse it in your model configurations.")}</p>
         </div>}
         {error && <p role="alert" className="rounded-md border border-destructive/40 p-3 text-sm text-destructive">{error}</p>}
         <div className="space-y-1.5">
-            <Label htmlFor="connection-provider">Provider</Label>
+            <Label htmlFor="connection-provider">{copy("Provider")}</Label>
             <ConfigurationSelect id="connection-provider" value={provider} required disabled={Boolean(connection)} onValueChange={changeProvider}
                 options={Object.entries(providers)
-                    .map(([key, schema]) => ({ value: key, label: schema.title || key }))
+                    .map(([key, schema]) => ({ value: key, label: copy(schema.title || key) }))
                     .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }))} />
         </div>
-        <div className="space-y-1.5"><Label htmlFor="connection-name">Connection name</Label>
-            <Input id="connection-name" required maxLength={128} placeholder="Production account" value={name} onChange={event => setName(event.target.value)} /></div>
+        <div className="space-y-1.5"><Label htmlFor="connection-name">{copy("Connection name")}</Label>
+            <Input id="connection-name" required maxLength={128} placeholder={copy("Production account")} value={name} onChange={event => setName(event.target.value)} /></div>
         {entry && <>
             {Object.keys(entry.connection_fields).length > 0 && <fieldset className="space-y-3">
-                <legend className="mb-2 text-sm font-semibold">Connection settings</legend>
+                <legend className="mb-2 text-sm font-semibold">{copy("Connection settings")}</legend>
                 <SchemaFields key={`connection-${provider}`} schema={{ properties: entry.connection_fields, required: entry.connection_required }} values={settings}
                     onChange={(field, value) => setSettings(previous => changeField(previous, field, value))} />
             </fieldset>}
             {Object.keys(entry.credential_fields).length > 0 && <fieldset className="space-y-3">
-                <legend className="mb-2 text-sm font-semibold">Credentials</legend>
+                <legend className="mb-2 text-sm font-semibold">{copy("Credentials")}</legend>
                 <SchemaFields key={`credentials-${provider}`} secret schema={{ properties: entry.credential_fields, required: entry.credential_required }} values={credentials}
                     configuredFields={connection?.configured_credentials} onChange={(field, value) => setCredentials(previous => changeField(previous, field, value))} />
             </fieldset>}
         </>}
-        <div className="flex justify-end"><Button type="submit" disabled={saving || !entry || !name.trim()}>{saving ? "Validating and saving…" : "Save Connection"}</Button></div>
+        <div className="flex justify-end"><Button type="submit" disabled={saving || !entry || !name.trim()}>{saving ? copy("Validating and saving…") : copy("Save Connection")}</Button></div>
     </form>;
 }

@@ -5,10 +5,12 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useCopy } from "@/i18n/LocaleProvider";
 
 import { ConfigurationFields, type ConfigurationFieldsDensity } from "./ConfigurationFields";
 import { ConfigurationSelect } from "./ConfigurationSelect";
 import type { WorkflowModelOverride } from "./useWorkflowModelOverride";
+
 
 const INHERIT = "__inherit__";
 const LEGACY = "__legacy__";
@@ -48,12 +50,13 @@ export function WorkflowModelPicker({ model, density = "full", fields }: {
     /** Setting names to show for each service; all of them when omitted. */
     fields?: string[];
 }) {
+    const copy = useCopy();
     const { binding, view, configuration, shared, catalog, connections, defaultUuid, loading, loadError, reload, error, saving } = model;
     const compact = density === "compact";
-    if (loading && !catalog) return <p className="text-sm text-muted-foreground">Loading model configurations…</p>;
+    if (loading && !catalog) return <p className="text-sm text-muted-foreground">{copy("Loading model configurations…")}</p>;
     if (loadError || !catalog) return <div role="alert" className="space-y-2 rounded-md border border-destructive/40 p-3 text-sm text-destructive">
-        {loadError || "Failed to load model configurations"}
-        <div><Button type="button" size="sm" variant="outline" onClick={() => void reload()}>Retry</Button></div>
+        {loadError || copy("Failed to load model configurations")}
+        <div><Button type="button" size="sm" variant="outline" onClick={() => void reload()}>{copy("Retry")}</Button></div>
     </div>;
     const line = status(model);
     const defaultName = shared.find(item => item.uuid === defaultUuid)?.name;
@@ -62,36 +65,36 @@ export function WorkflowModelPicker({ model, density = "full", fields }: {
     return <div className={compact ? "space-y-3" : "space-y-4"}>
         <Tabs value={view} onValueChange={next => { if (next === "custom") model.startCustom(); else void model.leaveCustom(); }}>
             <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="existing" disabled={saving}>Preset configuration</TabsTrigger>
-                <TabsTrigger value="custom" disabled={saving}>Custom</TabsTrigger>
+                <TabsTrigger value="existing" disabled={saving}>{copy("Preset configuration")}</TabsTrigger>
+                <TabsTrigger value="custom" disabled={saving}>{copy("Custom")}</TabsTrigger>
             </TabsList>
         </Tabs>
         {/* On the canvas the select already names the configuration; only warnings and custom state need a line. */}
         {line.text && !(compact && line.tone === "muted") && <p className={`rounded-md border px-3 py-2 text-xs leading-relaxed ${TONE_CLASS[line.tone]}`} role="status">{line.text}</p>}
         {view === "existing" && <div className={compact ? "space-y-1" : "space-y-1.5"}>
-            <label htmlFor="workflow-model-base" className={compact ? "text-xs font-medium text-muted-foreground" : "text-sm font-medium"}>Configuration</label>
-            <ConfigurationSelect id="workflow-model-base" value={selected} disabled={saving} placeholder="Choose a configuration" onValueChange={next => {
+            <label htmlFor="workflow-model-base" className={compact ? "text-xs font-medium text-muted-foreground" : "text-sm font-medium"}>{copy("Configuration")}</label>
+            <ConfigurationSelect id="workflow-model-base" value={selected} disabled={saving} placeholder={copy("Choose a configuration")} onValueChange={next => {
                 if (next === LEGACY || next === UNAVAILABLE) return;
                 void model.useExisting(next === INHERIT ? null : next);
             }} options={[
                 // Following the default moves with it; naming a configuration, the default included, pins it.
                 { value: INHERIT, label: defaultName ? `Organization default (${defaultName})` : "Organization default" },
                 ...shared.map(item => ({ value: item.uuid, label: item.name })),
-                ...(binding.kind === "legacy" ? [{ value: LEGACY, label: "Existing workflow override" }] : []),
-                ...(binding.kind === "unavailable" ? [{ value: UNAVAILABLE, label: "Unavailable configuration" }] : []),
+                ...(binding.kind === "legacy" ? [{ value: LEGACY, label: copy("Existing workflow override") }] : []),
+                ...(binding.kind === "unavailable" ? [{ value: UNAVAILABLE, label: copy("Unavailable configuration") }] : []),
             ]} />
             {binding.kind === "existing" && <Link href={`/model-configurations/${binding.base.uuid}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-muted-foreground underline underline-offset-2">
-                Open {binding.base.name} in Models<ExternalLink className="h-3 w-3" />
+                {copy("Open ")}{binding.base.name} {copy(" in Models")}<ExternalLink className="h-3 w-3" />
             </Link>}
         </div>}
         {view === "custom" && configuration && <ConfigurationFields configuration={configuration} catalog={catalog} connections={connections} onChange={model.edit} onConnectionAdded={model.addConnection} density={density} fields={fields} />}
         {error && <div role="alert" className="flex flex-wrap items-center gap-2 text-xs text-destructive">
             <span>{error}</span>
-            {model.dirty && <Button type="button" size="sm" variant="outline" className="h-6 px-2 text-xs" disabled={saving} onClick={model.retry}>Retry</Button>}
+            {model.dirty && <Button type="button" size="sm" variant="outline" className="h-6 px-2 text-xs" disabled={saving} onClick={model.retry}>{copy("Retry")}</Button>}
         </div>}
         {(saving || !compact) && <p className="inline-flex items-center gap-2 text-xs text-muted-foreground">
-            {saving ? <><Loader2 className="h-3 w-3 animate-spin" />Saving to draft…</>
-                : <span>Manage configurations in <Link href="/model-configurations" className="inline-flex items-center gap-0.5 underline">Models<ExternalLink className="h-3 w-3" /></Link>.</span>}
+            {saving ? <><Loader2 className="h-3 w-3 animate-spin" />{copy("Saving to draft…")}</>
+                : <span>{copy("Manage configurations in ")}<Link href="/model-configurations" className="inline-flex items-center gap-0.5 underline">{copy("Models")}<ExternalLink className="h-3 w-3" /></Link>.</span>}
         </p>}
     </div>;
 }
