@@ -27,7 +27,7 @@ from api.schemas.model_connections import (
     CREDENTIAL_FIELDS,
     ModelConfigurationSpec,
 )
-from api.services.configuration.registry import REGISTRY, ServiceType
+from api.services.configuration.registry import REGISTRY, ServiceType, get_service_configuration
 
 _MIGRATION_PATH = (
     Path(__file__).resolve().parents[1]
@@ -120,7 +120,7 @@ def _assert_valid_for_registry(spec, connections):
         if selection is None:
             continue
         provider = connections[selection["provider_connection_uuid"]]["provider"]
-        schema = REGISTRY[ServiceType[role.upper()]][provider]
+        schema = get_service_configuration(ServiceType[role.upper()], provider)
         allowed = schema.model_fields.keys() - CREDENTIAL_FIELDS - CONNECTION_FIELDS
         assert set(selection["settings"]) <= allowed, (role, provider, selection)
 
@@ -395,21 +395,25 @@ async def _run(test_engine):
 
 
 @pytest.mark.asyncio
-async def test_backfill_binds_current_rows_once_and_leaves_history_alone(
+async def test_backfill_is_atomic_and_preserves_historical_and_archived_settings(
     test_engine, seeded
 ):
     session_factory, ids = seeded
     organization_id = ids["organization"]
 
+    with pytest.raises(ValueError, match="llm_override_without_provider_credentials"):
+        await _run(test_engine)
+    async with session_factory() as session:
+        assert await session.scalar(select(func.count()).select_from(ProviderConnectionModel).where(
+            ProviderConnectionModel.organization_id == organization_id
+        )) == 0
+        await session.execute(update(WorkflowDefinitionModel).where(
+            WorkflowDefinitionModel.id == ids["broken"]
+        ).values(workflow_configurations={}))
+        await session.commit()
     summary = await _run(test_engine)
     assert summary["organizations_without_default"] == []
-    assert summary["inherited"] == [
-        (
-            "workflow_definitions",
-            ids["broken"],
-            "llm_override_without_provider_credentials",
-        )
-    ]
+    assert summary["inherited"] == []
 
     async with session_factory() as session:
         default = await session.scalar(
@@ -453,17 +457,20 @@ async def test_backfill_binds_current_rows_once_and_leaves_history_alone(
         }
 
     assert default in configurations
-    assert configurations[default].name == "Organization default"
+    assert configurations[default].name == "Configuración predeterminada"
     # Dograh default, the Sales BYOK setup, and the draft's voice variant.
     assert sorted(row.name for row in configurations.values()) == [
-        "Organization default",
+        "Configuración predeterminada",
         "Sales",
         "Sales 2",
+        "Sales 3",
     ]
     assert sorted(row["provider"] for row in connections.values()) == [
         "deepgram",
         "dograh",
+        "google",
         "google_vertex",
+        "openai",
     ]
     for row in configurations.values():
         _assert_valid_for_registry(row.configuration, connections)
@@ -472,6 +479,9 @@ async def test_backfill_binds_current_rows_once_and_leaves_history_alone(
     assert configurations[binding["model_configuration_uuid"]].name == "Sales"
     assert definitions[ids["published"]]["model_configuration_override"] == binding
     assert "model_configuration_v2_override" in workflows[ids["overridden"]]
+    assert workflows[ids["archived"]]["model_configuration_override"] == binding
+    historical = definitions[ids["historical"]]["model_configuration_override"]
+    assert configurations[historical["model_configuration_uuid"]].configuration["mode"] == "realtime"
     draft_binding = definitions[ids["draft"]]["model_configuration_override"]
     assert configurations[draft_binding["model_configuration_uuid"]].name == "Sales 2"
     assert configurations[draft_binding["model_configuration_uuid"]].configuration[
@@ -479,8 +489,6 @@ async def test_backfill_binds_current_rows_once_and_leaves_history_alone(
     ]["settings"] == {"voice": "rachel", "speed": 1.0}
     for untouched in (
         workflows[ids["inherits"]],
-        workflows[ids["archived"]],
-        definitions[ids["historical"]],
         definitions[ids["broken"]],
     ):
         assert "model_configuration_override" not in untouched
@@ -495,5 +503,5 @@ async def test_backfill_binds_current_rows_once_and_leaves_history_alone(
                 .select_from(NamedModelConfigurationModel)
                 .where(NamedModelConfigurationModel.organization_id == organization_id)
             )
-            == 3
+            == 4
         )

@@ -5,13 +5,14 @@ Revises: a7128e93bc40
 
 Each organization's MODEL_CONFIGURATION_V2 row becomes provider connections
 plus an "Organization default" named configuration, which becomes the
-organization's default. Each active workflow row, its current published
-definition and its drafts that carry an inline V2 override or partial
+organization's default. Every workflow and definition, including archived
+and historical versions, that carries an inline V2 override or partial
 model_overrides get a named configuration of their own (identical setups
 within an organization share one row) and a model_configuration_override
 binding. Rows without inline settings get no binding, which the application
-reads as "inherit the organization default". Archived workflows and
-historical definitions are left untouched.
+reads as "inherit the organization default". Historical execution facts and
+customer content are left untouched. Unconvertible rows abort before any
+catalog writes instead of silently inheriting another configuration.
 
 The conversion is a frozen copy of the application's V2 compile and
 credential split at this revision, operating on raw JSON, so the migration
@@ -72,6 +73,11 @@ _ROLES = {
     "realtime": ("llm", "realtime", "embeddings"),
 }
 _REQUIRED = {"pipeline": ("llm", "stt", "tts"), "realtime": ("llm", "realtime")}
+_ACCOUNT_PROVIDER = {
+    "openai_realtime": "openai",
+    "google_realtime": "google",
+    "google_vertex_realtime": "google_vertex",
+}
 
 _LEGACY_ROWS_SQL = """
 SELECT w.organization_id,
@@ -81,8 +87,7 @@ SELECT w.organization_id,
        w.id AS row_id,
        w.workflow_configurations AS configuration
 FROM workflows w
-WHERE w.status <> 'archived'
-  AND jsonb_exists_any(COALESCE(w.workflow_configurations, '{}')::jsonb,
+WHERE jsonb_exists_any(COALESCE(w.workflow_configurations, '{}')::jsonb,
                        ARRAY[:full_key, :partial_key])
 UNION ALL
 SELECT w.organization_id,
@@ -93,9 +98,7 @@ SELECT w.organization_id,
        d.workflow_configurations
 FROM workflow_definitions d
 JOIN workflows w ON w.id = d.workflow_id
-WHERE w.status <> 'archived'
-  AND (d.status = 'draft' OR (d.status = 'published' AND d.is_current))
-  AND jsonb_exists_any(COALESCE(d.workflow_configurations, '{}')::jsonb,
+WHERE jsonb_exists_any(COALESCE(d.workflow_configurations, '{}')::jsonb,
                        ARRAY[:full_key, :partial_key])
 ORDER BY 1, 2, 4, 5
 """
@@ -264,6 +267,7 @@ class OrganizationCatalog:
         return name
 
     def _connection(self, provider, credentials, connection_settings):
+        provider = _ACCOUNT_PROVIDER.get(provider, provider)
         key = (provider, _canonical(credentials), _canonical(connection_settings))
         if key not in self._connections:
             row_uuid = str(uuid.uuid4())
@@ -351,7 +355,7 @@ def migrate(connection):
         try:
             mode, sections = sections_from_v2(row.value)
             defaults[row.organization_id] = catalog.configuration(
-                mode, sections, "Organization default"
+                mode, sections, "Configuración predeterminada"
             )
             organization_services[row.organization_id] = (mode, sections)
         except Unconvertible as exc:
@@ -399,6 +403,12 @@ def migrate(connection):
         bindings[row.kind].append(
             {"id": row.row_id, "configuration": json.dumps(configuration)}
         )
+
+    invalid = summary["organizations_without_default"] + summary["inherited"]
+    if invalid:
+        # Fixed reason codes and row IDs only, never customer text or secrets.
+        # Complete preflight before any INSERT or UPDATE.
+        raise ValueError(f"No se puede migrar el catálogo; revisa estas filas: {invalid}")
 
     connections = [c for catalog in catalogs.values() for c in catalog.connections]
     configurations = [

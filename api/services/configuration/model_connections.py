@@ -14,6 +14,7 @@ from fastapi import HTTPException
 from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
 
+from api import constants
 from api.db import db_client
 from api.enums import OrganizationConfigurationKey
 from api.schemas.ai_model_configuration import EffectiveAIModelConfiguration
@@ -58,10 +59,34 @@ def connection_provider(provider):
 
 
 def _schema(role, provider):
+    _require_allowed_provider(provider)
     schema = get_service_configuration(ServiceType[role.upper()], _provider(provider))
     if schema is None:
         raise _invalid(f"Provider does not support {role}")
     return schema
+
+
+def _require_allowed_provider(provider):
+    if _provider(provider) == "dograh" and (
+        constants.DEPLOYMENT_MODE == "abera" or not constants.ENABLE_DOGRAH_MPS
+    ):
+        raise _invalid(
+            "Los servicios administrados de Dograh están desactivados. Configura un proveedor propio."
+        )
+
+
+def validate_embedding_connection_update(provider, existing_settings, settings, credentials):
+    """A stored secret must never be forwarded to a newly selected endpoint."""
+    if _provider(provider) != "openai_compatible":
+        return
+    def normalize(value):
+        return (value or "").strip().rstrip("/")
+    if normalize(existing_settings.get("base_url")) == normalize(settings.get("base_url")):
+        return
+    key = credentials.get("api_key")
+    keys = key if isinstance(key, list) else [key]
+    if not keys or any(not isinstance(value, str) or not value.strip() or "***" in value for value in keys):
+        raise _invalid("Al cambiar la URL del proveedor de embeddings, vuelve a ingresar la API key.")
 
 
 def _validation_failure(role, exc):
@@ -101,6 +126,10 @@ def model_connection_catalog():
         for cls in REGISTRY[ServiceType[role.upper()]].values():
             schema = cls.model_json_schema(mode="validation")
             provider = cls.provider_definition
+            if provider.id == "dograh" and (
+                constants.DEPLOYMENT_MODE == "abera" or not constants.ENABLE_DOGRAH_MPS
+            ):
+                continue
             properties = schema.get("properties", {})
             required = schema.get("required", [])
             settings = {
@@ -158,6 +187,7 @@ def _validate_connection_urls(connection_settings):
 
 def validate_provider_connection(provider, credentials, connection_settings):
     """A connection must locally validate for at least one registered service."""
+    _require_allowed_provider(provider)
     _validate_connection_urls(connection_settings)
     provider = connection_provider(provider)
     schemas = [
@@ -187,6 +217,10 @@ def validate_provider_connection(provider, credentials, connection_settings):
             for key, value in {**credentials, **connection_settings}.items()
             if key in schema.model_fields
         }
+        if _provider(provider) == "openai_compatible":
+            # The real model belongs to a named configuration. This value is
+            # used for local connection shape validation only, never an API call.
+            payload["model"] = "connection-validation-only"
         try:
             service = schema.model_validate(
                 {**payload, "provider": schema.model_fields["provider"].default}
@@ -210,6 +244,8 @@ async def validate_provider_connection_credentials(
 ):
     """Check credentials only on connection writes, never during resolution."""
     service = validate_provider_connection(provider, credentials, connection_settings)
+    if _provider(provider) == "openai_compatible":
+        return  # Probe only with a configured embedding model, below.
     try:
         await run_in_threadpool(
             UserConfigurationValidator().validate_connection,
@@ -219,6 +255,40 @@ async def validate_provider_connection_credentials(
         )
     except ValueError as exc:
         raise _invalid(str(exc)) from None
+
+
+async def validate_embedding_configuration(organization_id, service, created_by=None):
+    """Validate custom vectors when saving a model, never on call startup."""
+    if service is None or _provider(service.provider) != "openai_compatible":
+        return
+    try:
+        await run_in_threadpool(
+            UserConfigurationValidator().validate_connection,
+            service,
+            organization_id=organization_id,
+            created_by=created_by,
+        )
+    except ValueError as exc:
+        raise _invalid(str(exc)) from None
+
+
+async def validate_saved_embedding_models(organization_id, connection, credentials, settings, created_by=None):
+    """Check every active model affected by a custom endpoint/key change."""
+    if connection.provider != "openai_compatible":
+        return
+    rows = await db_client.list_named_model_configurations(organization_id)
+    seen = set()
+    for row in rows:
+        selection = (row.configuration or {}).get("embeddings")
+        if not selection or selection.get("provider_connection_uuid") != connection.uuid:
+            continue
+        model_settings = selection.get("settings") or {}
+        model = model_settings.get("model")
+        if model in seen:
+            continue
+        seen.add(model)
+        service = _build_service("embeddings", connection.provider, credentials, settings, model_settings)
+        await validate_embedding_configuration(organization_id, service, created_by)
 
 
 def _check_required_credentials(service):

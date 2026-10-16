@@ -28,6 +28,9 @@ from api.services.configuration.model_connections import (
     resolve_inline_model_configuration,
     resolve_model_configuration,
     validate_embedding_compatibility,
+    validate_embedding_connection_update,
+    validate_embedding_configuration,
+    validate_saved_embedding_models,
     validate_provider_connection,
     validate_provider_connection_credentials,
 )
@@ -164,6 +167,9 @@ async def update_connection(
         row.credentials, changes.get("credentials", {})
     )
     settings = changes.get("connection_settings", row.connection_settings)
+    validate_embedding_connection_update(
+        row.provider, row.connection_settings, settings, changes.get("credentials", {})
+    )
     if changes.get("credentials") or settings != row.connection_settings:
         await validate_provider_connection_credentials(
             row.provider,
@@ -171,6 +177,9 @@ async def update_connection(
             settings,
             organization_id=user.selected_organization_id,
             created_by=user.provider_id,
+        )
+        await validate_saved_embedding_models(
+            user.selected_organization_id, row, credentials, settings, user.provider_id
         )
     else:
         validate_provider_connection(row.provider, credentials, settings)
@@ -236,8 +245,11 @@ async def list_configurations(user: UserModel = Auth, include_archived: bool = F
 async def create_configuration(
     request: NamedModelConfigurationCreate, user: UserModel = Auth
 ):
-    await resolve_inline_model_configuration(
+    resolved = await resolve_inline_model_configuration(
         user.selected_organization_id, request.configuration
+    )
+    await validate_embedding_configuration(
+        user.selected_organization_id, resolved.effective.embeddings, user.provider_id
     )
     row = await _write(
         db_client.create_named_model_configuration(
@@ -282,6 +294,10 @@ async def update_configuration(
         resolved = await resolve_inline_model_configuration(
             user.selected_organization_id, request.configuration
         )
+        if existing.configuration.get("embeddings") != changes["configuration"].get("embeddings"):
+            await validate_embedding_configuration(
+                user.selected_organization_id, resolved.effective.embeddings, user.provider_id
+            )
         default = await get_default(user.selected_organization_id)
         if (
             default is not None
