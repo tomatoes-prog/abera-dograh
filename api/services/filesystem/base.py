@@ -21,6 +21,14 @@ class _AsyncBytesReader:
 class BaseFileSystem(ABC):
     """Abstract base class for filesystem operations."""
 
+    async def adelete_file(self, file_path: str) -> bool:
+        """Erase an exact file and all its versions; return true only after verification."""
+        raise NotImplementedError("This storage backend has no verified deletion adapter")
+
+    async def alist_object_versions(self, prefix: str, cursor=None):
+        """One bounded metadata page, including noncurrent versions and markers."""
+        raise NotImplementedError("This storage backend has no version inventory adapter")
+
     @abstractmethod
     async def acreate_file(self, file_path: str, content: AsyncReadable) -> bool:
         """Create a new file with the given content.

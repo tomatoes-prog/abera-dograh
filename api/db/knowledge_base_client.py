@@ -1,6 +1,8 @@
 """Database client for managing knowledge base documents and chunks."""
 
 import hashlib
+import uuid
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import List, Optional
 
@@ -8,11 +10,18 @@ from loguru import logger
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import selectinload
 
-from api.db.base_client import BaseDBClient
-from api.db.models import KnowledgeBaseChunkModel, KnowledgeBaseDocumentModel
+from api.db.knowledge_base_storage_client import (
+    KnowledgeBaseStorageClient,
+    storage_object_id,
+)
+from api.db.models import (
+    KnowledgeBaseChunkModel,
+    KnowledgeBaseDocumentModel,
+    KnowledgeBaseStorageObjectModel,
+)
 
 
-class KnowledgeBaseClient(BaseDBClient):
+class KnowledgeBaseClient(KnowledgeBaseStorageClient):
     """Client for managing knowledge base documents and vector embeddings."""
 
     async def create_document(
@@ -63,8 +72,11 @@ class KnowledgeBaseClient(BaseDBClient):
             )
 
             # Use provided UUID or let the model generate one
-            if document_uuid:
-                document.document_uuid = document_uuid
+            document.document_uuid = document_uuid or str(uuid.uuid4())
+
+            if (custom_metadata or {}).get("s3_key"):
+                await self._attach_document_object(session, organization_id, document.document_uuid,
+                                                   custom_metadata["s3_key"])
 
             session.add(document)
             await session.commit()
@@ -220,8 +232,9 @@ class KnowledgeBaseClient(BaseDBClient):
         """
         async with self.async_session() as session:
             query = select(KnowledgeBaseDocumentModel).where(
-                KnowledgeBaseDocumentModel.id == document_id
-            )
+                KnowledgeBaseDocumentModel.id == document_id,
+                KnowledgeBaseDocumentModel.is_active.is_(True),
+            ).with_for_update()
             result = await session.execute(query)
             document = result.scalar_one_or_none()
 
@@ -263,8 +276,9 @@ class KnowledgeBaseClient(BaseDBClient):
         """
         async with self.async_session() as session:
             query = select(KnowledgeBaseDocumentModel).where(
-                KnowledgeBaseDocumentModel.id == document_id
-            )
+                KnowledgeBaseDocumentModel.id == document_id,
+                KnowledgeBaseDocumentModel.is_active.is_(True),
+            ).with_for_update()
             result = await session.execute(query)
             document = result.scalar_one_or_none()
 
@@ -272,8 +286,7 @@ class KnowledgeBaseClient(BaseDBClient):
                 return None
 
             document.processing_status = status
-            if error_message:
-                document.processing_error = error_message
+            document.processing_error = error_message
             if total_chunks is not None:
                 document.total_chunks = total_chunks
             if docling_metadata:
@@ -315,6 +328,12 @@ class KnowledgeBaseClient(BaseDBClient):
     ) -> List[KnowledgeBaseChunkModel]:
         """Replace all chunks for a document with a new precomputed batch."""
         async with self.async_session() as session:
+            document = await session.scalar(select(KnowledgeBaseDocumentModel).where(
+                KnowledgeBaseDocumentModel.id == document_id,
+                KnowledgeBaseDocumentModel.organization_id == organization_id,
+                KnowledgeBaseDocumentModel.is_active.is_(True)).with_for_update())
+            if not document:
+                return []
             await session.execute(
                 delete(KnowledgeBaseChunkModel).where(
                     KnowledgeBaseChunkModel.document_id == document_id,
@@ -472,8 +491,9 @@ class KnowledgeBaseClient(BaseDBClient):
         """
         async with self.async_session() as session:
             query = select(KnowledgeBaseDocumentModel).where(
-                KnowledgeBaseDocumentModel.id == document_id
-            )
+                KnowledgeBaseDocumentModel.id == document_id,
+                KnowledgeBaseDocumentModel.is_active.is_(True),
+            ).with_for_update()
             result = await session.execute(query)
             document = result.scalar_one_or_none()
             if document:
@@ -572,6 +592,7 @@ class KnowledgeBaseClient(BaseDBClient):
                 .where(
                     KnowledgeBaseDocumentModel.id == document_id,
                     KnowledgeBaseDocumentModel.organization_id == organization_id,
+                    KnowledgeBaseDocumentModel.is_active.is_(True),
                 )
                 .values(
                     processing_status=processing_status,
@@ -589,7 +610,8 @@ class KnowledgeBaseClient(BaseDBClient):
     ) -> bool:
         """Soft delete a document by setting is_active to False.
 
-        This will also cascade delete all chunks via the database foreign key.
+        Persist storage cleanup in the same transaction. Erase searchable
+        content immediately and redact metadata after verified storage removal.
 
         Args:
             document_uuid: The unique document UUID
@@ -602,7 +624,7 @@ class KnowledgeBaseClient(BaseDBClient):
             query = select(KnowledgeBaseDocumentModel).where(
                 KnowledgeBaseDocumentModel.document_uuid == document_uuid,
                 KnowledgeBaseDocumentModel.organization_id == organization_id,
-            )
+            ).with_for_update()
 
             result = await session.execute(query)
             document = result.scalar_one_or_none()
@@ -611,6 +633,25 @@ class KnowledgeBaseClient(BaseDBClient):
                 return False
 
             document.is_active = False
+            document.archived_at = document.archived_at or datetime.now(UTC)
+            await session.execute(delete(KnowledgeBaseChunkModel).where(
+                KnowledgeBaseChunkModel.document_id == document.id,
+                KnowledgeBaseChunkModel.organization_id == organization_id))
+            document.full_text, document.total_chunks = None, 0
+            key = (document.custom_metadata or {}).get("s3_key")
+            if key:
+                item = await session.get(KnowledgeBaseStorageObjectModel, storage_object_id(key), with_for_update=True)
+                if not item:
+                    item = KnowledgeBaseStorageObjectModel(id=storage_object_id(key), organization_id=organization_id,
+                        document_uuid=document_uuid, object_key=key, state="deleting")
+                    session.add(item)
+                if item.state != "purged":
+                    item.state, item.delete_after = "deleting", datetime.now(UTC)
+            await session.execute(update(KnowledgeBaseStorageObjectModel).where(
+                KnowledgeBaseStorageObjectModel.organization_id == organization_id,
+                KnowledgeBaseStorageObjectModel.document_uuid == document_uuid,
+                KnowledgeBaseStorageObjectModel.state != "purged",
+            ).values(state="deleting", delete_after=datetime.now(UTC)))
             await session.commit()
 
             logger.info(
