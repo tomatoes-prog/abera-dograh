@@ -5,6 +5,10 @@ entrega coordina el runtime, `abera-automation` y `abera-payments`. No despliega
 PROD ni habilita Pro. El catálogo técnico y el catálogo de ventas se publican
 por sus flujos existentes, conservando las releases y los contratos anteriores.
 
+También se prepara una [entrega local coordinada](LOCAL_DELIVERY.md) mediante
+Automations CLI y SSO dedicado DEV, con fuentes fijadas, revisión nativa y bloqueo
+compartido. La instalación de IAM y el primer despliegue quedan pendientes de revisión.
+
 ## Documentos y almacenamiento
 
 La revisión Alembic `d9e621a7f304`, posterior a `c82d4f6a9b10`, registra las
