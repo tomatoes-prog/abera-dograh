@@ -13,11 +13,28 @@ su gitlink. Las imágenes se construyen desde esas fuentes locales. No se incorp
 Cambios locales posteriores no se despliegan silenciosamente.
 
 La ejecución necesita Python 3.13, el entorno fijado de Billing, SAM, AWS CLI,
-Docker rootless y un perfil SSO dedicado DEV. Preparar el ejecutor antes de activar
+Docker rootless y los perfiles SSO existentes `abera-dev-bootstrap` y
+`abera-dev-billing-bootstrap`. El seed-installer mantiene su función; no hace falta
+crear otro usuario, grupo ni permission set. Preparar el ejecutor antes de activar
 el acceso. El Docker Desktop habitual por sí solo no cumple rootless; usar el
 entorno WSL2/Linux documentado y seleccionar su daemon mediante `DOCKER_HOST`.
 La CLI usa los roles existentes, revisa cada cambio nativo y conserva un bloqueo
 compartido y journal S3. Un resultado incierto no libera automáticamente el bloqueo.
+
+El helper WSL de Automations prepara una unidad de usuario propia
+`abera-dev-delivery-docker.service`, sin cambiar el contexto Docker ni los servicios
+existentes. Python 3.13 y las dependencias de cada repositorio se mantienen en
+entornos separados. El puente de credenciales reutiliza SSO Windows mediante un
+pipe; no copia tokens ni guarda claves. El servicio tiene inicio y apagado explícitos.
+
+Los cambios de acceso se proyectan sobre las plantillas instaladas, conservando
+permisos y recursos. Se revisan primero `abera-dev-bootstrap` y
+`abera-dev-billing-bootstrap`; después el rol apply de Billing permite leer y
+preparar la confianza de `abera-billing-dev-catalog` sin ampliar su acceso comercial
+a otros productos. Ese tercer paso requiere su propia comparación y revisión nativa.
+
+La [revisión de acceso DEV](DEV_LOCAL_ACCESS_REVIEW.md) conserva los cambios
+CloudFormation concretos, hashes, perfiles verificados y estado del ejecutor local.
 
 Publicar una release técnica, promover el default, actualizar clientes y publicar
 el catálogo comercial son pasos separados. Los archivos históricos siguen
