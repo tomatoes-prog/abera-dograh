@@ -11,6 +11,30 @@ from api.services.filesystem.quota import StorageQuotaExceeded
 from api.services.filesystem.s3 import S3FileSystem
 
 
+async def test_slow_managed_upload_expires_before_cleanup_and_removes_temporary_file(monkeypatch, tmp_path):
+    import asyncio
+    import json
+
+    from api.services.abera import storage_upload as service
+
+    redis = SimpleNamespace(getdel=AsyncMock(return_value=json.dumps({
+        "key": "knowledge_base/1/owned/file.txt", "size": 1, "content_type": "text/plain"})))
+    monkeypatch.setattr(service, "get_arq_redis", AsyncMock(return_value=redis))
+    monkeypatch.setattr(service, "UPLOAD_TIMEOUT_SECONDS", 0.001)
+    factory = service.tempfile.NamedTemporaryFile
+    monkeypatch.setattr(service.tempfile, "NamedTemporaryFile", lambda **kwargs: factory(dir=tmp_path, **kwargs))
+    storage = SimpleNamespace(aupload_file=AsyncMock())
+    monkeypatch.setattr(service, "storage_fs", storage)
+    async def stream():
+        await asyncio.sleep(1)
+        yield b"x"
+    with pytest.raises(HTTPException) as error:
+        await service.receive_upload("a" * 32, SimpleNamespace(headers={"content-type": "text/plain"}, stream=stream))
+    assert error.value.status_code == 408
+    storage.aupload_file.assert_not_awaited()
+    assert list(tmp_path.iterdir()) == []
+
+
 def fs_with_client(monkeypatch, *, used=90, previous=0):
     fs = S3FileSystem("private", key_prefix="subscriptions/one", storage_limit_bytes=100)
     client = SimpleNamespace(put_object=AsyncMock(), upload_file=AsyncMock(), copy_object=AsyncMock())
@@ -105,7 +129,10 @@ async def test_bounded_download_enforces_header_and_actual_bytes(monkeypatch, tm
 
 
 async def test_quota_store_failure_prevents_writes(monkeypatch):
-    from api.services.filesystem.quota import StorageQuotaUnavailable, storage_write_lock
+    from api.services.filesystem.quota import (
+        StorageQuotaUnavailable,
+        storage_write_lock,
+    )
     fs, client = fs_with_client(monkeypatch)
     monkeypatch.setattr("api.services.filesystem.s3.storage_write_lock", storage_write_lock)
     monkeypatch.setattr("api.tasks.arq.get_arq_redis", AsyncMock(side_effect=ConnectionError("offline")))
@@ -116,8 +143,8 @@ async def test_quota_store_failure_prevents_writes(monkeypatch):
 
 async def test_competing_writes_cannot_exceed_subscription_budget(monkeypatch):
     import asyncio
+
     from api.services.filesystem.quota import storage_write_lock
-    from api.tasks.arq import get_arq_redis
     fs, client = fs_with_client(monkeypatch, used=0)
     objects = {}
 
@@ -154,6 +181,7 @@ async def test_foreign_metadata_never_reaches_storage(monkeypatch, key):
 
 async def test_upload_token_is_consumed_and_size_enforced(monkeypatch):
     import json
+
     from api.services.abera import storage_upload as service
     redis = SimpleNamespace(getdel=AsyncMock(side_effect=[json.dumps({"key": "campaigns/1/a.csv", "size": 2, "content_type": "text/csv"}), None]))
     monkeypatch.setattr(service, "get_arq_redis", AsyncMock(return_value=redis))

@@ -1,14 +1,13 @@
 import os
-import aiofiles
 from contextlib import asynccontextmanager
-
-from api.services.filesystem.quota import StorageQuotaExceeded, storage_write_lock
-
 from typing import Any, Dict, Optional
 
 import aioboto3
+import aiofiles
 from botocore.config import Config
 from botocore.exceptions import ClientError
+
+from api.services.filesystem.quota import StorageQuotaExceeded, storage_write_lock
 
 from .base import AsyncReadable, BaseFileSystem
 
@@ -64,6 +63,53 @@ class S3FileSystem(BaseFileSystem):
         if not self.key_prefix:
             return file_path
         return f"{self.key_prefix}/{file_path.lstrip('/')}"
+
+    async def adelete_file(self, file_path: str) -> bool:
+        key = self._key(file_path)
+        async with self.session.client("s3", **self._client_kwargs()) as client:
+            # Include delete markers and noncurrent versions. Prefix matching
+            # alone must never authorize erasing a similarly named object.
+            async for page in client.get_paginator("list_object_versions").paginate(Bucket=self.bucket_name, Prefix=key):
+                for item in page.get("Versions", []) + page.get("DeleteMarkers", []):
+                    if item["Key"] == key:
+                        await client.delete_object(Bucket=self.bucket_name, Key=key, VersionId=item["VersionId"])
+            async for page in client.get_paginator("list_object_versions").paginate(Bucket=self.bucket_name, Prefix=key):
+                if any(item["Key"] == key for item in page.get("Versions", []) + page.get("DeleteMarkers", [])):
+                    return False
+            try:
+                await client.head_object(Bucket=self.bucket_name, Key=key)
+            except ClientError as error:
+                if error.response["Error"]["Code"] in {"404", "NoSuchKey", "NotFound"}:
+                    return True
+                raise
+            return False
+
+    async def alist_object_versions(self, prefix: str, cursor=None):
+        physical_prefix = self._key(prefix)
+        arguments = {"Bucket": self.bucket_name, "Prefix": physical_prefix, "MaxKeys": 500}
+        if cursor:
+            if (not isinstance(cursor, dict) or set(cursor) - {"KeyMarker", "VersionIdMarker"}
+                    or not str(cursor.get("KeyMarker", "")).startswith(physical_prefix)):
+                raise ValueError("El inventario está fuera del prefijo autorizado.")
+            arguments.update(cursor)
+        async with self.session.client("s3", **self._client_kwargs()) as client:
+            page = await client.list_object_versions(**arguments)
+        if type(page.get("IsTruncated")) is not bool:
+            raise ValueError("El inventario no confirmó su paginación.")
+        rows = []
+        for item in page.get("Versions", []) + page.get("DeleteMarkers", []):
+            if not item["Key"].startswith(physical_prefix):
+                raise ValueError("El inventario cambió de organización.")
+            relative = item["Key"][len(self.key_prefix) + 1:] if self.key_prefix else item["Key"]
+            rows.append({"key": relative, "modified_at": item["LastModified"]})
+        next_cursor = None
+        if page["IsTruncated"]:
+            next_cursor = {"KeyMarker": page["NextKeyMarker"]}
+            if page.get("NextVersionIdMarker"):
+                next_cursor["VersionIdMarker"] = page["NextVersionIdMarker"]
+            if next_cursor == cursor:
+                raise ValueError("El inventario no avanzó.")
+        return rows, next_cursor
 
     def _client_kwargs(self, *, for_presigning: bool = False) -> Dict[str, Any]:
         """Common kwargs for every ``session.client("s3", ...)`` call.

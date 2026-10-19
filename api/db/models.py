@@ -1340,6 +1340,22 @@ class ToolModel(Base):
     )
 
 
+class KnowledgeBaseStorageObjectModel(Base):
+    """Durable upload/cleanup intents; the queue may be rebuilt from this table."""
+
+    __tablename__ = "knowledge_base_storage_objects"
+    id = Column(String(64), primary_key=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    document_uuid = Column(String(36), nullable=False, index=True)
+    object_key = Column(String(1024), nullable=False)
+    state = Column(String(16), nullable=False, default="awaiting")
+    delete_after = Column(DateTime(timezone=True), nullable=True, index=True)
+    purged_at = Column(DateTime(timezone=True), nullable=True)
+    attempts = Column(Integer, nullable=False, default=0)
+    last_error = Column(String(40), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
+
+
 class KnowledgeBaseDocumentModel(Base):
     """Model for storing document-level metadata in the knowledge base.
 

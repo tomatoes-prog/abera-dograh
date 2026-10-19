@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
 
 from api.db import db_client
+from api.db.knowledge_base_storage_client import DocumentUploadExpired
 from api.db.models import KnowledgeBaseDocumentModel
 from api.enums import PostHogEvent
 from api.schemas.knowledge_base import (
@@ -23,6 +24,10 @@ from api.schemas.knowledge_base import (
 )
 from api.sdk_expose import sdk_expose
 from api.services.auth.depends import get_user
+from api.services.knowledge_base.processing import (
+    MAX_FILE_SIZE_BYTES,
+    SUPPORTED_EXTENSIONS,
+)
 from api.services.knowledge_base_content import (
     DocumentContentConflictError,
     DocumentContentTooLargeError,
@@ -31,10 +36,9 @@ from api.services.knowledge_base_content import (
     read_document_content,
     update_document_content,
 )
+from api.services.model_services.policy import MPSDisabledError
 from api.services.posthog_client import capture_event
 from api.services.storage import storage_fs
-from api.services.knowledge_base.processing import MAX_FILE_SIZE_BYTES, SUPPORTED_EXTENSIONS
-from api.services.model_services.policy import MPSDisabledError
 
 router = APIRouter(prefix="/knowledge-base", tags=["knowledge-base"])
 
@@ -135,6 +139,8 @@ async def get_upload_url(
                 status_code=500, detail="Failed to generate presigned upload URL"
             )
 
+        await db_client.register_document_upload(user.selected_organization_id, document_uuid, s3_key)
+
         logger.info(
             f"Generated upload URL for document {document_uuid}, "
             f"user {user.id}, org {user.selected_organization_id}"
@@ -146,6 +152,8 @@ async def get_upload_url(
             s3_key=s3_key,
         )
 
+    except DocumentUploadExpired as exc:
+        raise HTTPException(410, str(exc)) from None
     except HTTPException:
         raise
     except Exception as exc:
@@ -253,6 +261,8 @@ async def process_document(
             is_active=True,
         )
 
+    except DocumentUploadExpired as exc:
+        raise HTTPException(410, str(exc)) from None
     except HTTPException:
         raise
     except Exception as exc:
@@ -454,7 +464,7 @@ async def delete_document(
     document_uuid: str,
     user=Depends(get_user),
 ):
-    """Soft delete a document and its chunks.
+    """Remove the document and persist verified storage cleanup for the worker.
 
     Access Control:
     * Users can only delete documents from their organization.

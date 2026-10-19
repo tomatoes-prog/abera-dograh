@@ -1,5 +1,6 @@
 """Single-use, size-bounded uploads that preserve the existing browser PUT flow."""
 
+import asyncio
 import json
 import os
 import tempfile
@@ -10,6 +11,8 @@ from fastapi import HTTPException, Request
 from api.services.storage import storage_fs
 from api.tasks.arq import get_arq_redis
 from api.utils.common import get_backend_endpoints
+
+UPLOAD_TIMEOUT_SECONDS = 300
 
 
 async def create_upload_url(key: str, size: int, content_type: str) -> str:
@@ -38,16 +41,19 @@ async def receive_upload(token: str, request: Request):
     with tempfile.NamedTemporaryFile(delete=False) as output:
         path = output.name
     try:
-        received = 0
-        with open(path, "wb") as output:
-            async for chunk in request.stream():
-                received += len(chunk)
-                if received > grant["size"]:
-                    raise HTTPException(413, "Upload exceeds the authorized size")
-                output.write(chunk)
-        if received != grant["size"]:
-            raise HTTPException(400, "Upload size does not match the authorized size")
-        if not await storage_fs.aupload_file(path, grant["key"]):
-            raise HTTPException(503, "Could not store upload")
+        async with asyncio.timeout(UPLOAD_TIMEOUT_SECONDS):
+            received = 0
+            with open(path, "wb") as output:
+                async for chunk in request.stream():
+                    received += len(chunk)
+                    if received > grant["size"]:
+                        raise HTTPException(413, "Upload exceeds the authorized size")
+                    output.write(chunk)
+            if received != grant["size"]:
+                raise HTTPException(400, "Upload size does not match the authorized size")
+            if not await storage_fs.aupload_file(path, grant["key"]):
+                raise HTTPException(503, "Could not store upload")
+    except TimeoutError:
+        raise HTTPException(408, "La carga tardó demasiado; selecciona el archivo de nuevo.") from None
     finally:
         os.unlink(path)

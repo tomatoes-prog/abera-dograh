@@ -5,8 +5,11 @@ import pytest
 from fastapi import HTTPException
 
 from api.routes import knowledge_base as routes
-from api.schemas.knowledge_base import ChunkSearchRequestSchema, ProcessDocumentRequestSchema
-from api.schemas.knowledge_base import DocumentUploadRequestSchema
+from api.schemas.knowledge_base import (
+    ChunkSearchRequestSchema,
+    DocumentUploadRequestSchema,
+    ProcessDocumentRequestSchema,
+)
 from api.tasks import knowledge_base_processing as task
 
 DOCUMENT_UUID = "b082a155-766f-4941-9e52-a0858e699689"
@@ -115,6 +118,8 @@ async def test_managed_document_upload_uses_the_existing_quota_proxy(monkeypatch
     from api.services.abera import storage_upload
 
     monkeypatch.setattr(constants, "DEPLOYMENT_MODE", "abera")
+    register = AsyncMock()
+    monkeypatch.setattr(routes.db_client, "register_document_upload", register)
     ticket = AsyncMock(return_value="https://example.com/api/v1/s3/managed-upload/test")
     monkeypatch.setattr(storage_upload, "create_upload_url", ticket)
     direct_upload = AsyncMock(side_effect=AssertionError("must not bypass quota"))
@@ -123,13 +128,14 @@ async def test_managed_document_upload_uses_the_existing_quota_proxy(monkeypatch
     result = await routes.get_upload_url(request, user=SimpleNamespace(id=1, selected_organization_id=42))
     assert result.upload_url.endswith("/managed-upload/test")
     assert ticket.call_args.args == (result.s3_key, 123, "text/plain")
+    register.assert_awaited_once_with(42, result.document_uuid, result.s3_key)
     direct_upload.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 async def test_search_without_embedding_key_explains_configuration_before_any_provider_call(monkeypatch):
-    from api.services.configuration import ai_model_configuration as configuration
     from api.services import gen_ai
+    from api.services.configuration import ai_model_configuration as configuration
 
     monkeypatch.setattr(configuration, "get_resolved_ai_model_configuration", AsyncMock(return_value=SimpleNamespace(
         effective=SimpleNamespace(embeddings=None),

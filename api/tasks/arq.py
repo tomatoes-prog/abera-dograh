@@ -61,6 +61,7 @@ from api.tasks.campaign_tasks import (
     process_campaign_batch,
     sync_campaign_source,
 )
+from api.tasks.knowledge_base_cleanup import sweep_document_storage
 from api.tasks.knowledge_base_processing import process_knowledge_base_document
 from api.tasks.run_integrations import run_integrations_post_workflow_run
 from api.tasks.text_chat_completion import finalize_completed_text_chat
@@ -84,6 +85,7 @@ class WorkerSettings:
         finalize_completed_text_chat,
     ]
     cron_jobs = [
+        cron(sweep_document_storage, minute=set(range(0, 60, 5)), second=15, run_at_startup=True),
         # Safety net for webhook deliveries whose ARQ job was lost (worker
         # restart / Redis flush): re-enqueue any pending delivery that is overdue.
         cron(
