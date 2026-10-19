@@ -1,162 +1,124 @@
-# Revisión del acceso para entrega local DEV
+# Acceso DEV para entrega local y GitHub
 
-Evidencia consultada el 18 de octubre de 2026, hora de Bogotá. Cuenta
-`374786578563`, región `us-east-2`. **Los cambios IAM están preparados y no se han
-ejecutado. No se desplegaron aplicaciones ni se modificaron datos de clientes.**
+Modalidad vigente desde el 19 de octubre de 2026: **conservar ambas vías**.
+La confianza SSO local es aditiva; GitHub OIDC, sus sesiones y la recuperación de
+estado de Billing siguen habilitados. El bloqueo S3 compartido evita entregas
+simultáneas. **No se aplicó IAM, no se desplegaron aplicaciones ni se modificaron
+datos de clientes.**
 
-Al retomar el 19 de octubre, el paquete pasó la verificación en almacenamiento
-nativo de Ubuntu. AWS confirmó que ambas sesiones de operadores habían vencido
-durante la pausa. La revalidación nativa actual y cualquier activación IAM requieren
-renovar esa sesión compartida; los hashes y resultados de código permanecen válidos.
+Las dos revisiones anteriores del modo exclusivo se descartaron y retiraron sin
+ejecutar. Sus plantillas y evidencia histórica se conservan; sus change sets ya
+no autorizan una activación. No usar sus hashes para esta entrega.
 
-Se integraron las bases remotas consultadas durante esta preparación:
-Automations `d2701533acf03c3ec0bf35acc0facc5f1457901e` y Billing
-`212787ad280381c1c11540ff5008a14aac478bb7`. Incluyen verificación de reactivación
-pagada, validación de solicitudes y mejor observación de fallos. La resolución
-conserva los escenarios de restauración Dograh, las pruebas de origen de una
-operación y la distinción entre cancelación normal por pago y fallo real.
+## Perfiles existentes
 
-## Accesos reutilizados
+Cuenta `374786578563`, región `us-east-2`. AWS confirmó las dos sesiones renovadas,
+sus roles nativos exactos y 25 stacks DEV sin operaciones en curso.
 
-Se verificaron por STS las sesiones existentes y se leyeron las políticas fuente
-con los lectores ya autorizados. Los dos roles SSO de bootstrap no tienen boundary,
-políticas adjuntas ni denegaciones explícitas en sus políticas inline. El
-seed-installer conserva su función; no se crearon usuarios, grupos ni permission
-sets. La evaluación efectiva de STS sobre los roles destino sigue pendiente de
-instalar la confianza revisada: hoy responde `AccessDenied` porque solo acepta OIDC.
-
-La delegación usa confianza directa al rol IAM de la misma cuenta. AWS permite ese
-recorrido sin un Allow adicional en la política de identidad, sujeto a boundaries
-y denegaciones aplicables. [Referencia de AWS sobre políticas de confianza](https://aws.amazon.com/blogs/security/how-to-use-trust-policies-with-iam-roles/).
-
-| Perfil existente | Rol SSO nativo | Destinos de entrega |
+| Perfil | Rol SSO nativo | Destinos |
 |---|---|---|
 | `abera-dev-bootstrap` | `AWSReservedSSO_abera-dev-bootstrap-operators_03895323ad04423b` | Control plane y publicador de producto |
-| `abera-dev-billing-bootstrap` | `AWSReservedSSO_abera-dev-billing-bootstrap_cfa35a75e04d3629` | Plan/apply Billing y publicador comercial |
+| `abera-dev-billing-bootstrap` | `AWSReservedSSO_abera-dev-billing-bootstrap_cfa35a75e04d3629` | Plan/apply y publicador comercial Billing |
 
-Las confianzas fijan el ARN completo del rol SSO, con su sufijo nativo. Las sesiones
-destino exigen `abera:delivery-origin=local` y duran como máximo una hora. Activar
-este modo deniega OIDC y las acciones de sesiones sin esa etiqueta, incluso si se
-emitieron antes. No cancela operaciones CloudFormation que ya estén corriendo.
+El seed-installer conserva su función. No se crearon usuarios, grupos ni permission
+sets. Las asunciones locales exigen el ARN SSO completo y
+`abera:delivery-origin=local`, con duración máxima de una hora. La etiqueta no se
+exige a las sesiones OIDC. El operador local no recibe la recuperación de estado.
 
-## Cambios nativos preparados
+## Revisiones aditivas preparadas
 
-Ambos change sets terminaron `CREATE_COMPLETE`, `ExecutionStatus=AVAILABLE`.
-`DescribeEvents` confirmó la creación satisfactoria. Pasaron cfn-lint 1.54.0 y las
-reglas cfn-guard fijadas. Se proyectaron sobre las plantillas instaladas; no copian
-los permisos adicionales de una versión posterior del bootstrap.
+Ambos change sets están `CREATE_COMPLETE` / `AVAILABLE`. Solo modifican los roles
+existentes, con `Replacement=False`; no agregan ni eliminan recursos. Las
+proyecciones preservan las declaraciones OIDC, grants de negocio, boundaries,
+integraciones, claves y parámetros nativos mediante `UsePreviousValue`.
 
-| Stack | Change set | Modificaciones |
+| Stack | Change set | Recursos |
 |---|---|---|
-| `abera-dev-bootstrap` | `abera-dev-bootstrap-local-51a61fafec79aff4` | `GitHubDeploymentRole`, `GitHubProductPublisherRole` |
-| `abera-dev-billing-bootstrap` | `abera-dev-billing-bootstrap-local-53caff6917ac864c` | `GitHubDeployRole`, `GitHubApplyRole`, `GitHubStateRecoveryRole` |
+| `abera-dev-bootstrap` | `abera-dev-bootstrap-coexist-71ff70d81ac493cd` | `GitHubDeploymentRole`, `GitHubProductPublisherRole` |
+| `abera-dev-billing-bootstrap` | `abera-dev-billing-bootstrap-coexist-baff0d1e10138b58` | `GitHubDeployRole`, `GitHubApplyRole`, `GitHubStateRecoveryRole` |
 
-Todos son cambios `Modify`, `Replacement=False`; no agregan ni eliminan recursos.
-Conservan grants, boundaries, identidades, buckets y claves instalados. Las
-políticas reciben únicamente la denegación de sesiones sin origen local. El rol
-de recuperación del estado Billing recibe la denegación OIDC, **sin conceder su
-autoridad al operador local**. La recuperación de clientes sigue en API/worker/driver.
+El rol core ya puede coordinarse con su política instalada del bucket. Los roles
+de producto y Billing reciben solo `s3:GetObject`/`s3:PutObject` sobre
+`delivery/dev/fence.json` y `delivery/dev/runs/*` del bucket canónico
+`abera-dev-artifacts-374786578563-us-east-2`. El rol de recuperación solo añade
+ese permiso de coordinación y conserva su confianza OIDC.
 
-Hallazgo heredado: `abera-dev-billing-cfn-execution` conserva `iam:*` sobre `*` y
-no tiene permissions boundary. Su política deniega usuarios y claves permanentes,
-pero sigue teniendo autoridad IAM amplia. Reducir esa política requiere otra
-revisión de todos los recursos de Billing; queda pendiente antes de afirmar que
-su despliegue está completamente endurecido. Esta preparación mantiene sus grants
-instalados y registra el hallazgo en la evidencia de permisos nativos.
+| Revisión | SHA-256 de revisión | SHA-256 de TemplateBody | Bytes |
+|---|---|---|---:|
+| Automations | `0a44b070750760857a2e3470b83ede588d6aef121248c6dec80bc436010640f7` | `7e6727f49e561973143ce8b2f17a32fba69f5cd9d64eaae8f101a590150bc593` | 50.014 |
+| Billing | `0155840de14d0b7d548d04e74d6612ff2eb371abf91a5af28621b10e66093706` | `4991ebe260f362ac83709aca92a1797f2c6bf8878c090f157fcf06a39fb613b5` | 20.296 |
 
-Hashes de las revisiones locales de los resultados nativos:
+La evidencia y los ARN completos están en
+`.local-services/basic-readiness/coexisting-access-2026-10-19/`.
+Las cuatro plantillas candidatas pasaron cfn-lint 1.54.0; las de bootstrap/catalogo
+Billing también pasaron cfn-guard. Las revisiones no se ejecutaron.
 
-- Automations: `d5ef75bcb49c57ed98808ca87b55638b5e3aa90ee86726b431576bf7e1017d6f`.
-- Billing: `a759d2d129416f3d15f21c471b9d73d4b0b56c8501614514da90e7c2d09cb5c0`.
+## Permiso que falta en el boundary
 
-SHA-256 de los TemplateBody preparados:
+La lectura IAM nativa confirmó que el boundary del publicador de producto
+`abera-dev-product-deployment-boundary` v17 permite objetos de producto/catálogo,
+pero todavía no los objetos del bloqueo. Su ampliación limitada sigue pendiente.
 
-- Automations, 50.249 bytes: `dec34fe6a2b48933a8fa4b3eeba77f183737b215a1638617aa38dcbea6d44f56`.
-- Billing, 20.279 bytes: `ed3c1c0b8d0a55f8862ad95c71a2024fc90410c06b67c0224606b103afb6fea4`.
+`delivery access-templates --security-seed-template <Original-DEV.json>` produce
+una proyección del seed instalado que cambia únicamente ese managed policy y
+añade una regla de cuenta DEV. Conserva identidades, grants y recursos retenidos.
+La plantilla supera 51.200 bytes: requiere alojarla por hash bajo
+`bootstrap/dev/templates/` mediante el publicador autorizado y preparar su
+change set por `TemplateURL` con el seed-installer. No sustituirla por el seed
+completo de otra versión ni retirar el boundary para desbloquear el despliegue.
 
-El detalle completo, ARN de cada change set, plantillas Original, parámetros
-`UsePreviousValue`, eventos y pruebas de acceso se conservan en
-`.local-services/basic-readiness/existing-access-2026-10-18/`. No contienen claves
-exportadas ni copias de la caché SSO.
+La confianza del catálogo `abera-billing-dev-catalog` también necesita su lectura
+nativa con el rol apply ya habilitado y su revisión aparte. El candidato generado
+con selección Dograh sigue marcado `catalogNativeComparisonRequired=true`;
+no reemplaza las particiones comerciales vecinas.
 
-## Secuencia de activación pendiente
+## Activación coordinada pendiente
 
-1. Revisar y autorizar estos dos cambios. Antes de ejecutarlos, volver a comprobar
-   los hashes, plantillas base, parámetros y ausencia de operaciones nativas en curso.
-2. Aplicar secuencialmente con sus perfiles bootstrap existentes y verificar el
-   resultado nativo y las asunciones STS etiquetadas. Una denegación bloquea el avance.
-3. Con el rol apply Billing ya habilitado, leer la plantilla Original de
-   `abera-billing-dev-catalog`, proyectar únicamente su confianza y denegación de
-   sesiones y preparar otro change set. Su revisión sigue pendiente; el perfil
-   bootstrap actual no permite leer esa plantilla. Conservar las particiones
-   comerciales vecinas, sin sustituirlas por una selección exclusiva de Dograh.
-4. Solo después de esa revisión y activación, ejecutar `delivery status` y preparar
-   cada review/apply desde el paquete probado. La CLI comprueba los cinco roles y
-   la ausencia de operaciones previas antes de tomar el bloqueo S3.
+1. Integrar los workflows con la guardia de bloqueo en las ramas de entrega.
+   Terminar o cancelar los jobs anteriores, incluidos los que sigan en cola: sus
+   commits no participan en el bloqueo S3 aunque se integre el workflow nuevo.
+2. Revalidar hashes, parámetros, plantillas base y operaciones en curso; aplicar
+   únicamente las dos revisiones bootstrap aditivas exactas.
+3. Alojar y revisar el cambio mínimo del boundary con el seed-installer. Leer y
+   proyectar el catálogo nativo con apply Billing, preservando todas sus particiones;
+   revisar y aplicar únicamente su confianza y permiso de coordinación.
+4. Inicializar el estado del bloqueo con el coordinador Automations y verificar
+   permisos efectivos de todos los actores. Un acceso denegado no equivale a ausencia.
+5. Preparar cada review/apply desde el nuevo paquete probado. Mantener separadas
+   publicación de release, promoción de default y actualización de clientes.
 
-Para revertir el acceso, preparar otro cambio revisado con las plantillas Original
-conservadas y los parámetros nativos compatibles. Confirmar antes el cierre de la
-entrega y las operaciones activas. No borrar roles, buckets, stacks ni bloqueos.
-Restablecer OIDC habilita de nuevo los escritores GitHub y exige coordinación.
+Los workflows toman el bloqueo antes de escribir y comprueban su propietario antes
+de los pasos bash, incluso al cambiar de rol. Solo un job exitoso lo libera.
+Un fallo, cancelación o resultado incierto conserva el bloqueo para reconciliación;
+no borrarlo ni iniciar otra selección. Restaurar acceso local consiste en retirar
+su confianza mediante un cambio revisado; OIDC no necesita volver a habilitarse.
 
-## Ejecutor local comprobado
+## Ejecutor y pendientes
 
-Se reutilizó `Ubuntu-22.04`, usuario `abe` (UID 1000), con Python 3.13.15 y entornos
-separados para Automations y Billing. Las dependencias se copiaron de la imagen
-validada `sha256:71823e8e9a01a49278200c55f5c17ae164fecef841fa038a6119dd97592d755a`;
-ambos entornos pasaron `pip check`. SAM 1.165.0 y AWS CLI existentes se conservaron.
+El ejecutor propio WSL Ubuntu-22.04 usa Python 3.13.15, entornos separados,
+SAM y credenciales temporales por pipe desde Windows. Pasó de nuevo las
+comprobaciones de sesiones, Docker rootless y capacidades CPU/memoria/procesos.
+Su unidad `abera-dev-delivery-docker.service` quedó apagada y sin habilitación al
+inicio de sesión. El contexto WSL continúa en `default`; Windows utiliza su
+contexto `desktop-linux`. No se modificaron esos contextos ni otros servicios.
 
-El empaquetado Billing valida el rol de ejecución del stack API autorizado; usa el
-bucket `abera-dev-billing-artifacts-374786578563` observado en el bootstrap, sin
-pedir al rol apply acceso al stack del instalador. Una identidad de ejecución
-diferente bloquea el empaquetado antes de subir archivos.
+La aceptación vigente terminó con **23 controles PASS, 4.952 pruebas pasadas y
+3 omisiones PowerShell**. El paquete de coexistencia tiene 4.810 archivos y SHA-256
+`948fb365b5e7c888abaae95ebe6446ffc75ba4cfd3e3c8e383a25527efd8086c`.
+Se verificó completo en almacenamiento nativo de Ubuntu, se actualizó el lanzador
+propio y se repitieron arranque, sesión, capacidades y apagado. Su ubicación es
+`/home/abe/.local/share/abera-dev-delivery/bundles/<SHA>/`; el lanzador es
+`/home/abe/.local/share/abera-dev-delivery/run-dev-delivery.sh`.
 
-La unidad propia `abera-dev-delivery-docker.service` usa un socket y almacenamiento
-separados. No está habilitada al iniciar sesión. El puente `credential_process`
-reutiliza las sesiones Windows mediante un pipe, sin guardar credenciales. STS
-confirmó ambos perfiles dentro del ejecutor.
+El código y procedimiento están coordinados en
+[Automations #288](https://github.com/tomatoes-prog/abera-automation/pull/288),
+[Billing #101](https://github.com/tomatoes-prog/abera-payments/pull/101) y
+[Dograh #4](https://github.com/tomatoes-prog/abera-dograh/pull/4).
+Las bases integradas conservan la reactivación pagada y observabilidad recientes.
 
-Una prueba real rootless verificó 32 MiB, media CPU y 32 procesos en cgroup v2, y
-retiró su contenedor. El contexto Docker sigue en `default`; los contenedores
-anteriores no se reiniciaron. Se añadió únicamente delegación temporal para
-`user@1000.service` en `/run/systemd/system/user@1000.service.d/abera-dev-delivery.conf`.
-Se pierde al reiniciar WSL y debe volver a comprobarse antes de publicar.
-
-También se construyó una imagen mínima sin red mediante buildx y se comprobó que
-quedara en el daemon rootless verificado. El Docker original no recibió esa imagen;
-la imagen de prueba se retiró al terminar. El builder existente declara soporte
-para AMD64 y ARM64. Esta prueba valida el enrutamiento del builder; las imágenes
-completas del producto siguen la revisión/publicación fijada de la entrega.
-
-Operar solo la unidad propia mediante `scripts/local_delivery_wsl.py start|check|stop`
-desde Automations, con su entorno y variables documentadas. Los datos y entornos
-propios están en `/home/abe/.local/share/abera-dev-delivery`. Conservar el paquete,
-journal y revisiones si una entrega termina con resultado incierto.
-
-Después de comprobarlo, el daemon propio quedó `inactive`, sin habilitación al
-inicio de sesión y sin contenedores auxiliares de dependencias. El contexto Docker
-global continúa en `default`. El lanzador permite iniciarlo explícitamente cuando
-el acceso y la revisión estén listos.
-
-La preparación local y los change sets no acreditan aún restauración nativa,
-caducidad física de backups, eliminación de recursos ni disponibilidad comercial.
-Se mantienen los pendientes de [preparación comercial](BASIC_COMMERCIAL_READINESS.md).
-
-La preparación de esta estación deja el lanzador local
-`/home/abe/.local/share/abera-dev-delivery/run-dev-delivery.sh`, con rutas al paquete
-inmutable y los entornos propios. La copia y verificación de sus 4.806 archivos se
-completó el 19 de octubre en almacenamiento nativo de Ubuntu, evitando el bloqueo
-de lectura observado en el disco montado. El SHA del paquete es
-`d9b75c620244265cde70d23a0b80221aadee09a38f70592ee4eda143e1cb9ccd`.
-Se conserva otra copia del lanzador en `.local-services/basic-readiness/`.
-Desde PowerShell:
-
-```powershell
-wsl -d Ubuntu-22.04 --cd /home/abe --exec sh /home/abe/.local/share/abera-dev-delivery/run-dev-delivery.sh start
-wsl -d Ubuntu-22.04 --cd /home/abe --exec sh /home/abe/.local/share/abera-dev-delivery/run-dev-delivery.sh status
-```
-
-`start|check|stop` operan únicamente el ejecutor local. `status` necesita la
-confianza IAM activa y no toma el bloqueo. Para una revisión de aplicación, usar
-`run --step review-control-plane --output <ruta-WSL-nueva>` y revisar su resultado
-antes del apply correspondiente. El lanzador no ejecuta despliegues al arrancar.
+El ejecutor CloudFormation heredado de Billing conserva `iam:*` sobre `*`, sin
+boundary; su reducción requiere otra revisión de compatibilidad y sigue pendiente.
+La preparación no acredita aún restauración nativa, transición RDS 7→1 día DEV,
+caducidad física S3, eliminación completa de huérfanos ni disponibilidad comercial.
+Ver [preparación comercial](BASIC_COMMERCIAL_READINESS.md) y
+[operación local](LOCAL_DELIVERY.md).

@@ -6,6 +6,12 @@ Los cambios están en [Automations #288](https://github.com/tomatoes-prog/abera-
 y [Payments #101](https://github.com/tomatoes-prog/abera-payments/pull/101), junto con
 la preparación comercial de este fork. Deben revisarse y validarse como conjunto.
 
+La vía local se añade a GitHub OIDC, que permanece habilitado. Los workflows DEV
+de Automations y Billing y el ejecutor local comparten el mismo bloqueo S3 y
+journal. Un fallo o cancelación conserva la exclusión hasta reconciliar la
+ejecución. Cuando vuelva la cuota de Actions se podrá usar ese recorrido sin
+cambiar la confianza IAM ni retirar el acceso local.
+
 El paquete congela los commits probados de Automations/Billing y exporta Dograh en
 la revisión fijada en el manifiesto de producto, incluyendo el Pipecat exacto de
 su gitlink. Las imágenes se construyen desde esas fuentes locales. No se incorporan
@@ -32,6 +38,12 @@ permisos y recursos. Se revisan primero `abera-dev-bootstrap` y
 `abera-dev-billing-bootstrap`; después el rol apply de Billing permite leer y
 preparar la confianza de `abera-billing-dev-catalog` sin ampliar su acceso comercial
 a otros productos. Ese tercer paso requiere su propia comparación y revisión nativa.
+
+El boundary del publicador Automations también necesita el permiso acotado del
+bloqueo y journal, preservando su identidad y límites. Su proyección parte del
+security seed DEV instalado y requiere alojar la plantilla por hash y revisión
+nativa separada. Integrar las guardias de los workflows e instalar esos permisos
+como una activación coordinada; los workflows anteriores no toman el bloqueo S3.
 
 La [revisión de acceso DEV](DEV_LOCAL_ACCESS_REVIEW.md) conserva los cambios
 CloudFormation concretos, hashes, perfiles verificados y estado del ejecutor local.
