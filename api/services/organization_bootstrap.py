@@ -72,10 +72,9 @@ async def ensure_organization_bootstrapped(
             organization_id, [_BOOTSTRAP_KEY, _CATALOG_DEFAULT_KEY]
         )
     except Exception:
-        logger.warning(
+        logger.opt(exception=True).warning(
             "Failed to read bootstrap state for organization {}; will retry",
             organization_id,
-            exc_info=True,
         )
         return False
     if (state.get(_BOOTSTRAP_KEY) or {}).get("status") == LEASE_COMPLETED:
@@ -113,10 +112,9 @@ async def ensure_organization_bootstrapped(
         await db_client.release_configuration_lease(
             organization_id, _BOOTSTRAP_KEY, owner_token
         )
-        logger.warning(
+        logger.opt(exception=True).warning(
             "Failed to bootstrap organization {}; will retry on a later request",
             organization_id,
-            exc_info=True,
         )
         return False
 
@@ -162,10 +160,9 @@ async def _bootstrap_organization(
                 created_by=created_by,
             )
         except Exception:
-            logger.warning(
+            logger.opt(exception=True).warning(
                 "Failed to initialize hosted MPS billing account for organization {}",
                 organization_id,
-                exc_info=True,
             )
 
         service_key = await mint_managed_service_key(
@@ -242,11 +239,10 @@ async def provision_managed_sip_connectivity(
             created_by=created_by,
         )
     except Exception:
-        logger.error(
+        logger.opt(exception=True).error(
             "Failed to provision managed Cloudonix SIP connectivity for "
             "organization {}",
             organization_id,
-            exc_info=True,
         )
         return False
     return True
