@@ -1,3 +1,4 @@
+import re
 from functools import wraps
 from typing import TYPE_CHECKING
 from urllib.parse import urlencode, urlparse, urlunparse
@@ -1113,6 +1114,16 @@ def _migrate_deprecated_google_model(model: str) -> str:
     return model
 
 
+# Chat Completions uses "minimal" for the original GPT-5 models. Later
+# releases need "none" to accept the function tools used for workflow transitions.
+_GPT5_MINIMAL_EFFORT_MODEL = re.compile(r"gpt-5(?:-mini|-nano)?(?:-\d{4}-\d{2}-\d{2})?")
+
+
+def _gpt5_reasoning_effort(model: str) -> str:
+    base_model = model.rsplit("/", 1)[-1]
+    return "minimal" if _GPT5_MINIMAL_EFFORT_MODEL.fullmatch(base_model) else "none"
+
+
 @_report_service_factory_failures(ErrorSource.LLM, provider_argument=0)
 def create_llm_service_from_provider(
     provider: str,
@@ -1172,7 +1183,10 @@ def create_llm_service_from_provider(
                 api_key=api_key,
                 settings=OpenAILLMSettings(
                     model=model,
-                    extra={"reasoning_effort": "minimal", "verbosity": "low"},
+                    extra={
+                        "reasoning_effort": _gpt5_reasoning_effort(model),
+                        "verbosity": "low",
+                    },
                 ),
                 **kwargs,
             )
