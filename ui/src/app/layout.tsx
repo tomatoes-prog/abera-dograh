@@ -1,8 +1,9 @@
 import "./globals.css";
 
 import { GoogleTagManager } from "@next/third-parties/google";
+import { GeistMono } from "geist/font/mono";
+import { GeistSans } from "geist/font/sans";
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import { getLocale } from "next-intl/server";
 import { Suspense } from "react";
 
@@ -22,16 +23,6 @@ import type { UiLocale } from "@/i18n/config";
 import { LocaleProvider } from "@/i18n/LocaleProvider";
 import { AuthProvider } from "@/lib/auth";
 
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "Dograh",
@@ -76,7 +67,7 @@ export default async function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        className={`${GeistSans.variable} ${GeistMono.variable} antialiased`}>
         {gtmId ? <GoogleTagManager gtmId={gtmId} /> : null}
         {metaPixelId ? <MetaPixel pixelId={metaPixelId} /> : null}
         <LocaleProvider initialLocale={locale}>
