@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 # Multi-stage Dockerfile
 # Stage 1: Builder - Install Python dependencies into a venv via uv
 # (mirrors .devcontainer/Dockerfile's venv-builder stage).
