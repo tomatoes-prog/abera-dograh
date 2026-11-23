@@ -75,8 +75,12 @@ class KnowledgeBaseClient(KnowledgeBaseStorageClient):
             document.document_uuid = document_uuid or str(uuid.uuid4())
 
             if (custom_metadata or {}).get("s3_key"):
-                await self._attach_document_object(session, organization_id, document.document_uuid,
-                                                   custom_metadata["s3_key"])
+                await self._attach_document_object(
+                    session,
+                    organization_id,
+                    document.document_uuid,
+                    custom_metadata["s3_key"],
+                )
 
             session.add(document)
             await session.commit()
@@ -231,10 +235,14 @@ class KnowledgeBaseClient(KnowledgeBaseStorageClient):
             Updated KnowledgeBaseDocumentModel
         """
         async with self.async_session() as session:
-            query = select(KnowledgeBaseDocumentModel).where(
-                KnowledgeBaseDocumentModel.id == document_id,
-                KnowledgeBaseDocumentModel.is_active.is_(True),
-            ).with_for_update()
+            query = (
+                select(KnowledgeBaseDocumentModel)
+                .where(
+                    KnowledgeBaseDocumentModel.id == document_id,
+                    KnowledgeBaseDocumentModel.is_active.is_(True),
+                )
+                .with_for_update()
+            )
             result = await session.execute(query)
             document = result.scalar_one_or_none()
 
@@ -275,10 +283,14 @@ class KnowledgeBaseClient(KnowledgeBaseStorageClient):
             Updated KnowledgeBaseDocumentModel
         """
         async with self.async_session() as session:
-            query = select(KnowledgeBaseDocumentModel).where(
-                KnowledgeBaseDocumentModel.id == document_id,
-                KnowledgeBaseDocumentModel.is_active.is_(True),
-            ).with_for_update()
+            query = (
+                select(KnowledgeBaseDocumentModel)
+                .where(
+                    KnowledgeBaseDocumentModel.id == document_id,
+                    KnowledgeBaseDocumentModel.is_active.is_(True),
+                )
+                .with_for_update()
+            )
             result = await session.execute(query)
             document = result.scalar_one_or_none()
 
@@ -328,10 +340,15 @@ class KnowledgeBaseClient(KnowledgeBaseStorageClient):
     ) -> List[KnowledgeBaseChunkModel]:
         """Replace all chunks for a document with a new precomputed batch."""
         async with self.async_session() as session:
-            document = await session.scalar(select(KnowledgeBaseDocumentModel).where(
-                KnowledgeBaseDocumentModel.id == document_id,
-                KnowledgeBaseDocumentModel.organization_id == organization_id,
-                KnowledgeBaseDocumentModel.is_active.is_(True)).with_for_update())
+            document = await session.scalar(
+                select(KnowledgeBaseDocumentModel)
+                .where(
+                    KnowledgeBaseDocumentModel.id == document_id,
+                    KnowledgeBaseDocumentModel.organization_id == organization_id,
+                    KnowledgeBaseDocumentModel.is_active.is_(True),
+                )
+                .with_for_update()
+            )
             if not document:
                 return []
             await session.execute(
@@ -490,10 +507,14 @@ class KnowledgeBaseClient(KnowledgeBaseStorageClient):
             full_text: The full extracted text content
         """
         async with self.async_session() as session:
-            query = select(KnowledgeBaseDocumentModel).where(
-                KnowledgeBaseDocumentModel.id == document_id,
-                KnowledgeBaseDocumentModel.is_active.is_(True),
-            ).with_for_update()
+            query = (
+                select(KnowledgeBaseDocumentModel)
+                .where(
+                    KnowledgeBaseDocumentModel.id == document_id,
+                    KnowledgeBaseDocumentModel.is_active.is_(True),
+                )
+                .with_for_update()
+            )
             result = await session.execute(query)
             document = result.scalar_one_or_none()
             if document:
@@ -621,10 +642,14 @@ class KnowledgeBaseClient(KnowledgeBaseStorageClient):
             True if document was deleted, False if not found
         """
         async with self.async_session() as session:
-            query = select(KnowledgeBaseDocumentModel).where(
-                KnowledgeBaseDocumentModel.document_uuid == document_uuid,
-                KnowledgeBaseDocumentModel.organization_id == organization_id,
-            ).with_for_update()
+            query = (
+                select(KnowledgeBaseDocumentModel)
+                .where(
+                    KnowledgeBaseDocumentModel.document_uuid == document_uuid,
+                    KnowledgeBaseDocumentModel.organization_id == organization_id,
+                )
+                .with_for_update()
+            )
 
             result = await session.execute(query)
             document = result.scalar_one_or_none()
@@ -634,24 +659,40 @@ class KnowledgeBaseClient(KnowledgeBaseStorageClient):
 
             document.is_active = False
             document.archived_at = document.archived_at or datetime.now(UTC)
-            await session.execute(delete(KnowledgeBaseChunkModel).where(
-                KnowledgeBaseChunkModel.document_id == document.id,
-                KnowledgeBaseChunkModel.organization_id == organization_id))
+            await session.execute(
+                delete(KnowledgeBaseChunkModel).where(
+                    KnowledgeBaseChunkModel.document_id == document.id,
+                    KnowledgeBaseChunkModel.organization_id == organization_id,
+                )
+            )
             document.full_text, document.total_chunks = None, 0
             key = (document.custom_metadata or {}).get("s3_key")
             if key:
-                item = await session.get(KnowledgeBaseStorageObjectModel, storage_object_id(key), with_for_update=True)
+                item = await session.get(
+                    KnowledgeBaseStorageObjectModel,
+                    storage_object_id(key),
+                    with_for_update=True,
+                )
                 if not item:
-                    item = KnowledgeBaseStorageObjectModel(id=storage_object_id(key), organization_id=organization_id,
-                        document_uuid=document_uuid, object_key=key, state="deleting")
+                    item = KnowledgeBaseStorageObjectModel(
+                        id=storage_object_id(key),
+                        organization_id=organization_id,
+                        document_uuid=document_uuid,
+                        object_key=key,
+                        state="deleting",
+                    )
                     session.add(item)
                 if item.state != "purged":
                     item.state, item.delete_after = "deleting", datetime.now(UTC)
-            await session.execute(update(KnowledgeBaseStorageObjectModel).where(
-                KnowledgeBaseStorageObjectModel.organization_id == organization_id,
-                KnowledgeBaseStorageObjectModel.document_uuid == document_uuid,
-                KnowledgeBaseStorageObjectModel.state != "purged",
-            ).values(state="deleting", delete_after=datetime.now(UTC)))
+            await session.execute(
+                update(KnowledgeBaseStorageObjectModel)
+                .where(
+                    KnowledgeBaseStorageObjectModel.organization_id == organization_id,
+                    KnowledgeBaseStorageObjectModel.document_uuid == document_uuid,
+                    KnowledgeBaseStorageObjectModel.state != "purged",
+                )
+                .values(state="deleting", delete_after=datetime.now(UTC))
+            )
             await session.commit()
 
             logger.info(

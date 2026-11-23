@@ -216,7 +216,9 @@ async def test_managed_document_upload_uses_the_existing_quota_proxy(monkeypatch
 
 
 @pytest.mark.asyncio
-async def test_search_without_embedding_key_explains_configuration_before_any_provider_call(monkeypatch):
+async def test_search_without_embedding_key_explains_configuration_before_any_provider_call(
+    monkeypatch,
+):
     from api.services import gen_ai
     from api.services.configuration import ai_model_configuration as configuration
 

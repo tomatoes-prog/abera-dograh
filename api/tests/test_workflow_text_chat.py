@@ -2886,7 +2886,8 @@ async def test_text_chat_tags_a_rejected_provider_key_as_the_users(
 
     assert response.status_code == 200
     [failure] = [
-        record for record in records
+        record
+        for record in records
         if record["extra"].get("classification_mode") == "explicit"
     ]
     assert failure["extra"]["error_source"] == "llm"

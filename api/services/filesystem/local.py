@@ -36,18 +36,32 @@ class LocalFileSystem(BaseFileSystem):
             stat = await asyncio.to_thread(target.stat)
         except FileNotFoundError:
             return None
-        return {"size": stat.st_size, "modified_at": datetime.fromtimestamp(stat.st_mtime)}
+        return {
+            "size": stat.st_size,
+            "modified_at": datetime.fromtimestamp(stat.st_mtime),
+        }
 
-    async def aget_presigned_put_url(self, file_path: str, expiration=900, content_type="text/csv", max_size=10_485_760):
+    async def aget_presigned_put_url(
+        self,
+        file_path: str,
+        expiration=900,
+        content_type="text/csv",
+        max_size=10_485_760,
+    ):
         # Local disk has no HTTP upload endpoint to sign.
         return None
 
-    async def adownload_file(self, source_path: str, local_path: str, *, max_size=None) -> bool:
+    async def adownload_file(
+        self, source_path: str, local_path: str, *, max_size=None
+    ) -> bool:
         source = self._get_full_path(source_path)
         if max_size is not None and os.path.getsize(source) > max_size:
             raise ValueError("El archivo supera el tamaño permitido.")
         received = 0
-        async with aiofiles.open(source, "rb") as src, aiofiles.open(local_path, "wb") as dst:
+        async with (
+            aiofiles.open(source, "rb") as src,
+            aiofiles.open(local_path, "wb") as dst,
+        ):
             while chunk := await src.read(64 * 1024):
                 received += len(chunk)
                 if max_size is not None and received > max_size:
@@ -56,7 +70,10 @@ class LocalFileSystem(BaseFileSystem):
         return True
 
     async def acopy_file(self, source_path: str, destination_path: str) -> bool:
-        source, target = self._get_full_path(source_path), self._get_full_path(destination_path)
+        source, target = (
+            self._get_full_path(source_path),
+            self._get_full_path(destination_path),
+        )
         await asyncio.to_thread(os.makedirs, os.path.dirname(target), exist_ok=True)
         await asyncio.to_thread(shutil.copyfile, source, target)
         return True
@@ -104,7 +121,11 @@ class LocalFileSystem(BaseFileSystem):
             return False
 
     async def aget_signed_url(
-        self, file_path: str, expiration: int = 3600, force_inline=False, use_internal_endpoint=False,
+        self,
+        file_path: str,
+        expiration: int = 3600,
+        force_inline=False,
+        use_internal_endpoint=False,
     ) -> Optional[str]:
         # For local filesystem, we'll create a temporary symlink with expiration
         try:

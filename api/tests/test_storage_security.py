@@ -11,25 +11,45 @@ from api.services.filesystem.quota import StorageQuotaExceeded
 from api.services.filesystem.s3 import S3FileSystem
 
 
-async def test_slow_managed_upload_expires_before_cleanup_and_removes_temporary_file(monkeypatch, tmp_path):
+async def test_slow_managed_upload_expires_before_cleanup_and_removes_temporary_file(
+    monkeypatch, tmp_path
+):
     import asyncio
     import json
 
     from api.services.abera import storage_upload as service
 
-    redis = SimpleNamespace(getdel=AsyncMock(return_value=json.dumps({
-        "key": "knowledge_base/1/owned/file.txt", "size": 1, "content_type": "text/plain"})))
+    redis = SimpleNamespace(
+        getdel=AsyncMock(
+            return_value=json.dumps(
+                {
+                    "key": "knowledge_base/1/owned/file.txt",
+                    "size": 1,
+                    "content_type": "text/plain",
+                }
+            )
+        )
+    )
     monkeypatch.setattr(service, "get_arq_redis", AsyncMock(return_value=redis))
     monkeypatch.setattr(service, "UPLOAD_TIMEOUT_SECONDS", 0.001)
     factory = service.tempfile.NamedTemporaryFile
-    monkeypatch.setattr(service.tempfile, "NamedTemporaryFile", lambda **kwargs: factory(dir=tmp_path, **kwargs))
+    monkeypatch.setattr(
+        service.tempfile,
+        "NamedTemporaryFile",
+        lambda **kwargs: factory(dir=tmp_path, **kwargs),
+    )
     storage = SimpleNamespace(aupload_file=AsyncMock())
     monkeypatch.setattr(service, "storage_fs", storage)
+
     async def stream():
         await asyncio.sleep(1)
         yield b"x"
+
     with pytest.raises(HTTPException) as error:
-        await service.receive_upload("a" * 32, SimpleNamespace(headers={"content-type": "text/plain"}, stream=stream))
+        await service.receive_upload(
+            "a" * 32,
+            SimpleNamespace(headers={"content-type": "text/plain"}, stream=stream),
+        )
     assert error.value.status_code == 408
     storage.aupload_file.assert_not_awaited()
     assert list(tmp_path.iterdir()) == []
@@ -138,7 +158,9 @@ async def test_bounded_download_enforces_header_and_actual_bytes(
     # The real SDK context returns ClientResponse, whose read() takes no size.
     # Retain StreamingBody itself to read bounded chunks and validate lengths.
     body = StreamingBody(raw_response, str(advertised))
-    client.get_object = AsyncMock(return_value={"ContentLength": advertised, "Body": body})
+    client.get_object = AsyncMock(
+        return_value={"ContentLength": advertised, "Body": body}
+    )
     path = tmp_path / "document.txt"
     if expected:
         assert await fs.adownload_file(
@@ -147,7 +169,9 @@ async def test_bounded_download_enforces_header_and_actual_bytes(
         assert path.read_bytes() == b"data"
     else:
         with pytest.raises(ValueError, match="supera"):
-            await fs.adownload_file("knowledge_base/1/example.txt", str(path), max_size=4)
+            await fs.adownload_file(
+                "knowledge_base/1/example.txt", str(path), max_size=4
+            )
     raw_response.__aexit__.assert_awaited_once()
 
 
@@ -156,6 +180,7 @@ async def test_quota_store_failure_prevents_writes(monkeypatch):
         StorageQuotaUnavailable,
         storage_write_lock,
     )
+
     fs, client = fs_with_client(monkeypatch)
     monkeypatch.setattr(
         "api.services.filesystem.s3.storage_write_lock", storage_write_lock
@@ -174,6 +199,7 @@ async def test_competing_writes_cannot_exceed_subscription_budget(monkeypatch):
     import asyncio
 
     from api.services.filesystem.quota import storage_write_lock
+
     fs, client = fs_with_client(monkeypatch, used=0)
     objects = {}
 

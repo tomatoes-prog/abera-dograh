@@ -150,7 +150,9 @@ async def get_upload_url(
                 status_code=500, detail="Failed to generate presigned upload URL"
             )
 
-        await db_client.register_document_upload(user.selected_organization_id, document_uuid, s3_key)
+        await db_client.register_document_upload(
+            user.selected_organization_id, document_uuid, s3_key
+        )
 
         logger.info(
             f"Generated upload URL for document {document_uuid}, "

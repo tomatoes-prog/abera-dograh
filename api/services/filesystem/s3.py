@@ -82,12 +82,23 @@ class S3FileSystem(BaseFileSystem):
         async with self.session.client("s3", **self._client_kwargs()) as client:
             # Include delete markers and noncurrent versions. Prefix matching
             # alone must never authorize erasing a similarly named object.
-            async for page in client.get_paginator("list_object_versions").paginate(Bucket=self.bucket_name, Prefix=key):
+            async for page in client.get_paginator("list_object_versions").paginate(
+                Bucket=self.bucket_name, Prefix=key
+            ):
                 for item in page.get("Versions", []) + page.get("DeleteMarkers", []):
                     if item["Key"] == key:
-                        await client.delete_object(Bucket=self.bucket_name, Key=key, VersionId=item["VersionId"])
-            async for page in client.get_paginator("list_object_versions").paginate(Bucket=self.bucket_name, Prefix=key):
-                if any(item["Key"] == key for item in page.get("Versions", []) + page.get("DeleteMarkers", [])):
+                        await client.delete_object(
+                            Bucket=self.bucket_name,
+                            Key=key,
+                            VersionId=item["VersionId"],
+                        )
+            async for page in client.get_paginator("list_object_versions").paginate(
+                Bucket=self.bucket_name, Prefix=key
+            ):
+                if any(
+                    item["Key"] == key
+                    for item in page.get("Versions", []) + page.get("DeleteMarkers", [])
+                ):
                     return False
             try:
                 await client.head_object(Bucket=self.bucket_name, Key=key)
@@ -99,10 +110,17 @@ class S3FileSystem(BaseFileSystem):
 
     async def alist_object_versions(self, prefix: str, cursor=None):
         physical_prefix = self._key(prefix)
-        arguments = {"Bucket": self.bucket_name, "Prefix": physical_prefix, "MaxKeys": 500}
+        arguments = {
+            "Bucket": self.bucket_name,
+            "Prefix": physical_prefix,
+            "MaxKeys": 500,
+        }
         if cursor:
-            if (not isinstance(cursor, dict) or set(cursor) - {"KeyMarker", "VersionIdMarker"}
-                    or not str(cursor.get("KeyMarker", "")).startswith(physical_prefix)):
+            if (
+                not isinstance(cursor, dict)
+                or set(cursor) - {"KeyMarker", "VersionIdMarker"}
+                or not str(cursor.get("KeyMarker", "")).startswith(physical_prefix)
+            ):
                 raise ValueError("El inventario está fuera del prefijo autorizado.")
             arguments.update(cursor)
         async with self.session.client("s3", **self._client_kwargs()) as client:
@@ -113,7 +131,11 @@ class S3FileSystem(BaseFileSystem):
         for item in page.get("Versions", []) + page.get("DeleteMarkers", []):
             if not item["Key"].startswith(physical_prefix):
                 raise ValueError("El inventario cambió de organización.")
-            relative = item["Key"][len(self.key_prefix) + 1:] if self.key_prefix else item["Key"]
+            relative = (
+                item["Key"][len(self.key_prefix) + 1 :]
+                if self.key_prefix
+                else item["Key"]
+            )
             rows.append({"key": relative, "modified_at": item["LastModified"]})
         next_cursor = None
         if page["IsTruncated"]:
@@ -309,7 +331,9 @@ class S3FileSystem(BaseFileSystem):
                         self.bucket_name, self._key(source_path), local_path
                     )
                 else:
-                    response = await s3_client.get_object(Bucket=self.bucket_name, Key=self._key(source_path))
+                    response = await s3_client.get_object(
+                        Bucket=self.bucket_name, Key=self._key(source_path)
+                    )
                     # StreamingBody.__aenter__ returns the underlying HTTP
                     # response, whose read() does not accept a chunk size.
                     # Keep the SDK wrapper for bounded reads and length checks.

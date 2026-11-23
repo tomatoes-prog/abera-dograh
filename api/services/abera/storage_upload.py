@@ -54,10 +54,14 @@ async def receive_upload(token: str, request: Request):
                         raise HTTPException(413, "Upload exceeds the authorized size")
                     output.write(chunk)
             if received != grant["size"]:
-                raise HTTPException(400, "Upload size does not match the authorized size")
+                raise HTTPException(
+                    400, "Upload size does not match the authorized size"
+                )
             if not await storage_fs.aupload_file(path, grant["key"]):
                 raise HTTPException(503, "Could not store upload")
     except TimeoutError:
-        raise HTTPException(408, "La carga tardó demasiado; selecciona el archivo de nuevo.") from None
+        raise HTTPException(
+            408, "La carga tardó demasiado; selecciona el archivo de nuevo."
+        ) from None
     finally:
         os.unlink(path)

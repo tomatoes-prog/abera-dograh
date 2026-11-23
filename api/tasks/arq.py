@@ -101,7 +101,12 @@ class WorkerSettings:
         cron(
             retry_voice_receipts, minute=set(range(60)), second=15, run_at_startup=True
         ),
-        cron(sweep_document_storage, minute=set(range(0, 60, 5)), second=15, run_at_startup=True),
+        cron(
+            sweep_document_storage,
+            minute=set(range(0, 60, 5)),
+            second=15,
+            run_at_startup=True,
+        ),
         # Safety net for webhook deliveries whose ARQ job was lost (worker
         # restart / Redis flush): re-enqueue any pending delivery that is overdue.
         cron(
