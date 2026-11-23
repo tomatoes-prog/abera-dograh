@@ -22,7 +22,7 @@ async def test_voice_catalog_preserves_direct_provider_limit_error(monkeypatch):
 
     with pytest.raises(HTTPException) as error:
         await user_routes.get_voices(
-            provider="cartesia",
+            provider="dograh",
             user=SimpleNamespace(
                 selected_organization_id=42,
                 provider_id="provider-123",

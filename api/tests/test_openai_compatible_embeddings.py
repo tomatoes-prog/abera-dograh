@@ -208,69 +208,108 @@ def test_hosted_mode_rejects_private_embedding_endpoints_before_provider_validat
     probe.assert_not_called()
 
 
-@pytest.mark.parametrize("key", ["", "**********-key"])
-def test_changing_url_cannot_forward_an_inherited_or_hidden_key(key):
-    from api.schemas.ai_model_configuration import EffectiveAIModelConfiguration
-    from api.services.configuration.merge import merge_user_configurations
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "credentials", [{}, {"api_key": ""}, {"api_key": "**********-key"}]
+)
+async def test_catalog_url_change_rejects_inherited_or_hidden_keys_before_network(
+    monkeypatch, credentials
+):
+    from fastapi import HTTPException
 
-    saved = EffectiveAIModelConfiguration(embeddings=_configuration())
-    with pytest.raises(ValueError, match="vuelve a ingresar"):
-        merge_user_configurations(
-            saved,
-            {
+    from api.routes import model_connections as routes
+    from api.schemas.model_connections import ProviderConnectionUpdate
+
+    row = SimpleNamespace(
+        provider="openai_compatible",
+        revision=1,
+        credentials={"api_key": "own-provider-key"},
+        connection_settings={"base_url": "https://embeddings.example/v1"},
+    )
+    monkeypatch.setattr(
+        routes.db_client, "get_provider_connection", AsyncMock(return_value=row)
+    )
+    validate = AsyncMock()
+    monkeypatch.setattr(routes, "validate_provider_connection_credentials", validate)
+    request = ProviderConnectionUpdate(
+        connection_settings={"base_url": "https://another-provider.example/v1"},
+        credentials=credentials,
+    )
+    with pytest.raises(HTTPException, match="vuelve a ingresar") as failure:
+        await routes.update_connection(
+            "connection-uuid", request, SimpleNamespace(selected_organization_id=42)
+        )
+    assert failure.value.status_code == 422
+    validate.assert_not_awaited()
+    assert row.credentials == {"api_key": "own-provider-key"}
+
+
+def test_catalog_same_endpoint_preserves_key_and_changed_endpoint_requires_explicit_key():
+    from api.services.configuration.model_connections import (
+        validate_embedding_connection_update,
+    )
+
+    original = {"base_url": "https://embeddings.example/v1"}
+    validate_embedding_connection_update(
+        "openai_compatible",
+        original,
+        {"base_url": "https://embeddings.example/v1/"},
+        {},
+    )
+    validate_embedding_connection_update(
+        "openai_compatible",
+        original,
+        {"base_url": "https://another-provider.example/v1"},
+        {"api_key": "new-provider-key"},
+    )
+    assert original == {"base_url": "https://embeddings.example/v1"}
+
+
+@pytest.mark.asyncio
+async def test_connection_update_probes_affected_models_with_the_new_key_and_url(
+    monkeypatch,
+):
+    from api.services.configuration import model_connections
+
+    connection = SimpleNamespace(uuid="owned-connection", provider="openai_compatible")
+
+    def selected(uuid, model):
+        return SimpleNamespace(
+            configuration={
                 "embeddings": {
-                    "provider": "openai_compatible",
-                    "model": "provider/model-v1",
-                    "base_url": "https://another-provider.example/v1",
-                    "api_key": key,
+                    "provider_connection_uuid": uuid,
+                    "settings": {"model": model},
                 }
-            },
+            }
         )
 
-
-def test_unchanged_url_keeps_masked_key_and_changed_url_accepts_a_new_key():
-    from api.schemas.ai_model_configuration import EffectiveAIModelConfiguration
-    from api.services.configuration.masking import mask_key
-    from api.services.configuration.merge import merge_user_configurations
-
-    saved = EffectiveAIModelConfiguration(embeddings=_configuration())
-    payload = saved.embeddings.model_dump()
-    payload["api_key"] = mask_key("own-provider-key")
-    unchanged = merge_user_configurations(saved, {"embeddings": payload})
-    assert unchanged.embeddings.api_key == "own-provider-key"
-    payload.update(
-        base_url="https://another-provider.example/v1", api_key="new-provider-key"
+    listed = AsyncMock(
+        return_value=[
+            selected(connection.uuid, "model-a"),
+            selected(connection.uuid, "model-a"),
+            selected(connection.uuid, "model-b"),
+            selected("unrelated-connection", "model-c"),
+        ]
     )
-    changed = merge_user_configurations(saved, {"embeddings": payload})
-    assert changed.embeddings.api_key == "new-provider-key"
-    assert saved.embeddings.base_url == "https://embeddings.example/v1"
-
-
-def test_v2_configuration_blocks_redirecting_a_stored_key_to_another_endpoint():
-    from api.schemas.ai_model_configuration import OrganizationAIModelConfigurationV2
-    from api.services.configuration.ai_model_configuration import (
-        mask_ai_model_configuration_v2,
-        merge_ai_model_configuration_v2_secrets,
+    monkeypatch.setattr(
+        model_connections.db_client, "list_named_model_configurations", listed
     )
-
-    saved = OrganizationAIModelConfigurationV2.model_validate(
-        {
-            "mode": "byok",
-            "byok": {
-                "mode": "pipeline",
-                "pipeline": {
-                    "llm": {"provider": "openai", "api_key": "text-key"},
-                    "tts": {"provider": "openai", "api_key": "speech-key"},
-                    "stt": {"provider": "openai", "api_key": "speech-key"},
-                    "embeddings": _configuration().model_dump(),
-                },
-            },
-        }
+    probe = AsyncMock()
+    monkeypatch.setattr(model_connections, "validate_embedding_configuration", probe)
+    await model_connections.validate_saved_embedding_models(
+        42,
+        connection,
+        {"api_key": "new-key"},
+        {"base_url": "https://new-provider.example/v1"},
+        "owner",
     )
-    payload = mask_ai_model_configuration_v2(saved)
-    payload["byok"]["pipeline"]["embeddings"]["base_url"] = (
-        "https://another-provider.example/v1"
-    )
-    incoming = OrganizationAIModelConfigurationV2.model_validate(payload)
-    with pytest.raises(ValueError, match="vuelve a ingresar"):
-        merge_ai_model_configuration_v2_secrets(incoming, saved)
+    listed.assert_awaited_once_with(42)
+    assert probe.await_count == 2
+    assert {call.args[1].model for call in probe.await_args_list} == {
+        "model-a",
+        "model-b",
+    }
+    for call in probe.await_args_list:
+        assert call.args[0] == 42
+        assert call.args[1].api_key == "new-key"
+        assert call.args[1].base_url == "https://new-provider.example/v1"

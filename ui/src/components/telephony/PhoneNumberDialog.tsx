@@ -28,8 +28,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { apiErrorMessage } from "@/i18n/errors";
 import { useCopy } from "@/i18n/LocaleProvider";
-import { detailFromError } from "@/lib/apiError";
 import { useAuth } from "@/lib/auth";
 
 
@@ -37,6 +37,9 @@ interface PhoneNumberDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   configId: number;
+  /** False for a provider that only receives calls: a number on it is never a
+      caller ID, so the default-caller choice is not offered. */
+  supportsOutbound?: boolean;
   /** Carrier paths on this configuration; empty for providers without trunks. */
   trunks?: TrunkResponse[];
   /** Preselected trunk when creating — set when the dialog is opened from a
@@ -73,6 +76,7 @@ export function PhoneNumberDialog({
   open,
   onOpenChange,
   configId,
+  supportsOutbound = true,
   trunks = [],
   defaultTrunkId = null,
   existing,
@@ -166,7 +170,7 @@ export function PhoneNumberDialog({
             },
           },
         );
-        if (res.error) throw new Error(copy(detailFromError(res.error, "Failed to save phone number")));
+        if (res.error) throw new Error(copy(apiErrorMessage(res.error, copy, "Failed to save phone number")));
         providerSync = res.data?.provider_sync;
         toast.success(copy("Phone number updated"));
       } else {
@@ -179,13 +183,13 @@ export function PhoneNumberDialog({
               country_code: countryCode || undefined,
               label: label || undefined,
               is_active: isActive,
-              is_default_caller_id: isDefaultCallerId,
+              is_default_caller_id: supportsOutbound && isDefaultCallerId,
               inbound_workflow_id: inboundId ?? undefined,
               telephony_trunk_id: selectedTrunkId ?? undefined,
             },
           },
         );
-        if (res.error) throw new Error(copy(detailFromError(res.error, "Failed to save phone number")));
+        if (res.error) throw new Error(copy(apiErrorMessage(res.error, copy, "Failed to save phone number")));
         providerSync = res.data?.provider_sync;
         toast.success(copy("Phone number added"));
       }
@@ -308,7 +312,7 @@ export function PhoneNumberDialog({
             <Switch checked={isActive} onCheckedChange={setIsActive} />
           </div>
 
-          {!isEdit && (
+          {!isEdit && supportsOutbound && (
             <div className="flex items-center justify-between rounded border p-3">
               <div>
                 <Label className="text-sm">{copy("Default caller ID for this configuration")}</Label>

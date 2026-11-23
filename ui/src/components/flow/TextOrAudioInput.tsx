@@ -1,7 +1,5 @@
-"use client";
-
 import { AlertCircle, Check, ChevronDown, Pause, Play, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 
 import type { RecordingResponseSchema } from "@/client/types.gen";
 import { Button } from "@/components/ui/button";
@@ -26,7 +24,8 @@ export function StaticTextWarning() {
     return (
         <div className="flex items-start gap-2 rounded-md bg-amber-50 p-2 text-xs text-amber-700 border border-amber-200">
             <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-            <span>{copy("This text is spoken as-is. For multilingual workflows, choose your phrasing carefully. Realtime (speech-to-speech) models can't play static text.")}</span>
+            <span>
+                {copy("This text is spoken as-is. For multilingual workflows, choose your phrasing carefully. Realtime (speech-to-speech) models can't play static text.")}</span>
         </div>
     );
 }
@@ -50,6 +49,7 @@ export function TextOrAudioInput({
     children,
 }: TextOrAudioInputProps) {
     const copy = useCopy();
+    const id = useId();
     return (
         <>
             <RadioGroup
@@ -58,12 +58,12 @@ export function TextOrAudioInput({
                 className="flex items-center gap-4"
             >
                 <div className="flex items-center gap-2">
-                    <RadioGroupItem value="text" id="toa-text" />
-                    <Label htmlFor="toa-text" className="font-normal cursor-pointer">{copy("Text")}</Label>
+                    <RadioGroupItem value="text" id={`${id}-text`} />
+                    <Label htmlFor={`${id}-text`} className="font-normal cursor-pointer">{copy("Text")}</Label>
                 </div>
                 <div className="flex items-center gap-2">
-                    <RadioGroupItem value="audio" id="toa-audio" />
-                    <Label htmlFor="toa-audio" className="font-normal cursor-pointer">{copy("Audio")}</Label>
+                    <RadioGroupItem value="audio" id={`${id}-audio`} />
+                    <Label htmlFor={`${id}-audio`} className="font-normal cursor-pointer">{copy("Audio")}</Label>
                 </div>
             </RadioGroup>
             {type === 'text' ? (
@@ -125,7 +125,8 @@ export function RecordingSelect({ value, onChange, recordings }: RecordingSelect
 
     return (
         <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">{copy("Select a pre-recorded audio file to play.")}</Label>
+            <Label className="text-xs text-muted-foreground">
+                {copy("Select a pre-recorded audio file to play.")}</Label>
             <Popover modal open={open} onOpenChange={(v) => { if (!v) { stop(); setSearch(""); } setOpen(v); }}>
                 <PopoverTrigger asChild>
                     <Button
@@ -141,7 +142,7 @@ export function RecordingSelect({ value, onChange, recordings }: RecordingSelect
                                 </code>
                                 <span className="text-sm">
                                     {selected.transcript.length > 75
-                                        ? copy("{value0}…", {value0: selected.transcript.slice(0, 75)})
+                                        ? `${selected.transcript.slice(0, 75)}…`
                                         : selected.transcript}
                                 </span>
                             </span>
@@ -156,7 +157,8 @@ export function RecordingSelect({ value, onChange, recordings }: RecordingSelect
                     align="start"
                 >
                     {recordings.length === 0 ? (
-                        <div className="p-3 text-sm text-muted-foreground text-center">{copy("No recordings available")}</div>
+                        <div className="p-3 text-sm text-muted-foreground text-center">
+                            {copy("No recordings available")}</div>
                     ) : (
                         <div>
                             <div className="p-2 border-b">
@@ -173,8 +175,8 @@ export function RecordingSelect({ value, onChange, recordings }: RecordingSelect
                             </div>
                             <div className="max-h-56 overflow-y-auto">
                             {filtered.length === 0 ? (
-                                <div className="p-3 text-sm text-muted-foreground text-center">{copy("No recordings match “")}{search}&rdquo;
-                                </div>
+                                <div className="p-3 text-sm text-muted-foreground text-center">
+                                    {copy("No recordings match “")}{search}{copy("”")}</div>
                             ) : filtered.map((r) => {
                                 const filename = (r.metadata?.original_filename as string) || "";
                                 const isSelected = String(r.id) === value;

@@ -9,6 +9,10 @@ import pytest
 from api import constants
 from api.routes.user import get_default_configurations
 from api.services import organization_bootstrap, quota_service, workflow_run_billing
+from api.services.configuration.model_connections import (
+    model_connection_catalog,
+    validate_provider_connection,
+)
 from api.services.model_services.policy import MPSDisabledError
 from api.services.mps_service_key_client import MPSServiceKeyClient
 
@@ -27,6 +31,55 @@ async def test_default_model_catalog_only_offers_available_providers():
         assert "dograh" not in getattr(catalog, field)
         assert getattr(catalog, field)
     assert "openai_realtime" in catalog.realtime
+
+
+@pytest.mark.parametrize(
+    "mode,enabled", [("oss", False), ("abera", False), ("abera", True)]
+)
+def test_v3_catalog_and_connection_writes_enforce_abera_provider_policy(
+    monkeypatch, mode, enabled
+):
+    from fastapi import HTTPException
+
+    monkeypatch.setattr(constants, "DEPLOYMENT_MODE", mode)
+    monkeypatch.setattr(constants, "ENABLE_DOGRAH_MPS", enabled)
+    catalog = model_connection_catalog()
+    for providers in catalog["services"].values():
+        assert "dograh" not in providers
+    assert "openai_compatible" in catalog["services"]["embeddings"]
+    with pytest.raises(HTTPException) as failure:
+        validate_provider_connection("dograh", {"api_key": "test-only-key"}, {})
+    assert failure.value.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_abera_never_bootstraps_vendor_services_even_if_flag_is_enabled(
+    monkeypatch,
+):
+    monkeypatch.setattr(organization_bootstrap, "DEPLOYMENT_MODE", "abera")
+    monkeypatch.setattr(organization_bootstrap, "ENABLE_DOGRAH_MPS", True)
+    read = AsyncMock(side_effect=AssertionError("must not bootstrap"))
+    monkeypatch.setattr(
+        organization_bootstrap.db_client, "get_configuration_values", read
+    )
+    assert (
+        await organization_bootstrap.ensure_organization_bootstrapped(
+            42, created_by="test"
+        )
+        is True
+    )
+    read.assert_not_awaited()
+
+
+def test_warm_catalog_cannot_reuse_another_deployments_provider_policy(monkeypatch):
+    monkeypatch.setattr(constants, "DEPLOYMENT_MODE", "oss")
+    monkeypatch.setattr(constants, "ENABLE_DOGRAH_MPS", True)
+    assert "dograh" in model_connection_catalog()["services"]["llm"]
+    monkeypatch.setattr(constants, "DEPLOYMENT_MODE", "abera")
+    assert "dograh" not in model_connection_catalog()["services"]["llm"]
+    monkeypatch.setattr(constants, "DEPLOYMENT_MODE", "oss")
+    monkeypatch.setattr(constants, "ENABLE_DOGRAH_MPS", False)
+    assert "dograh" not in model_connection_catalog()["services"]["llm"]
 
 
 @pytest.mark.asyncio

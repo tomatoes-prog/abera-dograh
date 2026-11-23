@@ -268,7 +268,9 @@ export default function TelephonyConfigurationsPage() {
                         {item.inactive && (
                           <Badge variant="destructive">{copy("Inactive")}</Badge>
                         )}
-                        {!item.inactive && item.is_ready_for_outbound === false && (
+                        {!item.inactive &&
+                          item.supports_outbound !== false &&
+                          item.is_ready_for_outbound === false && (
                           <Badge
                             variant="outline"
                             className="gap-1 border-amber-400 text-amber-700 dark:border-amber-700 dark:text-amber-400"
@@ -316,7 +318,7 @@ export default function TelephonyConfigurationsPage() {
                       >
                         <RotateCcw className="h-4 w-4 mr-1" />{copy("Reactivate")}</Button>
                     )}
-                    {!item.is_default_outbound && (
+                    {!item.is_default_outbound && item.supports_outbound !== false && (
                       <Button
                         variant="ghost"
                         size="sm"

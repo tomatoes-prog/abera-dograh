@@ -6,6 +6,7 @@ racing a running job must never leave the file and the index out of step.
 """
 
 import hashlib
+import uuid
 from unittest.mock import AsyncMock, patch
 
 import aiofiles
@@ -36,7 +37,9 @@ async def _make_document(
     full_text: str | None = ORIGINAL_TEXT,
     file_hash: str = ORIGINAL_HASH,
 ):
+    identifier = str(uuid.uuid4())
     document = await db_session.create_document(
+        document_uuid=identifier,
         organization_id=user.selected_organization_id,
         created_by=user.id,
         filename=filename,
@@ -44,7 +47,7 @@ async def _make_document(
         file_hash=file_hash,
         mime_type="text/plain",
         custom_metadata={
-            "s3_key": f"knowledge_base/{user.selected_organization_id}/x/{filename}"
+            "s3_key": f"knowledge_base/{user.selected_organization_id}/{identifier}/{filename}"
         },
         retrieval_mode=retrieval_mode,
     )

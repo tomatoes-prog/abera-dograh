@@ -1,0 +1,152 @@
+{
+  "date": "2026-10-16",
+  "base_commit": "fba406e81934ed7ef7e6564803b01e9f7fa96a14",
+  "validated_code_commit": "7ab28eb8676f316135c8dc52d29e3a5c5ffb95dd",
+  "upstream_commit": "417c9a74156f518de814cc55b579eb96a9656d5a",
+  "pipecat_commit": "93f62ca909fcbf6713e3ff99b26f33d4bb7b157e",
+  "workload": {
+    "transport": "in-process ASGI, no lifespan/startup or external provider requests",
+    "requests_per_trial": 200,
+    "concurrency": 8,
+    "warmup_requests": 20,
+    "trials_per_revision": 3,
+    "aggregation": "median of trials",
+    "python": "3.13.15"
+  },
+  "trials": {
+    "before": [
+      {
+        "label": "fba406e8-before-1",
+        "endpoint": "/api/v1/user/configurations/defaults",
+        "requests": 200,
+        "concurrency": 8,
+        "warmup_requests": 20,
+        "elapsed_seconds": 12.08,
+        "cpu_seconds": 12.078,
+        "requests_per_second": 16.56,
+        "median_ms": 55.896,
+        "p95_ms": 93.773,
+        "response_bytes": 66835,
+        "peak_rss_mib": 316.9
+      },
+      {
+        "label": "before-2",
+        "endpoint": "/api/v1/user/configurations/defaults",
+        "requests": 200,
+        "concurrency": 8,
+        "warmup_requests": 20,
+        "elapsed_seconds": 17.208,
+        "cpu_seconds": 17.203,
+        "requests_per_second": 11.62,
+        "median_ms": 73.622,
+        "p95_ms": 156.114,
+        "response_bytes": 66835,
+        "peak_rss_mib": 316.94
+      },
+      {
+        "label": "before-3",
+        "endpoint": "/api/v1/user/configurations/defaults",
+        "requests": 200,
+        "concurrency": 8,
+        "warmup_requests": 20,
+        "elapsed_seconds": 12.18,
+        "cpu_seconds": 12.178,
+        "requests_per_second": 16.42,
+        "median_ms": 55.176,
+        "p95_ms": 99.399,
+        "response_bytes": 66835,
+        "peak_rss_mib": 317.74
+      }
+    ],
+    "optimized": [
+      {
+        "label": "optimized-after-1",
+        "endpoint": "/api/v1/model-connections/catalog",
+        "requests": 200,
+        "concurrency": 8,
+        "warmup_requests": 20,
+        "elapsed_seconds": 0.663,
+        "cpu_seconds": 0.675,
+        "requests_per_second": 301.48,
+        "median_ms": 21.511,
+        "p95_ms": 35.282,
+        "response_bytes": 72276,
+        "peak_rss_mib": 329.73
+      },
+      {
+        "label": "optimized-after-2",
+        "endpoint": "/api/v1/model-connections/catalog",
+        "requests": 200,
+        "concurrency": 8,
+        "warmup_requests": 20,
+        "elapsed_seconds": 0.774,
+        "cpu_seconds": 0.787,
+        "requests_per_second": 258.28,
+        "median_ms": 24.051,
+        "p95_ms": 44.147,
+        "response_bytes": 72276,
+        "peak_rss_mib": 329.5
+      },
+      {
+        "label": "optimized-after-3",
+        "endpoint": "/api/v1/model-connections/catalog",
+        "requests": 200,
+        "concurrency": 8,
+        "warmup_requests": 20,
+        "elapsed_seconds": 0.876,
+        "cpu_seconds": 0.886,
+        "requests_per_second": 228.36,
+        "median_ms": 26.416,
+        "p95_ms": 50.91,
+        "response_bytes": 72276,
+        "peak_rss_mib": 329.54
+      }
+    ]
+  },
+  "medians": {
+    "before": {
+      "median_ms": 55.896,
+      "p95_ms": 99.399,
+      "cpu_seconds": 12.178,
+      "requests_per_second": 16.42,
+      "peak_rss_mib": 316.94,
+      "response_bytes": 66835
+    },
+    "optimized": {
+      "median_ms": 24.051,
+      "p95_ms": 44.147,
+      "cpu_seconds": 0.787,
+      "requests_per_second": 258.28,
+      "peak_rss_mib": 329.54,
+      "response_bytes": 72276
+    }
+  },
+  "scope_limit": "Different catalog contracts for the same UI operation; this does not measure real voice latency or production capacity.",
+  "backup_restore": {
+    "scope": "Disposable PostgreSQL 17 + pgvector database with synthetic keys, customer text and archived/historical overrides",
+    "logical_fingerprint_before_and_after": "105716c06eb453c06ecc28db9128cab92af745294871b27e2c2e67c98e667dda"
+  },
+  "api_validation": {
+    "summary": {
+      "failures": 0,
+      "errors": 0,
+      "skipped": 2,
+      "passed": 4986,
+      "testcases": 4988,
+      "passed_subtests": 17
+    },
+    "method": "Full suite at a5b33bae; rerun all cases in the 3 affected fixture modules after test-only corrections at 7ab28eb8. Production API/Pipecat code unchanged between runs.",
+    "full_run": {
+      "passed": 4929,
+      "failed": 3,
+      "setup_errors": 54,
+      "skipped": 2,
+      "passed_subtests": 17
+    },
+    "recheck": {
+      "passed": 78,
+      "failed": 0,
+      "errors": 0
+    }
+  }
+}

@@ -48,7 +48,6 @@ import {
     createMcpDefinition,
     createToolDefinition,
     createTransferAgentDefinition,
-    DEFAULT_TRANSFER_AGENT_MESSAGE,
     getCategoryConfig,
     MCP_URL_PATTERN,
     renderToolIcon,
@@ -185,7 +184,6 @@ export default function ToolsPage() {
             } else if (newToolCategory === "transfer_agent") {
                 definition = createTransferAgentDefinition({
                     workflow_id: Number(newTransferAgentWorkflowId),
-                    message: DEFAULT_TRANSFER_AGENT_MESSAGE,
                 });
             } else {
                 definition = createToolDefinition(newToolCategory);
@@ -208,7 +206,7 @@ export default function ToolsPage() {
             });
 
             if (response.error) {
-                setCreateError(copy(detailFromError(response.error, "Failed to create tool")));
+                setCreateError(copy(detailFromError(response.error, copy("Failed to create tool"))));
                 return;
             }
 

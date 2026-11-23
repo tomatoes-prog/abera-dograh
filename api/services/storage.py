@@ -10,6 +10,7 @@ from api.constants import (
     S3_ADDRESSING_STYLE,
     S3_BUCKET,
     S3_ENDPOINT_URL,
+    S3_PUBLIC_ENDPOINT_URL,
     S3_REGION,
     S3_SIGNATURE_VERSION,
 )
@@ -49,6 +50,7 @@ def get_storage_for_backend(backend: str) -> BaseFileSystem:
             bucket_name=bucket,
             region_name=region,
             endpoint_url=S3_ENDPOINT_URL,
+            public_endpoint_url=S3_PUBLIC_ENDPOINT_URL,
             signature_version=S3_SIGNATURE_VERSION,
             addressing_style=S3_ADDRESSING_STYLE,
             key_prefix=key_prefix,

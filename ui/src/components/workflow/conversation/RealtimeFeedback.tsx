@@ -1,5 +1,7 @@
 "use client";
 
+import { useCopy } from "@/i18n/LocaleProvider";
+
 import {
     conversationItemsFromLiveFeedback,
     conversationItemsFromRealtimeFeedbackEvents,
@@ -13,6 +15,7 @@ import type {
 } from "./types";
 import { countConversationMessages } from "./utils";
 
+
 interface LiveModeProps {
     mode: "live";
     messages: RealtimeFeedbackMessage[];
@@ -23,11 +26,13 @@ interface LiveModeProps {
 interface HistoricalModeProps {
     mode: "historical";
     logs: WorkflowRunLogs | null;
+    toolResults?: unknown;
 }
 
 type RealtimeFeedbackProps = LiveModeProps | HistoricalModeProps;
 
 export function RealtimeFeedback(props: RealtimeFeedbackProps) {
+    const copy = useCopy();
     let items;
     let status: ConversationStatus;
     let title: string;
@@ -35,21 +40,21 @@ export function RealtimeFeedback(props: RealtimeFeedbackProps) {
     let autoScroll = false;
 
     if (props.mode === "historical") {
-        items = props.logs?.realtime_feedback_events
-            ? conversationItemsFromRealtimeFeedbackEvents(props.logs.realtime_feedback_events)
-            : [];
+        items = conversationItemsFromRealtimeFeedbackEvents(
+            props.logs?.realtime_feedback_events ?? [], props.toolResults,
+        );
         status = "ended";
         title = "Call Transcript";
         emptyState = {
-            title: "No conversation recorded",
-            subtitle: "Real-time feedback events were not captured for this call",
+            title: copy("No conversation recorded"),
+            subtitle: copy("Real-time feedback events were not captured for this call"),
         };
     } else {
         items = conversationItemsFromLiveFeedback(props.messages);
         status = props.isCallActive ? "live" : props.isCallCompleted ? "ended" : "ready";
         title = "Live Transcript";
         emptyState = {
-            title: "No messages yet",
+            title: copy("No messages yet"),
             subtitle: props.isCallActive
                 ? "Start speaking to see the transcript"
                 : "Start the call to begin the conversation",

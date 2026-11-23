@@ -91,7 +91,7 @@ export const PhoneCallDialog = ({
         const result =
             await getPreferencesApiV1OrganizationsPreferencesGet();
         if (result.error) {
-            throw new Error(copy(detailFromError(result.error, "Failed to load phone preferences")));
+            throw new Error(copy(detailFromError(result.error, copy("Failed to load phone preferences"))));
         }
         return result.data || {};
     }, [copy]);
@@ -113,7 +113,11 @@ export const PhoneCallDialog = ({
             try {
                 const configResponse = await listTelephonyConfigurationsApiV1OrganizationsTelephonyConfigsGet({});
 
-                const configurations = configResponse.data?.configurations ?? [];
+                // A configuration that only receives calls has no place in a
+                // dialog that places one.
+                const configurations = (configResponse.data?.configurations ?? []).filter(
+                    (config) => config.supports_outbound !== false,
+                );
                 if (configResponse.error || configurations.length === 0) {
                     setNeedsConfiguration(true);
                     setTelephonyConfigs([]);
@@ -267,7 +271,7 @@ export const PhoneCallDialog = ({
             });
 
         if (result.error) {
-            throw new Error(copy(detailFromError(result.error, "Failed to save phone preferences")));
+            throw new Error(copy(detailFromError(result.error, copy("Failed to save phone preferences"))));
         }
         if (!result.data) {
             throw new Error("Failed to save phone preferences");

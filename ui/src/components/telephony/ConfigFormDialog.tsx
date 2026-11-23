@@ -36,8 +36,8 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { apiErrorMessage } from "@/i18n/errors";
 import { useCopy } from "@/i18n/LocaleProvider";
-import { detailFromError } from "@/lib/apiError";
 import { useAuth } from "@/lib/auth";
 import { copyTextToClipboard } from "@/lib/clipboard";
 
@@ -213,7 +213,7 @@ export function ConfigFormDialog({
             body: { name: name || undefined, config: configPayload },
           },
         );
-        if (res.error) throw new Error(copy(detailFromError(res.error, "Failed to save configuration")));
+        if (res.error) throw new Error(copy(apiErrorMessage(res.error, copy, "Failed to save configuration")));
         toast.success(copy("Configuration updated"));
       } else {
         const res = await createTelephonyConfigurationApiV1OrganizationsTelephonyConfigsPost(
@@ -221,12 +221,15 @@ export function ConfigFormDialog({
             headers: { Authorization: `Bearer ${token}` },
             body: {
               name: name.trim(),
-              is_default_outbound: isDefault,
+              // A provider that only receives calls is never the outbound
+              // default, whatever the (hidden) switch was left at.
+              is_default_outbound:
+                currentProvider.supports_outbound === false ? false : isDefault,
               config: configPayload,
             },
           },
         );
-        if (res.error) throw new Error(copy(detailFromError(res.error, "Failed to save configuration")));
+        if (res.error) throw new Error(copy(apiErrorMessage(res.error, copy, "Failed to save configuration")));
         toast.success(copy("Configuration created"));
       }
       onOpenChange(false);
@@ -315,7 +318,7 @@ export function ConfigFormDialog({
             )}
           </div>
 
-          {!isEdit && (
+          {!isEdit && currentProvider?.supports_outbound !== false && (
             <div className="flex items-center justify-between rounded border p-3">
               <div>
                 <Label className="text-sm">{copy("Set as default for outbound calls")}</Label>
