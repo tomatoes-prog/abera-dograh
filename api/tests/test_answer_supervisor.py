@@ -6,6 +6,14 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
+
+from api.schemas.answer_supervisor import AnswerSupervisorConfig
+from api.services.pipecat.answer_classification import (
+    MachineSubtype,
+    classify_machine_utterance,
+)
+from api.services.pipecat.processors.answer_supervisor import AnswerSupervisor
+from api.services.pipecat.worker_runner import run_pipeline_worker
 from pipecat.frames.frames import (
     BotStartedSpeakingFrame,
     BotStoppedSpeakingFrame,
@@ -33,14 +41,6 @@ from pipecat.turns.user_mute import FirstSpeechUserMuteStrategy
 from pipecat.turns.user_start import ExternalUserTurnStartStrategy
 from pipecat.turns.user_stop import ExternalUserTurnStopStrategy
 from pipecat.turns.user_turn_strategies import UserTurnStrategies
-
-from api.schemas.answer_supervisor import AnswerSupervisorConfig
-from api.services.pipecat.answer_classification import (
-    MachineSubtype,
-    classify_machine_utterance,
-)
-from api.services.pipecat.processors.answer_supervisor import AnswerSupervisor
-from api.services.pipecat.worker_runner import run_pipeline_worker
 
 
 class Capture(FrameProcessor):

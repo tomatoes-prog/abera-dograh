@@ -11,6 +11,13 @@ from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 
 from loguru import logger
+
+from api.enums import AnswerAction
+from api.schemas.answer_supervisor import AnswerSupervisorConfig
+from api.services.pipecat.answer_classification import (
+    MachineSubtype,
+    classify_machine_utterance,
+)
 from pipecat.frames.frames import (
     CancelFrame,
     EndFrame,
@@ -22,13 +29,6 @@ from pipecat.frames.frames import (
 )
 from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.frame_processor import FrameProcessor
-
-from api.enums import AnswerAction
-from api.schemas.answer_supervisor import AnswerSupervisorConfig
-from api.services.pipecat.answer_classification import (
-    MachineSubtype,
-    classify_machine_utterance,
-)
 
 
 @dataclass(frozen=True)

@@ -11,11 +11,11 @@ from typing import Any, Dict, List, Optional
 
 from loguru import logger
 from opentelemetry import trace
-from pipecat.utils.tracing.langfuse_helpers import mark_trace_public
 
 from api.db import db_client
 from api.services.gen_ai import build_embedding_service
 from api.services.pipecat.tracing_config import ensure_tracing
+from pipecat.utils.tracing.langfuse_helpers import mark_trace_public
 
 
 async def retrieve_from_knowledge_base(

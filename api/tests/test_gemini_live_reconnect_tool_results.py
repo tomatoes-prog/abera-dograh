@@ -5,6 +5,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from google.genai.types import LiveServerContent, LiveServerMessage
+
+from api.services.pipecat.realtime.gemini_live import DograhGeminiLiveLLMService
 from pipecat.frames.frames import (
     BotStoppedSpeakingFrame,
     EndFrame,
@@ -18,8 +20,6 @@ from pipecat.processors.aggregators.llm_response_universal import (
 )
 from pipecat.processors.frame_processor import FrameDirection
 from pipecat.services.llm_service import FunctionCallFromLLM
-
-from api.services.pipecat.realtime.gemini_live import DograhGeminiLiveLLMService
 
 
 class _TestDograhGeminiLiveLLMService(DograhGeminiLiveLLMService):

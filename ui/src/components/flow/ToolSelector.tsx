@@ -12,10 +12,25 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TOOLS_INTRODUCTION_DOC_URL } from "@/constants/documentation";
+import type { Copy } from "@/i18n/catalog";
 import { useCopy } from "@/i18n/LocaleProvider";
 
 import { type McpDiscoveredTool, refreshMcpTools } from "./mcpRefresh";
 
+
+const DYNAMIC_TOOL_DESCRIPTION_PATTERNS: Array<[RegExp, string]> = [
+    [/^IANA timezone name \(e\.g\., 'America\/New_York', 'Europe\/London'\)\. Use '([^']+)' as local timezone if no timezone provided by the user\.$/, "IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Use '{value0}' as local timezone if no timezone provided by the user."],
+    [/^Source IANA timezone name \(e\.g\., 'America\/New_York', 'Europe\/London'\)\. Use '([^']+)' as local timezone if no source timezone provided by the user\.$/, "Source IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Use '{value0}' as local timezone if no source timezone provided by the user."],
+    [/^Target IANA timezone name \(e\.g\., 'Asia\/Tokyo', 'America\/San_Francisco'\)\. Use '([^']+)' as local timezone if no target timezone provided by the user\.$/, "Target IANA timezone name (e.g., 'Asia/Tokyo', 'America/San_Francisco'). Use '{value0}' as local timezone if no target timezone provided by the user."],
+];
+
+function localizeToolDescription(description: string, copy: Copy): string {
+    for (const [pattern, source] of DYNAMIC_TOOL_DESCRIPTION_PATTERNS) {
+        const match = description.match(pattern);
+        if (match) return copy(source, { value0: match[1] });
+    }
+    return copy(description);
+}
 
 interface ToolSelectorProps {
     value: string[];
@@ -223,7 +238,7 @@ export function ToolSelector({
                                             </span>
                                             {tool.description && (
                                                 <span className="text-xs text-muted-foreground break-words">
-                                                    {tool.description}
+                                                    {localizeToolDescription(tool.description, copy)}
                                                 </span>
                                             )}
                                         </div>
@@ -261,7 +276,7 @@ export function ToolSelector({
                                                 </span>
                                                 {tool.description && (
                                                     <span className="text-xs text-muted-foreground break-words">
-                                                        {tool.description}
+                                                        {localizeToolDescription(tool.description, copy)}
                                                     </span>
                                                 )}
                                             </div>
@@ -309,7 +324,7 @@ export function ToolSelector({
                                                             </span>
                                                             {fn.description && (
                                                                 <span className="text-xs text-muted-foreground break-words">
-                                                                    {fn.description}
+                                                                    {localizeToolDescription(fn.description, copy)}
                                                                 </span>
                                                             )}
                                                         </div>

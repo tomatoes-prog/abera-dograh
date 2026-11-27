@@ -13,7 +13,6 @@ from urllib.parse import urlparse
 import aiohttp
 from fastapi import HTTPException
 from loguru import logger
-from pipecat.utils.enums import EndTaskReason
 
 from api.db import db_client
 from api.enums import TelephonyCallStatus, WorkflowRunMode
@@ -32,6 +31,7 @@ from api.services.telephony.providers.ari.dial_string import (
     build_dial_string,
 )
 from api.services.telephony.providers.ari.external_pbx import create_adapter
+from pipecat.utils.enums import EndTaskReason
 
 if TYPE_CHECKING:
     from fastapi import WebSocket

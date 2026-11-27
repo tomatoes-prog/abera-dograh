@@ -4,7 +4,6 @@ import asyncio
 from dataclasses import replace
 
 import pytest
-from pipecat.frames.frames import TTSAudioRawFrame
 
 from api.services.pipecat.tts_cache.cache import SpeechCache
 from api.services.pipecat.tts_cache.models import CachedSpeech, CachePolicy
@@ -17,6 +16,7 @@ from api.tests.test_tts_cache import (
     synthesize,
     warm_cache,
 )
+from pipecat.frames.frames import TTSAudioRawFrame
 
 pytestmark = pytest.mark.asyncio
 redis_backend = test_tts_cache.redis_backend

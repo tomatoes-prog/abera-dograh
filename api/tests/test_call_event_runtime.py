@@ -2,17 +2,16 @@ import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
-from pipecat.frames.frames import ErrorFrame, InterruptionFrame, TranscriptionFrame
-from pipecat.observers.base_observer import FramePushed
-from pipecat.processors.frame_processor import FrameDirection
-from pipecat.utils.base_object import BaseObject
-
 from api.services.observability.call_events import runtime
 from api.services.observability.call_events.base import EventBuffer
 from api.services.observability.call_events.configuration import CallEventsSettings
 from api.services.observability.call_events.recorder import CallEventRecorder
 from api.services.pipecat.in_memory_buffers import InMemoryLogsBuffer
 from api.services.pipecat.realtime_feedback_observer import RealtimeFeedbackObserver
+from pipecat.frames.frames import ErrorFrame, InterruptionFrame, TranscriptionFrame
+from pipecat.observers.base_observer import FramePushed
+from pipecat.processors.frame_processor import FrameDirection
+from pipecat.utils.base_object import BaseObject
 
 
 class Publisher(BaseObject):
@@ -180,13 +179,12 @@ def test_current_playback_preserves_legacy_mute_state_values():
 async def test_retired_agent_tool_completion_is_kept_but_late_text_is_not():
     from unittest.mock import create_autospec
 
+    from api.services.pipecat.agent_bridge import AgentWorker
     from pipecat.frames.frames import (
         FunctionCallInProgressFrame,
         FunctionCallResultFrame,
         LLMTextFrame,
     )
-
-    from api.services.pipecat.agent_bridge import AgentWorker
 
     worker = create_autospec(AgentWorker, instance=True)
     worker.name = "old"

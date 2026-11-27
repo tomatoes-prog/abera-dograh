@@ -1,11 +1,11 @@
 from types import SimpleNamespace
 
 import pytest
-from pipecat.processors.aggregators.llm_context import LLMContext
 from pydantic import ValidationError
 
 from api.schemas.answer_supervisor import resolve_answer_supervisor_config
 from api.services.pipecat.processors.answer_supervisor import AnswerSupervisor
+from pipecat.processors.aggregators.llm_context import LLMContext
 
 
 def resolve(config, **kwargs):

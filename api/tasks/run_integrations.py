@@ -5,8 +5,6 @@ from datetime import UTC, datetime
 from typing import Any, Dict, Optional
 
 from loguru import logger
-from pipecat.utils.enums import EndTaskReason
-from pipecat.utils.run_context import set_current_org_id, set_current_run_id
 from pydantic import ValidationError
 
 from api.constants import BACKEND_API_ENDPOINT, DEFAULT_WEBHOOK_DELIVERY_CONFIG
@@ -36,6 +34,8 @@ from api.services.workflow.qa import run_per_node_qa_analysis
 from api.tasks.function_names import FunctionNames
 from api.utils.recording_artifacts import get_recording_storage_key
 from api.utils.template_renderer import render_template
+from pipecat.utils.enums import EndTaskReason
+from pipecat.utils.run_context import set_current_org_id, set_current_run_id
 
 
 def _should_skip_qa(

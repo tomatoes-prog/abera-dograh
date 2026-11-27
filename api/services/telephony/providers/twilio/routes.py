@@ -8,7 +8,6 @@ import json
 
 from fastapi import APIRouter, HTTPException, Request
 from loguru import logger
-from pipecat.utils.run_context import set_current_run_id
 from starlette.responses import HTMLResponse, Response
 
 from api.db import db_client
@@ -25,6 +24,7 @@ from api.services.telephony.status_processor import (
 )
 from api.services.telephony.transfer_audio import get_transfer_audio
 from api.services.telephony.transfer_event_protocol import TransferEventType
+from pipecat.utils.run_context import set_current_run_id
 
 router = APIRouter()
 

@@ -1,10 +1,10 @@
 from types import SimpleNamespace
 
 import pytest
-from pipecat.services.speechmatics.stt import SpeechmaticsSTTService, TurnDetectionMode
 
 from api.services.configuration.registry import SpeechmaticsSTTConfiguration
 from api.services.pipecat.service_factory import create_stt_service
+from pipecat.services.speechmatics.stt import SpeechmaticsSTTService, TurnDetectionMode
 
 
 @pytest.mark.parametrize("model", ["linden-1", "enhanced", "standard"])

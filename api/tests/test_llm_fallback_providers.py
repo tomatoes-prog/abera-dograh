@@ -10,6 +10,11 @@ import pytest
 from loguru import logger
 from openai import AuthenticationError, RateLimitError
 from openai.types.chat import ChatCompletionChunk
+
+from api.schemas.llm_fallback import ErrorCondition, NoOutputCondition
+from api.services.pipecat.fallback_llm import FallbackLLMProcessor, FallbackRoute
+from api.services.pipecat.service_factory import create_llm_service_from_provider
+from api.tests.test_fallback_llm_processor import Capture, Stream, chunk, generate
 from pipecat.clocks.system_clock import SystemClock
 from pipecat.frames.frames import ErrorFrame, StartFrame
 from pipecat.pipeline.pipeline import Pipeline
@@ -18,11 +23,6 @@ from pipecat.processors.aggregators.llm_response_universal import LLMAssistantAg
 from pipecat.processors.frame_processor import FrameProcessorSetup
 from pipecat.services.settings import LLMSettings
 from pipecat.utils.asyncio.task_manager import TaskManager
-
-from api.schemas.llm_fallback import ErrorCondition, NoOutputCondition
-from api.services.pipecat.fallback_llm import FallbackLLMProcessor, FallbackRoute
-from api.services.pipecat.service_factory import create_llm_service_from_provider
-from api.tests.test_fallback_llm_processor import Capture, Stream, chunk, generate
 
 
 def openai_chunk(content=None, *, tools=None, role=None):

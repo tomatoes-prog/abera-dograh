@@ -4,7 +4,6 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from pipecat.utils.run_context import set_current_run_id
 from pydantic import BaseModel, Field
 
 from api.db import db_client
@@ -34,6 +33,7 @@ from api.services.workflow.text_chat_stream import (
     TextChatEventStreamResponse,
     TextChatTurnStream,
 )
+from pipecat.utils.run_context import set_current_run_id
 
 router = APIRouter(prefix="/workflow", tags=["workflow-text-chat"])
 

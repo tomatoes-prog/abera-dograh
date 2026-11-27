@@ -135,13 +135,12 @@ async def _run_pipeline_finished(
 async def test_answer_decision_is_saved_in_gathered_context_without_rtf_events(
     monkeypatch, recording_upload_enabled
 ):
-    from pipecat.processors.aggregators.llm_context import LLMContext
-
     from api.schemas.answer_supervisor import AnswerSupervisorConfig
     from api.services.pipecat import event_handlers
     from api.services.pipecat.in_memory_buffers import InMemoryLogsBuffer
     from api.services.pipecat.processors.answer_supervisor import AnswerSupervisor
     from api.services.workflow.answer_handling import handle_answer
+    from pipecat.processors.aggregators.llm_context import LLMContext
 
     logs_buffer = InMemoryLogsBuffer(workflow_run_id=88)
     supervisor = AnswerSupervisor(

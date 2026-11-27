@@ -6,7 +6,6 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
-from pipecat.processors.aggregators.llm_context import LLMContext
 
 from api.services.workflow.agent_handoff_context import (
     HANDOFF_CONTEXT_PREFIX,
@@ -18,6 +17,7 @@ from api.services.workflow.agent_handoff_context import (
 from api.services.workflow.pipecat_engine_context_summarizer import (
     ContextSummarizationManager,
 )
+from pipecat.processors.aggregators.llm_context import LLMContext
 
 
 def handoff(context, source="English"):

@@ -22,7 +22,6 @@ from urllib.parse import urlsplit, urlunsplit
 
 import httpx
 from loguru import logger
-from pipecat.utils.run_context import set_current_org_id, set_current_run_id
 
 from api.constants import DEFAULT_WEBHOOK_DELIVERY_CONFIG
 from api.db import db_client
@@ -36,6 +35,7 @@ from api.errors.failure import (
 )
 from api.tasks.function_names import FunctionNames
 from api.utils.credential_auth import build_auth_header
+from pipecat.utils.run_context import set_current_org_id, set_current_run_id
 
 # HTTP statuses that are worth retrying even though the server answered.
 _RETRYABLE_STATUS_CODES = {408, 425, 429, 500, 502, 503, 504}

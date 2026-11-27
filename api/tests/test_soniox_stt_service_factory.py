@@ -1,8 +1,6 @@
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from pipecat.services.settings import NOT_GIVEN
-from pipecat.transcriptions.language import Language
 from pydantic import TypeAdapter
 
 from api.services.configuration.options import SONIOX_STT_LANGUAGES, SONIOX_STT_MODELS
@@ -16,6 +14,8 @@ from api.services.pipecat.service_factory import (
     create_stt_service,
     stt_uses_external_turns,
 )
+from pipecat.services.settings import NOT_GIVEN
+from pipecat.transcriptions.language import Language
 
 
 def _audio_config() -> AudioConfig:

@@ -14,11 +14,11 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set
 
 from loguru import logger
 from mcp.client.session_group import StreamableHttpParameters
-from pipecat.adapters.schemas.function_schema import FunctionSchema
-from pipecat.services.mcp_service import MCPClient
 
 from api.services.workflow.tools.mcp_tool import namespace_function_name
 from api.utils.credential_auth import build_auth_header
+from pipecat.adapters.schemas.function_schema import FunctionSchema
+from pipecat.services.mcp_service import MCPClient
 
 if TYPE_CHECKING:
     from api.db.models import ExternalCredentialModel

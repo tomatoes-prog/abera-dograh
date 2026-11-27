@@ -8,7 +8,6 @@ from typing import Any, Dict
 
 import aiohttp
 from loguru import logger
-from pipecat.serializers.call_strategies import HangupStrategy, TransferStrategy
 
 from api.errors.failure import (
     DograhFailure,
@@ -24,6 +23,7 @@ from api.services.telephony.transfer_event_protocol import (
     TransferEventType,
 )
 from api.utils.common import get_backend_endpoints
+from pipecat.serializers.call_strategies import HangupStrategy, TransferStrategy
 
 
 class TwilioConferenceStrategy(TransferStrategy):

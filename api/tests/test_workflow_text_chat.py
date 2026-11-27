@@ -9,8 +9,6 @@ import httpx
 import openai
 import pytest
 from loguru import logger
-from pipecat.processors.aggregators.llm_context import LLMSpecificMessage
-from pipecat.utils.enums import EndTaskReason
 
 from api.db.models import OrganizationModel, UserModel, organization_users_association
 from api.errors.failure import ErrorOwner, ErrorSource, annotate_failure_metadata
@@ -30,7 +28,9 @@ from api.services.workflow.text_chat_session_service import (
 from api.tasks.function_names import FunctionNames
 from api.tests.integrations._run_pipeline_helpers import USER_CONFIGURATION
 from api.tests.support.model_catalog import seed_default_model_configuration
+from pipecat.processors.aggregators.llm_context import LLMSpecificMessage
 from pipecat.tests import MockLLMService
+from pipecat.utils.enums import EndTaskReason
 
 
 def _log_texts(logs: dict | None, event_type: str) -> list[str]:

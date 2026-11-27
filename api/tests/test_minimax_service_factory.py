@@ -3,8 +3,6 @@ from unittest.mock import patch
 
 import pytest
 from loguru import logger
-from pipecat.services.minimax.llm import MiniMaxLLMService as RealMiniMaxLLMService
-from pipecat.services.minimax.tts import MiniMaxTTSService
 
 from api.services.configuration.registry import (
     MiniMaxLLMConfiguration,
@@ -15,6 +13,8 @@ from api.services.pipecat.service_factory import (
     create_llm_service_from_provider,
     create_tts_service,
 )
+from pipecat.services.minimax.llm import MiniMaxLLMService as RealMiniMaxLLMService
+from pipecat.services.minimax.tts import MiniMaxTTSService
 
 
 class TestMiniMaxLLMConfiguration:

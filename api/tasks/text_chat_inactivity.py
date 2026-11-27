@@ -3,8 +3,6 @@
 from datetime import UTC, datetime, timedelta
 
 from loguru import logger
-from pipecat.utils.enums import EndTaskReason
-from pipecat.utils.run_context import set_current_run_id
 
 from api.constants import (
     MAX_TEXT_CHAT_INACTIVITY_TIMEOUT_SECONDS,
@@ -23,6 +21,8 @@ from api.services.workflow.text_chat_session_service import (
     complete_text_chat_session,
 )
 from api.tasks.function_names import FunctionNames
+from pipecat.utils.enums import EndTaskReason
+from pipecat.utils.run_context import set_current_run_id
 
 
 async def sweep_inactive_text_chat_sessions(_ctx) -> None:

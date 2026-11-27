@@ -5,6 +5,17 @@ from types import SimpleNamespace
 
 import pytest
 from google.genai.types import Blob, Content, LiveServerContent, LiveServerMessage, Part
+
+from api.services.pipecat.call_monitor_processor import CallMonitorProcessor
+from api.services.pipecat.pipeline_builder import build_realtime_pipeline
+from api.services.pipecat.realtime.gemini_live import DograhGeminiLiveLLMService
+from api.services.pipecat.speech_playback import SpeechPlaybackTracker
+from api.services.pipecat.worker_runner import (
+    create_worker_runner,
+    run_worker_runner,
+    wait_for_pipeline_worker_started,
+)
+from api.tests.test_call_monitor import ControlledOutput
 from pipecat.frames.frames import (
     CancelFrame,
     LLMContextFrame,
@@ -19,17 +30,6 @@ from pipecat.processors.aggregators.llm_response_universal import (
     LLMUserAggregatorParams,
 )
 from pipecat.processors.filters.identity_filter import IdentityFilter
-
-from api.services.pipecat.call_monitor_processor import CallMonitorProcessor
-from api.services.pipecat.pipeline_builder import build_realtime_pipeline
-from api.services.pipecat.realtime.gemini_live import DograhGeminiLiveLLMService
-from api.services.pipecat.speech_playback import SpeechPlaybackTracker
-from api.services.pipecat.worker_runner import (
-    create_worker_runner,
-    run_worker_runner,
-    wait_for_pipeline_worker_started,
-)
-from api.tests.test_call_monitor import ControlledOutput
 
 
 class OfflineGemini(DograhGeminiLiveLLMService):

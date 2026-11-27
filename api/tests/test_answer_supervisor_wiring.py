@@ -3,10 +3,6 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-from pipecat.turns.user_mute import (
-    FunctionCallUserMuteStrategy,
-    MuteUntilFirstBotCompleteUserMuteStrategy,
-)
 
 from api.services.pipecat.event_handlers import register_event_handlers
 from api.services.pipecat.pre_call_fetch import PreCallFetchResult
@@ -14,6 +10,10 @@ from api.services.pipecat.run_pipeline import _create_user_mute_strategies
 from api.services.pipecat.termination_funnel_processor import TerminationFunnelProcessor
 from api.services.workflow import answer_classification_service
 from api.services.workflow.pipecat_engine import PipecatEngine
+from pipecat.turns.user_mute import (
+    FunctionCallUserMuteStrategy,
+    MuteUntilFirstBotCompleteUserMuteStrategy,
+)
 
 
 @pytest.mark.parametrize(
@@ -301,9 +301,8 @@ async def test_initial_response_respects_call_disposal(
 async def test_saved_detector_settings_build_a_private_classifier_with_saved_instructions(
     monkeypatch, use_workflow_llm
 ):
-    from pipecat.processors.aggregators.llm_context import LLMContext
-
     from api.services.pipecat.run_pipeline import _create_answer_supervisor
+    from pipecat.processors.aggregators.llm_context import LLMContext
 
     llm = SimpleNamespace(run_inference=AsyncMock(return_value="SCREENER"))
     workflow_factory = Mock(return_value=llm)
@@ -377,9 +376,8 @@ async def test_saved_detector_settings_build_a_private_classifier_with_saved_ins
 async def test_a_workflow_without_saved_instructions_uses_the_built_in_prompt(
     monkeypatch,
 ):
-    from pipecat.processors.aggregators.llm_context import LLMContext
-
     from api.services.pipecat.run_pipeline import _create_answer_supervisor
+    from pipecat.processors.aggregators.llm_context import LLMContext
 
     llm = SimpleNamespace(run_inference=AsyncMock(return_value="SCREENER"))
     monkeypatch.setattr(
@@ -407,9 +405,8 @@ async def test_a_workflow_without_saved_instructions_uses_the_built_in_prompt(
 def test_unsupported_or_disabled_calls_do_not_create_a_classifier(
     monkeypatch, realtime, enabled
 ):
-    from pipecat.processors.aggregators.llm_context import LLMContext
-
     from api.services.pipecat.run_pipeline import _create_answer_supervisor
+    from pipecat.processors.aggregators.llm_context import LLMContext
 
     factory = Mock()
     monkeypatch.setattr("api.services.pipecat.run_pipeline.create_llm_service", factory)

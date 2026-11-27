@@ -4,8 +4,6 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from pipecat.processors.aggregators.llm_context import LLMContext
-from pipecat.utils.enums import EndTaskReason
 
 from api.schemas.workflow_configurations import CallDispositionOption
 from api.services.workflow.conversation_history import (
@@ -19,6 +17,8 @@ from api.services.workflow.disposition_extraction import (
 )
 from api.services.workflow.dto import ExtractionVariableDTO
 from api.services.workflow.pipecat_engine import PipecatEngine
+from pipecat.processors.aggregators.llm_context import LLMContext
+from pipecat.utils.enums import EndTaskReason
 
 _DISPOSITIONS = (
     CallDispositionOption(

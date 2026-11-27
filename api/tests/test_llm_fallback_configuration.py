@@ -4,7 +4,6 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from pipecat.services.llm_service import LLMService
 from pydantic import ValidationError
 
 from api.schemas.ai_model_configuration import EffectiveAIModelConfiguration
@@ -18,6 +17,7 @@ from api.services.pipecat.service_factory import (
 )
 from api.services.workflow.agent_runtime import AgentRuntime
 from api.services.workflow.pipecat_engine import PipecatEngine
+from pipecat.services.llm_service import LLMService
 
 
 @pytest.mark.parametrize("delay", [99, 10001, None, 1500.5])

@@ -3,15 +3,6 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, call
 
 import pytest
-from pipecat.adapters.schemas.function_schema import FunctionSchema
-from pipecat.adapters.schemas.tools_schema import ToolsSchema
-from pipecat.frames.frames import (
-    BotStoppedSpeakingFrame,
-    LLMMessagesAppendFrame,
-    TTSSpeakFrame,
-)
-from pipecat.processors.aggregators.llm_context import LLMContext
-from pipecat.processors.frame_processor import FrameDirection
 from websockets.exceptions import ConnectionClosedError
 from websockets.frames import Close
 
@@ -22,6 +13,15 @@ from api.services.pipecat.realtime.ultravox_realtime import (
     DograhUltravoxRealtimeLLMService,
 )
 from api.services.pipecat.service_factory import create_realtime_llm_service
+from pipecat.adapters.schemas.function_schema import FunctionSchema
+from pipecat.adapters.schemas.tools_schema import ToolsSchema
+from pipecat.frames.frames import (
+    BotStoppedSpeakingFrame,
+    LLMMessagesAppendFrame,
+    TTSSpeakFrame,
+)
+from pipecat.processors.aggregators.llm_context import LLMContext
+from pipecat.processors.frame_processor import FrameDirection
 
 
 class _ClosingSocket:

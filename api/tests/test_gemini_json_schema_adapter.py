@@ -2,9 +2,6 @@ from unittest.mock import patch
 
 import pytest
 from google.genai.types import GenerateContentConfig, LiveConnectConfig
-from pipecat.adapters.schemas.function_schema import FunctionSchema
-from pipecat.adapters.schemas.tools_schema import ToolsSchema
-from pipecat.adapters.services.gemini_live_adapter import GeminiLiveLLMAdapter
 
 from api.services.configuration.registry import ServiceProviders
 from api.services.pipecat.gemini_json_schema_adapter import (
@@ -20,6 +17,9 @@ from api.services.pipecat.service_factory import (
     DograhGoogleVertexLLMService,
     create_llm_service_from_provider,
 )
+from pipecat.adapters.schemas.function_schema import FunctionSchema
+from pipecat.adapters.schemas.tools_schema import ToolsSchema
+from pipecat.adapters.services.gemini_live_adapter import GeminiLiveLLMAdapter
 
 
 def test_gemini_tools_use_json_schema_parameters_for_external_schemas():

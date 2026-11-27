@@ -4,8 +4,6 @@ import asyncio
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from pipecat.tests.mock_transport import MockTransport
-from pipecat.transports.base_transport import TransportParams
 
 from api.enums import OrganizationConfigurationKey, WorkflowRunMode, WorkflowRunState
 from api.services.observability.call_events.runtime import CallEventsSession
@@ -19,6 +17,8 @@ from api.tests.integrations._run_pipeline_helpers import (
     patch_run_pipeline_externals,
 )
 from api.tests.integrations.test_run_pipeline import WORKFLOW_DEFINITION
+from pipecat.tests.mock_transport import MockTransport
+from pipecat.transports.base_transport import TransportParams
 
 
 @pytest.mark.parametrize(

@@ -4,7 +4,6 @@ import asyncio
 import json
 
 from fastapi import HTTPException
-from pipecat.processors.aggregators.llm_context import LLMContext
 
 from api.services.configuration.ai_model_configuration import (
     get_resolved_ai_model_configuration,
@@ -13,6 +12,7 @@ from api.services.gen_ai.json_parser import parse_llm_json
 from api.services.pipecat.service_factory import create_llm_service
 from api.services.workflow.dto import ReactFlowDTO
 from api.services.workflow.workflow_graph import WorkflowGraph
+from pipecat.processors.aggregators.llm_context import LLMContext
 
 _EXAMPLE = {
     "name": "Atención al cliente",

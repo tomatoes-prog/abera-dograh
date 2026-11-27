@@ -8,6 +8,8 @@ pipecat event handlers, so no pipeline is needed.
 import asyncio
 from unittest.mock import create_autospec
 
+from api.services.observability.call_events import events as ev
+from api.services.observability.call_events.recorder import CallEventRecorder
 from pipecat.frames.frames import (
     BotStartedSpeakingFrame,
     BotStoppedSpeakingFrame,
@@ -30,9 +32,6 @@ from pipecat.observers.user_bot_latency_observer import (
 )
 from pipecat.processors.frame_processor import FrameDirection
 from pipecat.transports.base_output import BaseOutputTransport
-
-from api.services.observability.call_events import events as ev
-from api.services.observability.call_events.recorder import CallEventRecorder
 
 
 class _RecordingSink:

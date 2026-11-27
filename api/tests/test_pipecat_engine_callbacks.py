@@ -1,9 +1,9 @@
 from unittest.mock import AsyncMock
 
 import pytest
-from pipecat.utils.enums import EndTaskReason
 
 from api.services.workflow.pipecat_engine_callbacks import create_max_duration_callback
+from pipecat.utils.enums import EndTaskReason
 
 
 @pytest.mark.asyncio

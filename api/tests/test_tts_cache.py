@@ -13,6 +13,18 @@ from unittest.mock import patch
 import aiohttp
 import pytest
 from aiohttp import web
+from redis.asyncio import Redis
+
+from api.services.pipecat.minimax_tts import MiniMaxCachingTTSService
+from api.services.pipecat.tts_cache.cache import SpeechCache
+from api.services.pipecat.tts_cache.models import (
+    CachedSpeech,
+    CachePolicy,
+    SynthesisRequest,
+)
+from api.services.pipecat.tts_cache.redis import RedisCacheBackend
+from api.services.pipecat.tts_cache.runtime import close_speech_cache, get_speech_cache
+from api.services.pipecat.tts_cache.synthesis import cached_synthesis
 from pipecat.frames.frames import (
     ErrorFrame,
     Frame,
@@ -36,18 +48,6 @@ from pipecat.services.tts_service import TextAggregationMode
 from pipecat.tests.mock_transport import MockOutputTransport
 from pipecat.tests.utils import SleepFrame, run_test
 from pipecat.transports.base_transport import TransportParams
-from redis.asyncio import Redis
-
-from api.services.pipecat.minimax_tts import MiniMaxCachingTTSService
-from api.services.pipecat.tts_cache.cache import SpeechCache
-from api.services.pipecat.tts_cache.models import (
-    CachedSpeech,
-    CachePolicy,
-    SynthesisRequest,
-)
-from api.services.pipecat.tts_cache.redis import RedisCacheBackend
-from api.services.pipecat.tts_cache.runtime import close_speech_cache, get_speech_cache
-from api.services.pipecat.tts_cache.synthesis import cached_synthesis
 
 pytestmark = pytest.mark.asyncio
 PCM = b"\x01\x02" * 256

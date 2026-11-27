@@ -6,12 +6,12 @@ from collections.abc import Callable
 from loguru import logger
 from opentelemetry import trace
 from opentelemetry.context import Context
+
+from api.services.pipecat.answer_classification import MachineSubtype
 from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.services.minimax.llm import MiniMaxLLMService
 from pipecat.utils.tracing.langfuse_helpers import mark_trace_public
 from pipecat.utils.tracing.service_attributes import add_llm_span_attributes
-
-from api.services.pipecat.answer_classification import MachineSubtype
 
 # Budget for the whole completion, not just the label. A reasoning model spends
 # it on hidden reasoning before the first visible token, and the classifier

@@ -6,7 +6,6 @@ from typing import Any
 from uuid import uuid4
 
 from loguru import logger
-from pipecat.utils.enums import EndTaskReason
 
 from api.db import db_client
 from api.db.models import WorkflowRunTextSessionModel
@@ -28,6 +27,7 @@ from api.services.workflow.text_chat_runner import (
 from api.services.workflow_run_artifacts import upload_workflow_run_artifacts
 from api.tasks.function_names import FunctionNames
 from api.utils.transcript import generate_transcript_text
+from pipecat.utils.enums import EndTaskReason
 
 TEXT_CHAT_SESSION_VERSION = 1
 

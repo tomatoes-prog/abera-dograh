@@ -6,6 +6,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
+
+from api.tests import test_realtime_conversation_contract as conversation_contract
+from api.tests.test_streamed_tool_response import live_event, response_done, tool_event
 from pipecat.clocks.system_clock import SystemClock
 from pipecat.frames.frames import (
     BotStartedSpeakingFrame,
@@ -21,9 +24,6 @@ from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessorSetup
 from pipecat.services.llm_service import FunctionCallFromLLM, LLMService
 from pipecat.utils.asyncio.task_manager import TaskManager
-
-from api.tests import test_realtime_conversation_contract as conversation_contract
-from api.tests.test_streamed_tool_response import live_event, response_done, tool_event
 
 realtime_service = conversation_contract.realtime_service
 

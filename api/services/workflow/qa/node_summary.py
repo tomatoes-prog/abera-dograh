@@ -3,13 +3,13 @@
 from typing import Any
 
 from loguru import logger
-from pipecat.processors.aggregators.llm_context import LLMContext
 
 from api.db import db_client
 from api.db.models import WorkflowRunModel
 from api.services.workflow.dto import NodeType, QANodeData
 from api.services.workflow.qa.llm_config import create_qa_llm_service
 from api.services.workflow.qa.tracing import create_node_summary_trace
+from pipecat.processors.aggregators.llm_context import LLMContext
 
 NODE_SUMMARY_SYSTEM_PROMPT = (
     "You are analyzing a voice AI agent script. This is only a part of a larger script. "

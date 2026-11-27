@@ -2,10 +2,9 @@
 
 import re
 
+from api.services.observability.metrics import get_runtime, valid_duration
 from pipecat.observers.service_metrics_observer import ServiceMetricsObserver
 from pipecat.observers.user_bot_latency_observer import UserBotLatencyObserver
-
-from api.services.observability.metrics import get_runtime, valid_duration
 
 
 def _service_label(processor: str) -> str:

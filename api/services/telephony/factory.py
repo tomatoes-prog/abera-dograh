@@ -20,7 +20,6 @@ joining ``telephony_phone_numbers``.
 from typing import Any, Dict, List, Optional, Tuple, Type
 
 from loguru import logger
-from pipecat.utils.run_context import set_current_org_id
 
 from api.db import db_client
 from api.db.models import TelephonyConfigurationModel, WorkflowRunModel
@@ -37,6 +36,7 @@ from api.services.telephony.registry import (
     ProviderSetupChecklist,
     caller_id_only_checklist,
 )
+from pipecat.utils.run_context import set_current_org_id
 
 
 async def load_telephony_config_by_id(

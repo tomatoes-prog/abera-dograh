@@ -9,6 +9,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import create_autospec
 
+from api.services.integrations.bigquery.sink import to_bigquery_row
+from api.services.observability.call_events import events
+from api.services.observability.call_events import recorder as recorder_module
 from pipecat.frames.frames import (
     BotStartedSpeakingFrame,
     BotStoppedSpeakingFrame,
@@ -27,10 +30,6 @@ from pipecat.frames.frames import (
 from pipecat.observers.base_observer import FramePushed
 from pipecat.processors.frame_processor import FrameDirection
 from pipecat.transports.base_output import BaseOutputTransport
-
-from api.services.integrations.bigquery.sink import to_bigquery_row
-from api.services.observability.call_events import events
-from api.services.observability.call_events import recorder as recorder_module
 
 
 async def replay(recorder):

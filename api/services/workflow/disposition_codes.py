@@ -22,11 +22,10 @@ produce values outside this catalog. Those are learned per workflow by
 ``get_organization_disposition_codes``.
 """
 
-from pipecat.utils.enums import EndTaskReason
-
 from api.enums import TelephonyCallStatus
 from api.services.workflow.answer_handling import ANSWER_TERMINAL_REASONS
 from api.services.workflow.disposition_extraction import DEFAULT_DISPOSITION_CODES
+from pipecat.utils.enums import EndTaskReason
 
 # Keep this derived directly from the enum so every pipeline disposition is
 # available to clients without maintaining a second list.

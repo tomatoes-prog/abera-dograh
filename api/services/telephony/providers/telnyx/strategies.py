@@ -17,6 +17,7 @@ from typing import Any, Dict
 
 import aiohttp
 from loguru import logger
+
 from pipecat.serializers.call_strategies import HangupStrategy, TransferStrategy
 
 TELNYX_API_BASE = "https://api.telnyx.com/v2"

@@ -1,8 +1,8 @@
 import pytest
-from pipecat.utils.enums import RealtimeFeedbackType
 
 from api.services.observability.call_events.metrics import ttfb_kind
 from api.services.workflow.qa.metrics import compute_call_metrics
+from pipecat.utils.enums import RealtimeFeedbackType
 
 
 @pytest.mark.parametrize(

@@ -5,6 +5,13 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
+
+from api.services.pipecat.speech_playback import PlaybackOutcome
+from api.services.workflow.pipecat_engine import PipecatEngine
+from api.services.workflow.text_chat_runner import (
+    _ResponseWindowState,
+    _TextChatCaptureProcessor,
+)
 from pipecat.frames.frames import (
     BotStartedSpeakingFrame,
     BotStoppedSpeakingFrame,
@@ -21,13 +28,6 @@ from pipecat.frames.frames import (
 from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.frame_processor import FrameDirection
 from pipecat.utils.enums import EndTaskReason
-
-from api.services.pipecat.speech_playback import PlaybackOutcome
-from api.services.workflow.pipecat_engine import PipecatEngine
-from api.services.workflow.text_chat_runner import (
-    _ResponseWindowState,
-    _TextChatCaptureProcessor,
-)
 
 
 @pytest.fixture

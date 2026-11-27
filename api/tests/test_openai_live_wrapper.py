@@ -5,6 +5,22 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
+
+from api.routes.user import get_default_configurations
+from api.schemas.ai_model_configuration import EffectiveAIModelConfiguration
+from api.services.configuration.registry import (
+    OpenAIRealtimeLLMConfiguration,
+)
+from api.services.pipecat.pipeline_metrics_aggregator import PipelineMetricsAggregator
+from api.services.pipecat.realtime.openai_live import (
+    VOICE_INSTRUCTIONS,
+    DograhOpenAILiveLLMService,
+)
+from api.services.pipecat.realtime.openai_realtime import DograhOpenAIRealtimeLLMService
+from api.services.pipecat.run_pipeline import _create_realtime_user_turn_config
+from api.services.pipecat.service_factory import create_realtime_llm_service
+from api.services.pipecat.worker_runner import run_pipeline_worker
+from api.services.workflow.pipecat_engine import PipecatEngine
 from pipecat.adapters.schemas.function_schema import FunctionSchema
 from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.frames.frames import (
@@ -38,22 +54,6 @@ from pipecat.turns.user_mute import (
     CallbackUserMuteStrategy,
     MuteUntilFirstBotCompleteUserMuteStrategy,
 )
-
-from api.routes.user import get_default_configurations
-from api.schemas.ai_model_configuration import EffectiveAIModelConfiguration
-from api.services.configuration.registry import (
-    OpenAIRealtimeLLMConfiguration,
-)
-from api.services.pipecat.pipeline_metrics_aggregator import PipelineMetricsAggregator
-from api.services.pipecat.realtime.openai_live import (
-    VOICE_INSTRUCTIONS,
-    DograhOpenAILiveLLMService,
-)
-from api.services.pipecat.realtime.openai_realtime import DograhOpenAIRealtimeLLMService
-from api.services.pipecat.run_pipeline import _create_realtime_user_turn_config
-from api.services.pipecat.service_factory import create_realtime_llm_service
-from api.services.pipecat.worker_runner import run_pipeline_worker
-from api.services.workflow.pipecat_engine import PipecatEngine
 
 
 def make_service():

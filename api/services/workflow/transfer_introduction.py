@@ -6,14 +6,14 @@ from copy import deepcopy
 
 from loguru import logger
 from opentelemetry import trace
-from pipecat.processors.aggregators.llm_context import LLMContext
-from pipecat.utils.tracing.langfuse_helpers import mark_trace_public
-from pipecat.utils.tracing.service_attributes import add_llm_span_attributes
 
 from api.schemas.tool import DEFAULT_TRANSFER_INTRODUCTION_PROMPT
 from api.services.pipecat.service_factory import create_tts_service
 from api.services.pipecat.speech_synthesis import synthesize_speech
 from api.services.telephony.transfer_audio import store_transfer_audio
+from pipecat.processors.aggregators.llm_context import LLMContext
+from pipecat.utils.tracing.langfuse_helpers import mark_trace_public
+from pipecat.utils.tracing.service_attributes import add_llm_span_attributes
 
 PREPARATION_TIMEOUT_SECONDS = 8
 MAX_WORDS = 25

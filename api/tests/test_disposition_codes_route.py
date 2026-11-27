@@ -3,7 +3,6 @@ from unittest.mock import AsyncMock, patch
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from pipecat.utils.enums import EndTaskReason
 
 from api.routes.organization import router
 from api.services.auth.depends import get_user_with_selected_organization
@@ -12,6 +11,7 @@ from api.services.workflow.disposition_codes import (
     SYSTEM_DISPOSITION_CODES,
 )
 from api.services.workflow.disposition_extraction import DEFAULT_DISPOSITION_CODES
+from pipecat.utils.enums import EndTaskReason
 
 
 def _make_test_app() -> FastAPI:

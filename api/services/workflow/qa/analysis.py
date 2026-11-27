@@ -5,7 +5,6 @@ import json
 from typing import Any
 
 from loguru import logger
-from pipecat.processors.aggregators.llm_context import LLMContext
 
 from api.db.models import WorkflowRunModel
 from api.errors.failure import (
@@ -33,6 +32,7 @@ from api.services.workflow.qa.tracing import (
     setup_langfuse_parent_context,
 )
 from api.utils.template_renderer import render_template
+from pipecat.processors.aggregators.llm_context import LLMContext
 
 _QA_LLM_ATTEMPTS = 3
 

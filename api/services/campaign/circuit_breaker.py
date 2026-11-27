@@ -20,13 +20,13 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import redis.asyncio as aioredis
 from loguru import logger
-from pipecat.utils.errors import ErrorCategory, extract_http_status_code
-from pipecat.utils.run_context import get_current_org_id, get_current_run_id
 
 from api.constants import DEFAULT_CIRCUIT_BREAKER_CONFIG, REDIS_URL
 from api.db import db_client
 from api.errors.failure import extract_http_status
 from api.services.campaign.campaign_event_publisher import get_campaign_event_publisher
+from pipecat.utils.errors import ErrorCategory, extract_http_status_code
+from pipecat.utils.run_context import get_current_org_id, get_current_run_id
 
 # Cap on the number of recent failure entries kept per campaign — large enough
 # to be useful for debugging a trip, small enough that the JSON details stay

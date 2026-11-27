@@ -2,15 +2,15 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
-from pipecat.frames.frames import BotStoppedSpeakingFrame, TTSSpeakFrame
-from pipecat.processors.aggregators.llm_context import LLMContext
-from pipecat.processors.frame_processor import FrameDirection
-from pipecat.services.openai.realtime import events
 
 from api.services.pipecat.realtime.openai_realtime import (
     DograhOpenAIRealtimeLLMService,
 )
 from api.tests.test_streamed_tool_response import response_done
+from pipecat.frames.frames import BotStoppedSpeakingFrame, TTSSpeakFrame
+from pipecat.processors.aggregators.llm_context import LLMContext
+from pipecat.processors.frame_processor import FrameDirection
+from pipecat.services.openai.realtime import events
 
 
 def _make_service() -> DograhOpenAIRealtimeLLMService:

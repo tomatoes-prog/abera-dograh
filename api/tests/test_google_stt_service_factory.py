@@ -1,10 +1,9 @@
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from pipecat.transcriptions.language import Language
-
 from api.services.configuration.registry import ServiceProviders
 from api.services.pipecat.service_factory import create_stt_service
+from pipecat.transcriptions.language import Language
 
 
 def test_create_google_stt_service_uses_credentials_location_and_language():

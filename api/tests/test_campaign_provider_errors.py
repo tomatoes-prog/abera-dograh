@@ -5,13 +5,13 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
-from pipecat.frames.frames import ErrorFrame
-from pipecat.processors.frame_processor import FrameProcessor
-from pipecat.utils.errors import ErrorCategory
 
 from api.errors.failure import ErrorSource
 from api.services.campaign import circuit_breaker as module
 from api.services.campaign.circuit_breaker import CircuitBreaker
+from pipecat.frames.frames import ErrorFrame
+from pipecat.processors.frame_processor import FrameProcessor
+from pipecat.utils.errors import ErrorCategory
 
 
 class ProviderError(Exception):

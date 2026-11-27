@@ -267,7 +267,7 @@ export const ConfigurationsDialog = ({
                                 </SelectContent>
                             </Select>
                             <p className="text-xs text-muted-foreground">
-                                {selectedTurnStartStrategy?.description}
+                                {selectedTurnStartStrategy && copy(selectedTurnStartStrategy.description)}
                             </p>
                         </div>
 

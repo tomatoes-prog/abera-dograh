@@ -4,10 +4,10 @@ from typing import Any, Dict
 
 import aiohttp
 from loguru import logger
-from pipecat.serializers.call_strategies import HangupStrategy, TransferStrategy
 
 from api.services.telephony.call_transfer_manager import get_call_transfer_manager
 from api.utils.common import get_backend_endpoints
+from pipecat.serializers.call_strategies import HangupStrategy, TransferStrategy
 
 
 class PlivoConferenceStrategy(TransferStrategy):

@@ -7,6 +7,14 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from opentelemetry import trace
+from prometheus_client.parser import text_string_to_metric_families
+
+from api.routes import main as main_routes
+from api.services.observability import active_calls, metrics
+from api.services.observability.pipeline_metrics import attach_pipeline_metrics
+from api.services.pipecat.agent_bridge import AgentBridgeProcessor
+from api.services.pipecat.pipeline_builder import create_pipeline_task
+from api.services.pipecat.worker_runner import run_pipeline_worker
 from pipecat.bus.messages import BusFrameMessage
 from pipecat.frames.frames import (
     BotStartedSpeakingFrame,
@@ -22,14 +30,6 @@ from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.worker_observer import WorkerObserver
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 from pipecat.utils.asyncio.task_manager import TaskManager
-from prometheus_client.parser import text_string_to_metric_families
-
-from api.routes import main as main_routes
-from api.services.observability import active_calls, metrics
-from api.services.observability.pipeline_metrics import attach_pipeline_metrics
-from api.services.pipecat.agent_bridge import AgentBridgeProcessor
-from api.services.pipecat.pipeline_builder import create_pipeline_task
-from api.services.pipecat.worker_runner import run_pipeline_worker
 
 
 @pytest.fixture

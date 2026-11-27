@@ -3,12 +3,12 @@ from types import SimpleNamespace
 from urllib.parse import parse_qs, urlparse
 
 import pytest
-from pipecat.services.elevenlabs.dialogue.tts import ElevenLabsDialogueTTSService
-from pipecat.services.elevenlabs.tts import ElevenLabsTTSService
 
 from api.services.configuration.registry import ElevenlabsTTSConfiguration
 from api.services.pipecat.audio_config import AudioConfig
 from api.services.pipecat.service_factory import create_tts_service
+from pipecat.services.elevenlabs.dialogue.tts import ElevenLabsDialogueTTSService
+from pipecat.services.elevenlabs.tts import ElevenLabsTTSService
 
 
 @pytest.mark.parametrize(

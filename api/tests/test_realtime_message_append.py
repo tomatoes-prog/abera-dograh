@@ -2,13 +2,13 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
-from pipecat.frames.frames import LLMMessagesAppendFrame
-from pipecat.services.openai.realtime import events
 
 from api.services.pipecat.realtime.openai_realtime import (
     DograhOpenAIRealtimeLLMService,
 )
 from api.services.workflow.pipecat_engine_callbacks import handle_user_idle
+from pipecat.frames.frames import LLMMessagesAppendFrame
+from pipecat.services.openai.realtime import events
 
 
 @pytest.mark.asyncio

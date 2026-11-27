@@ -2,13 +2,13 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
-from pipecat.services.tts_service import TextAggregationMode
 from pydantic import ValidationError
 
 from api.schemas.ai_model_configuration import EffectiveAIModelConfiguration
 from api.services.configuration.registry import DeepgramTTSConfiguration
 from api.services.pipecat.audio_config import AudioConfig
 from api.services.pipecat.service_factory import create_tts_service
+from pipecat.services.tts_service import TextAggregationMode
 
 AURA = "api.services.pipecat.service_factory.DeepgramTTSService"
 FLUX = "api.services.pipecat.service_factory.DeepgramFluxTTSService"

@@ -652,13 +652,13 @@ function GeneralSection({
                             <SelectContent>
                                 {TURN_START_STRATEGY_OPTIONS.map((option) => (
                                     <SelectItem key={option.value} value={option.value}>
-                                        {option.label}
+                                        {copy(option.label)}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
                         <p className="text-xs text-muted-foreground">
-                            {selectedTurnStartStrategy?.description}
+                            {selectedTurnStartStrategy && copy(selectedTurnStartStrategy.description)}
                         </p>
                     </div>
                     {turnStartStrategy === "min_words" && (

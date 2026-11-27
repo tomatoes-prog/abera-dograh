@@ -3,7 +3,6 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 import redis.asyncio as aioredis
-from pipecat.utils.enums import EndTaskReason
 
 from api.db import db_client
 from api.enums import TelephonyCallStatus
@@ -15,6 +14,7 @@ from api.services.telephony.providers.ari.external_pbx import (
 from api.services.telephony.providers.ari.provider import ARIProvider
 from api.services.telephony.providers.ari.strategies import ARIHangupStrategy
 from api.services.workflow.tools import transfer_resolver
+from pipecat.utils.enums import EndTaskReason
 
 
 def _vicidial_config() -> dict:

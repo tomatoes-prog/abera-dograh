@@ -33,6 +33,9 @@ from functools import wraps
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
+
+from api.schemas.tool import ToolMessages
+from api.services.workflow.tool_execution import ToolExecutionOwner
 from pipecat.frames.frames import (
     Frame,
     FunctionCallResultProperties,
@@ -47,14 +50,10 @@ from pipecat.services.llm_service import (
     LLMService,
 )
 
-from api.schemas.tool import ToolMessages
-from api.services.workflow.tool_execution import ToolExecutionOwner
-
 if TYPE_CHECKING:
-    from pipecat.processors.aggregators.llm_context import LLMContext
-
     from api.services.workflow.pipecat_engine import PipecatEngine
     from api.services.workflow.workflow_graph import Node, WorkflowGraph
+    from pipecat.processors.aggregators.llm_context import LLMContext
 
 
 # How long a retiring agent gets to drain and shut its worker down. Past this

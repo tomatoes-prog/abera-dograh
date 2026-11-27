@@ -1,8 +1,7 @@
 from types import SimpleNamespace
 
-from pipecat.utils.run_context import run_id_var
-
 from api.logging_config import enrich_log_record
+from pipecat.utils.run_context import run_id_var
 
 
 def _record(level: int, extra: dict | None = None) -> dict:

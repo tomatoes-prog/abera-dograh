@@ -8,7 +8,6 @@ from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi import HTTPException
-from pipecat.transports.whatsapp.api import WhatsAppWebhookRequest
 from starlette.requests import Request
 
 from api.db import db_client
@@ -22,6 +21,7 @@ from api.services.telephony.providers.whatsapp.routes import (
     _terminated_by_meta,
     handle_whatsapp_webhook,
 )
+from pipecat.transports.whatsapp.api import WhatsAppWebhookRequest
 
 ROUTES = "api.services.telephony.providers.whatsapp.routes"
 CONCURRENCY = "api.services.call_concurrency.call_concurrency"

@@ -19,6 +19,9 @@ from google.genai.types import (
     Part,
 )
 from loguru import logger
+
+from api.schemas.llm_fallback import ErrorCondition, NoOutputCondition
+from api.services.pipecat.fallback_llm import FallbackLLMProcessor, FallbackRoute
 from pipecat.clocks.system_clock import SystemClock
 from pipecat.frames.frames import (
     ErrorFrame,
@@ -43,9 +46,6 @@ from pipecat.processors.frame_processor import (
 from pipecat.services.google.llm import GoogleLLMService
 from pipecat.services.settings import LLMSettings
 from pipecat.utils.asyncio.task_manager import TaskManager
-
-from api.schemas.llm_fallback import ErrorCondition, NoOutputCondition
-from api.services.pipecat.fallback_llm import FallbackLLMProcessor, FallbackRoute
 
 PRIMARY = "gemini-3.5-flash"
 BACKUP = "gemini-3.1-flash-lite"
@@ -637,13 +637,12 @@ async def test_disabled_public_metrics_still_arbitrate_tools(harness, monkeypatc
 
 @pytest.mark.asyncio
 async def test_worker_flush_waits_for_race_and_upstream_continuation(monkeypatch):
-    from pipecat.frames.frames import EndFrame
-    from pipecat.pipeline.worker import PipelineWorker
-
     from api.services.pipecat.worker_runner import (
         run_pipeline_worker,
         wait_for_pipeline_worker_started,
     )
+    from pipecat.frames.frames import EndFrame
+    from pipecat.pipeline.worker import PipelineWorker
 
     services = [
         GoogleLLMService(

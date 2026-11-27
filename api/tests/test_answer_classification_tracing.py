@@ -10,11 +10,11 @@ from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
-from pipecat.utils.tracing.tracing_context import TracingContext
 
 from api.services.pipecat.answer_classification import MachineSubtype
 from api.services.workflow import answer_classification_service as classification
 from api.services.workflow.pipecat_engine import PipecatEngine
+from pipecat.utils.tracing.tracing_context import TracingContext
 
 
 @pytest.fixture
@@ -72,9 +72,8 @@ async def test_classifier_records_generation_input_output_and_model(tracing):
 async def test_factory_classifier_follows_call_and_current_turn(
     tracing, monkeypatch, use_workflow_llm
 ):
-    from pipecat.processors.aggregators.llm_context import LLMContext
-
     from api.services.pipecat import run_pipeline
+    from pipecat.processors.aggregators.llm_context import LLMContext
 
     tracer, exporter = tracing
     llm = classifier_llm()

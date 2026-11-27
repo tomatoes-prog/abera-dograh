@@ -8,6 +8,12 @@ from typing import TYPE_CHECKING, Optional
 
 from loguru import logger
 from opentelemetry import trace
+
+from api.services.pipecat.tracing_config import ensure_tracing
+from api.services.workflow.agent_handoff_context import (
+    ConversationSummaryMessage,
+    HandoffMessage,
+)
 from pipecat.frames.frames import LLMContextSummaryRequestFrame
 from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.utils.context.llm_context_summarization import (
@@ -15,12 +21,6 @@ from pipecat.utils.context.llm_context_summarization import (
     LLMContextSummaryConfig,
 )
 from pipecat.utils.tracing.service_attributes import add_llm_span_attributes
-
-from api.services.pipecat.tracing_config import ensure_tracing
-from api.services.workflow.agent_handoff_context import (
-    ConversationSummaryMessage,
-    HandoffMessage,
-)
 
 if TYPE_CHECKING:
     from api.services.workflow.pipecat_engine import PipecatEngine

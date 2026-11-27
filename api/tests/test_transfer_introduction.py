@@ -10,11 +10,11 @@ from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
-from pipecat.processors.aggregators.llm_context import LLMContext
 
 from api.schemas.tool import TransferCallConfig
 from api.services.pipecat.audio_config import AudioConfig
 from api.services.workflow import transfer_introduction as introduction
+from pipecat.processors.aggregators.llm_context import LLMContext
 
 
 @pytest.fixture(autouse=True)

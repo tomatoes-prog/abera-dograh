@@ -7,6 +7,7 @@ import asyncio
 from typing import TYPE_CHECKING, Any, Dict
 
 from loguru import logger
+
 from pipecat.serializers.call_strategies import HangupStrategy, TransferStrategy
 
 if TYPE_CHECKING:

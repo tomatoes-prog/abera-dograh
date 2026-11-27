@@ -5,9 +5,6 @@ from urllib.parse import parse_qs
 import pytest
 
 pytestmark = pytest.mark.usefixtures("mps_enabled")
-from pipecat.services.settings import NOT_GIVEN
-from pipecat.transcriptions.language import Language
-
 from api.services.configuration.registry import DograhSTTService, ServiceProviders
 from api.services.pipecat.audio_config import AudioConfig
 from api.services.pipecat.service_factory import (
@@ -15,6 +12,8 @@ from api.services.pipecat.service_factory import (
     dograh_stt_uses_flux_language,
     stt_uses_external_turns,
 )
+from pipecat.services.settings import NOT_GIVEN
+from pipecat.transcriptions.language import Language
 
 # Explicit opt-in for these tests of the legacy managed provider.
 pytestmark = pytest.mark.usefixtures("mps_enabled")

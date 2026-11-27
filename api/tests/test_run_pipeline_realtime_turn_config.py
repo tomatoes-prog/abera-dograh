@@ -1,4 +1,16 @@
 import pytest
+
+import api.services.pipecat.run_pipeline as run_pipeline_module
+from api.services.configuration.registry import ServiceProviders
+from api.services.pipecat.run_pipeline import (
+    DEFAULT_TURN_START_MIN_WORDS,
+    DEFAULT_USER_TURN_STOP_TIMEOUT,
+    EXTERNAL_TURN_USER_STOP_TIMEOUT,
+    _create_non_realtime_user_turn_start_strategies,
+    _create_non_realtime_user_turn_stop_strategies,
+    _create_realtime_user_turn_config,
+    _resolve_user_turn_stop_timeout,
+)
 from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.frames.frames import (
     BotStartedSpeakingFrame,
@@ -34,18 +46,6 @@ from pipecat.turns.user_stop import (
     TurnAnalyzerUserTurnStopStrategy,
 )
 from pipecat.turns.user_turn_strategies import UserTurnStrategies
-
-import api.services.pipecat.run_pipeline as run_pipeline_module
-from api.services.configuration.registry import ServiceProviders
-from api.services.pipecat.run_pipeline import (
-    DEFAULT_TURN_START_MIN_WORDS,
-    DEFAULT_USER_TURN_STOP_TIMEOUT,
-    EXTERNAL_TURN_USER_STOP_TIMEOUT,
-    _create_non_realtime_user_turn_start_strategies,
-    _create_non_realtime_user_turn_stop_strategies,
-    _create_realtime_user_turn_config,
-    _resolve_user_turn_stop_timeout,
-)
 
 
 def test_gemini_realtime_uses_local_vad_without_local_interruptions():

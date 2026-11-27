@@ -2,7 +2,6 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
-from pipecat.transcriptions.language import Language
 
 from api.services.configuration.check_validity import UserConfigurationValidator
 from api.services.configuration.registry import (
@@ -11,6 +10,7 @@ from api.services.configuration.registry import (
     XAITTSConfiguration,
 )
 from api.services.pipecat.service_factory import create_tts_service
+from pipecat.transcriptions.language import Language
 
 
 def test_xai_tts_configuration_defaults():

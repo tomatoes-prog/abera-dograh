@@ -7,6 +7,25 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
+
+from api.schemas.answer_supervisor import AnswerSupervisorConfig
+from api.services.pipecat.agent_bridge import AgentBridgeProcessor
+from api.services.pipecat.answer_classification import MachineSubtype
+from api.services.pipecat.in_memory_buffers import InMemoryLogsBuffer
+from api.services.pipecat.pipeline_builder import create_agent_worker
+from api.services.pipecat.processors.answer_supervisor import AnswerSupervisor
+from api.services.pipecat.realtime_feedback_observer import (
+    RealtimeFeedbackObserver,
+    register_turn_log_handlers,
+)
+from api.services.pipecat.run_pipeline import (
+    _create_non_realtime_user_turn_start_strategies,
+    _create_user_mute_strategies,
+)
+from api.services.pipecat.speech_playback import PlaybackOutcome
+from api.services.pipecat.transcript_log_coordinator import TranscriptLogCoordinator
+from api.services.pipecat.worker_runner import create_worker_runner, run_worker_runner
+from api.services.workflow.pipecat_engine import PipecatEngine
 from pipecat.frames.frames import (
     CancelFrame,
     InterimTranscriptionFrame,
@@ -27,6 +46,7 @@ from pipecat.processors.aggregators.llm_response_universal import (
     LLMContextAggregatorPair,
     LLMUserAggregatorParams,
 )
+from pipecat.tests import MockLLMService, MockTTSService
 from pipecat.tests.mock_transport import MockOutputTransport
 from pipecat.transports.base_transport import TransportParams
 from pipecat.turns.user_stop import (
@@ -34,26 +54,6 @@ from pipecat.turns.user_stop import (
     SpeechTimeoutUserTurnStopStrategy,
 )
 from pipecat.turns.user_turn_strategies import UserTurnStrategies
-
-from api.schemas.answer_supervisor import AnswerSupervisorConfig
-from api.services.pipecat.agent_bridge import AgentBridgeProcessor
-from api.services.pipecat.answer_classification import MachineSubtype
-from api.services.pipecat.in_memory_buffers import InMemoryLogsBuffer
-from api.services.pipecat.pipeline_builder import create_agent_worker
-from api.services.pipecat.processors.answer_supervisor import AnswerSupervisor
-from api.services.pipecat.realtime_feedback_observer import (
-    RealtimeFeedbackObserver,
-    register_turn_log_handlers,
-)
-from api.services.pipecat.run_pipeline import (
-    _create_non_realtime_user_turn_start_strategies,
-    _create_user_mute_strategies,
-)
-from api.services.pipecat.speech_playback import PlaybackOutcome
-from api.services.pipecat.transcript_log_coordinator import TranscriptLogCoordinator
-from api.services.pipecat.worker_runner import create_worker_runner, run_worker_runner
-from api.services.workflow.pipecat_engine import PipecatEngine
-from pipecat.tests import MockLLMService, MockTTSService
 
 
 async def until(predicate):

@@ -3,6 +3,11 @@ from unittest.mock import AsyncMock
 
 import pytest
 from google.genai.types import LiveServerMessage, UsageMetadata
+
+from api.services.pipecat.pipeline_metrics_aggregator import PipelineMetricsAggregator
+from api.services.pipecat.realtime.aws_nova_sonic import DograhAWSNovaSonicLLMService
+from api.services.pipecat.realtime.gemini_live import DograhGeminiLiveLLMService
+from api.services.workflow.run_usage_response import format_public_usage_info
 from pipecat.frames.frames import MetricsFrame
 from pipecat.metrics.metrics import (
     LLMTokenUsage,
@@ -11,11 +16,6 @@ from pipecat.metrics.metrics import (
     STTUsageMetricsData,
 )
 from pipecat.processors.frame_processor import FrameDirection
-
-from api.services.pipecat.pipeline_metrics_aggregator import PipelineMetricsAggregator
-from api.services.pipecat.realtime.aws_nova_sonic import DograhAWSNovaSonicLLMService
-from api.services.pipecat.realtime.gemini_live import DograhGeminiLiveLLMService
-from api.services.workflow.run_usage_response import format_public_usage_info
 
 PROCESSOR = "DograhGeminiLiveLLMService#0"
 MODEL = "gemini-3.1-flash-live-preview"

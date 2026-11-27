@@ -444,7 +444,7 @@ export default function ToolsPage() {
                                                             </div>
                                                             {tool.description && (
                                                                 <p className="text-sm text-muted-foreground mt-1">
-                                                                    {tool.description}
+                                                                    {copy(tool.description)}
                                                                 </p>
                                                             )}
                                                         </div>
@@ -502,7 +502,7 @@ export default function ToolsPage() {
                                                                 </div>
                                                                 {tool.description && (
                                                                     <p className="text-sm text-muted-foreground mt-1">
-                                                                        {tool.description}
+                                                                        {copy(tool.description)}
                                                                     </p>
                                                                 )}
                                                             </div>

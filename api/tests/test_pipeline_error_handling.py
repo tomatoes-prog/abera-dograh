@@ -3,10 +3,6 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-from pipecat.frames.frames import EndFrame, ErrorFrame
-from pipecat.pipeline.worker import ProcessorUnusablePolicy
-from pipecat.utils.enums import EndTaskReason
-from pipecat.utils.errors import ErrorCategory
 
 from api.enums import WorkflowRunState
 from api.schemas.call_events import CallEventsSettings
@@ -17,6 +13,10 @@ from api.services.pipecat.termination_funnel_processor import (
     TerminationFunnelProcessor,
 )
 from api.services.workflow.pipecat_engine import PipecatEngine
+from pipecat.frames.frames import EndFrame, ErrorFrame
+from pipecat.pipeline.worker import ProcessorUnusablePolicy
+from pipecat.utils.enums import EndTaskReason
+from pipecat.utils.errors import ErrorCategory
 
 
 class _EventSource:

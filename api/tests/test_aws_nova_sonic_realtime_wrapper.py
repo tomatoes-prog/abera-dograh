@@ -6,19 +6,6 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from pipecat.adapters.services.aws_nova_sonic_adapter import Role
-from pipecat.frames.frames import (
-    FunctionCallFromLLM,
-    InputAudioRawFrame,
-    LLMMessagesAppendFrame,
-    TranscriptionFrame,
-    TTSSpeakFrame,
-    UserMuteStartedFrame,
-    UserMuteStoppedFrame,
-)
-from pipecat.processors.aggregators.llm_context import LLMContext
-from pipecat.processors.frame_processor import FrameDirection
-from pipecat.services.aws.nova_sonic.llm import AWSNovaSonicLLMService
 
 from api.schemas.ai_model_configuration import EffectiveAIModelConfiguration
 from api.services.configuration.check_validity import UserConfigurationValidator
@@ -34,6 +21,19 @@ from api.services.pipecat.realtime.aws_nova_sonic import (
 )
 from api.services.pipecat.service_factory import create_realtime_llm_service
 from api.services.workflow.pipecat_engine import PipecatEngine
+from pipecat.adapters.services.aws_nova_sonic_adapter import Role
+from pipecat.frames.frames import (
+    FunctionCallFromLLM,
+    InputAudioRawFrame,
+    LLMMessagesAppendFrame,
+    TranscriptionFrame,
+    TTSSpeakFrame,
+    UserMuteStartedFrame,
+    UserMuteStoppedFrame,
+)
+from pipecat.processors.aggregators.llm_context import LLMContext
+from pipecat.processors.frame_processor import FrameDirection
+from pipecat.services.aws.nova_sonic.llm import AWSNovaSonicLLMService
 
 
 def _make_service() -> DograhAWSNovaSonicLLMService:

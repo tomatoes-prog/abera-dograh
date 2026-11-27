@@ -29,8 +29,6 @@ from typing import Any
 
 from loguru import logger
 from opentelemetry import trace
-from pipecat.processors.aggregators.llm_context import LLMContext
-from pipecat.utils.tracing.service_attributes import add_llm_span_attributes
 
 from api.errors.failure import (
     classify_exception,
@@ -48,6 +46,8 @@ from api.services.workflow.conversation_history import (
     has_user_turns,
 )
 from api.utils.template_renderer import render_template
+from pipecat.processors.aggregators.llm_context import LLMContext
+from pipecat.utils.tracing.service_attributes import add_llm_span_attributes
 
 CALL_DISPOSITION_CONTEXT_KEY = "call_disposition"
 DISPOSITION_EXTRACTION_TRACE_NAME = "disposition_extraction"

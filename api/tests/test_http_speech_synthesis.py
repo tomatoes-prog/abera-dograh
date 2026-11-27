@@ -9,6 +9,10 @@ from unittest.mock import AsyncMock, Mock
 
 import aiohttp
 import pytest
+
+from api.services.pipecat import speech_synthesis
+from api.services.pipecat.minimax_tts import MiniMaxOwnedSessionTTSService
+from api.services.pipecat.speechify_tts import SpeechifyOwnedSessionTTSService
 from pipecat.services.cartesia.tts import CartesiaHttpTTSService, CartesiaTTSSettings
 from pipecat.services.deepgram.tts import DeepgramHttpTTSService, DeepgramTTSSettings
 from pipecat.services.elevenlabs.tts import (
@@ -18,10 +22,6 @@ from pipecat.services.elevenlabs.tts import (
 from pipecat.services.minimax.tts import MiniMaxTTSSettings
 from pipecat.services.openai.tts import OpenAITTSService, OpenAITTSSettings
 from pipecat.services.speechify.tts import SpeechifyTTSSettings
-
-from api.services.pipecat import speech_synthesis
-from api.services.pipecat.minimax_tts import MiniMaxOwnedSessionTTSService
-from api.services.pipecat.speechify_tts import SpeechifyOwnedSessionTTSService
 
 PCM = b"\x01\x00" * 800
 

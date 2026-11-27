@@ -24,6 +24,10 @@ from collections import OrderedDict
 from typing import Any
 
 from loguru import logger
+
+from api.services.observability.call_events import events as ev
+from api.services.observability.call_events.events import CallEvent
+from api.services.observability.call_events.metrics import ttfb_kind
 from pipecat.frames.frames import (
     BotSpeakingFrame,
     BotStartedSpeakingFrame,
@@ -49,10 +53,6 @@ from pipecat.frames.frames import (
 from pipecat.observers.base_observer import FramePushed
 from pipecat.processors.frame_processor import FrameDirection
 from pipecat.transports.base_output import BaseOutputTransport
-
-from api.services.observability.call_events import events as ev
-from api.services.observability.call_events.events import CallEvent
-from api.services.observability.call_events.metrics import ttfb_kind
 
 DEFAULT_HUNG_AFTER_S = 15.0
 DEFAULT_SILENT_AFTER_S = 8.0

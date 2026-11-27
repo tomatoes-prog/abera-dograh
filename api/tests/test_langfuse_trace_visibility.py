@@ -10,9 +10,9 @@ import os
 from unittest.mock import patch
 
 import pytest
-from pipecat.utils.run_context import set_current_org_id
 
 from api.services.pipecat import tracing_config
+from pipecat.utils.run_context import set_current_org_id
 
 ORG = "org-42"
 CREDS = {

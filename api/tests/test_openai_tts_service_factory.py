@@ -1,10 +1,9 @@
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from pipecat.services.openai._constants import OPENAI_SAMPLE_RATE
-
 from api.services.configuration.registry import ServiceProviders
 from api.services.pipecat.service_factory import create_tts_service
+from pipecat.services.openai._constants import OPENAI_SAMPLE_RATE
 
 
 def test_create_openai_tts_service_uses_openai_pcm_sample_rate():

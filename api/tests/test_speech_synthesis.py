@@ -5,11 +5,11 @@ import io
 import wave
 
 import pytest
+
+from api.services.pipecat.speech_synthesis import synthesize_speech
 from pipecat.frames.frames import ErrorFrame, TTSAudioRawFrame, TTSStoppedFrame
 from pipecat.processors.frame_processor import FrameProcessor
 from pipecat.tests.mock_tts_service import MockTTSService
-
-from api.services.pipecat.speech_synthesis import synthesize_speech
 
 PCM = b"\x01\x00" * 1280
 

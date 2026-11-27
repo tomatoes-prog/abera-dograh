@@ -32,6 +32,13 @@ import asyncio
 from unittest.mock import AsyncMock, patch
 
 import pytest
+
+from api.services.workflow.pipecat_engine import PipecatEngine
+from api.services.workflow.pipecat_engine_variable_extractor import (
+    VariableExtractionManager,
+)
+from api.services.workflow.workflow_graph import WorkflowGraph
+from api.tests.pipecat_test_utils import run_engine_test_pipeline
 from pipecat.frames.frames import LLMContextFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.worker import PipelineParams, PipelineWorker
@@ -41,6 +48,7 @@ from pipecat.processors.aggregators.llm_response_universal import (
     LLMContextAggregatorPair,
     LLMUserAggregatorParams,
 )
+from pipecat.tests import MockLLMService, MockTTSService
 from pipecat.tests.mock_transport import MockTransport
 from pipecat.transports.base_transport import TransportParams
 from pipecat.turns.user_mute import (
@@ -48,14 +56,6 @@ from pipecat.turns.user_mute import (
     MuteUntilFirstBotCompleteUserMuteStrategy,
 )
 from pipecat.utils.enums import EndTaskReason
-
-from api.services.workflow.pipecat_engine import PipecatEngine
-from api.services.workflow.pipecat_engine_variable_extractor import (
-    VariableExtractionManager,
-)
-from api.services.workflow.workflow_graph import WorkflowGraph
-from api.tests.pipecat_test_utils import run_engine_test_pipeline
-from pipecat.tests import MockLLMService, MockTTSService
 
 
 async def create_test_pipeline_with_failing_transport(

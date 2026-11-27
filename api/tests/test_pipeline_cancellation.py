@@ -2,6 +2,8 @@ import asyncio
 
 import pytest
 from loguru import logger
+
+from api.services.pipecat.worker_runner import run_pipeline_worker
 from pipecat.frames.frames import (
     EndWorkerFrame,
     Frame,
@@ -11,8 +13,6 @@ from pipecat.frames.frames import (
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.worker import PipelineWorker
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
-
-from api.services.pipecat.worker_runner import run_pipeline_worker
 
 
 class MockTransport(FrameProcessor):

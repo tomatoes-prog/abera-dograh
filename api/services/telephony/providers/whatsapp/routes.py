@@ -21,13 +21,6 @@ import aiohttp
 import redis.asyncio as aioredis
 from fastapi import APIRouter, HTTPException, Query, Request
 from loguru import logger
-from pipecat.transports.smallwebrtc.connection import IceServer, SmallWebRTCConnection
-from pipecat.transports.whatsapp.api import (
-    WhatsAppApi,
-    WhatsAppConnectCall,
-    WhatsAppWebhookRequest,
-)
-from pipecat.transports.whatsapp.client import WhatsAppClient
 from starlette.responses import PlainTextResponse
 
 from api.constants import ENABLE_COTURN, FORCE_TURN_RELAY, REDIS_URL
@@ -49,6 +42,13 @@ from api.services.quota_service import authorize_workflow_run_start
 from api.services.workflow.run_creation import prepare_workflow_run_inputs
 from api.services.workflow_run_failure import mark_workflow_run_failed
 from api.utils.telephony_address import normalize_telephony_address
+from pipecat.transports.smallwebrtc.connection import IceServer, SmallWebRTCConnection
+from pipecat.transports.whatsapp.api import (
+    WhatsAppApi,
+    WhatsAppConnectCall,
+    WhatsAppWebhookRequest,
+)
+from pipecat.transports.whatsapp.client import WhatsAppClient
 
 from .provider import signature_matches
 

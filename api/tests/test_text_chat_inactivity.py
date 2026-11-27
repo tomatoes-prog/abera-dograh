@@ -3,7 +3,6 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from pipecat.utils.enums import EndTaskReason
 
 from api.constants import (
     TEXT_CHAT_INACTIVITY_SWEEP_LOOKBACK_SECONDS,
@@ -22,6 +21,7 @@ from api.services.workflow.text_chat_session_service import (
 )
 from api.tasks import text_chat_inactivity
 from api.tasks.function_names import FunctionNames
+from pipecat.utils.enums import EndTaskReason
 
 
 @pytest.mark.asyncio

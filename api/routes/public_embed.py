@@ -15,7 +15,6 @@ from fastapi import (
     Response,
 )
 from loguru import logger
-from pipecat.utils.run_context import set_current_run_id
 from pydantic import BaseModel
 from starlette.datastructures import Headers, MutableHeaders
 from starlette.types import ASGIApp, Receive, Scope, Send
@@ -55,6 +54,7 @@ from api.services.workflow.text_chat_session_service import (
     TextChatSessionRevisionConflictError,
 )
 from api.services.workflow.text_chat_stream import TextChatEventStreamResponse
+from pipecat.utils.run_context import set_current_run_id
 
 router = APIRouter(prefix="/public/embed")
 

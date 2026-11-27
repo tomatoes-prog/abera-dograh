@@ -2,11 +2,11 @@
 
 from arq import Retry
 from loguru import logger
-from pipecat.utils.run_context import set_current_run_id
 
 from api.services.workflow.text_chat_session_service import (
     finalize_completed_text_chat as finalize_session,
 )
+from pipecat.utils.run_context import set_current_run_id
 
 
 async def finalize_completed_text_chat(_ctx, run_id: int) -> None:

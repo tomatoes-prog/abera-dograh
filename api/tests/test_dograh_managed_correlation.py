@@ -2,12 +2,13 @@ import json
 
 import pytest
 from openai._types import NOT_GIVEN as OPENAI_NOT_GIVEN
+from websockets.protocol import State
+
 from pipecat.frames.frames import TTSStartedFrame
 from pipecat.services.dograh.llm import DograhLLMService
 from pipecat.services.dograh.stt import DograhSTTService
 from pipecat.services.dograh.tts import DograhTTSService
 from pipecat.services.openai.base_llm import OpenAILLMSettings
-from websockets.protocol import State
 
 
 class _FakeWebSocket:

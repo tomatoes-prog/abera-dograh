@@ -1,10 +1,9 @@
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from pipecat.services.settings import NOT_GIVEN
-
 from api.services.configuration.registry import ServiceProviders
 from api.services.pipecat.service_factory import create_tts_service
+from pipecat.services.settings import NOT_GIVEN
 
 
 def test_create_google_tts_service_uses_credentials_location_and_settings():

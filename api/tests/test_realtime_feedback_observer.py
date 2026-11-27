@@ -3,6 +3,16 @@ import re
 from types import SimpleNamespace
 
 import pytest
+from websockets.datastructures import Headers
+from websockets.exceptions import InvalidStatus
+from websockets.http11 import Response
+
+from api.services.pipecat.in_memory_buffers import InMemoryLogsBuffer
+from api.services.pipecat.realtime_feedback_observer import (
+    RealtimeFeedbackObserver,
+    register_turn_log_handlers,
+)
+from api.services.pipecat.transcript_log_coordinator import TranscriptLogCoordinator
 from pipecat.frames.frames import (
     ErrorFrame,
     MetricsFrame,
@@ -15,16 +25,6 @@ from pipecat.observers.base_observer import FramePushed
 from pipecat.processors.frame_processor import FrameDirection
 from pipecat.transports.base_output import BaseOutputTransport
 from pipecat.transports.base_transport import TransportParams
-from websockets.datastructures import Headers
-from websockets.exceptions import InvalidStatus
-from websockets.http11 import Response
-
-from api.services.pipecat.in_memory_buffers import InMemoryLogsBuffer
-from api.services.pipecat.realtime_feedback_observer import (
-    RealtimeFeedbackObserver,
-    register_turn_log_handlers,
-)
-from api.services.pipecat.transcript_log_coordinator import TranscriptLogCoordinator
 
 
 class _FakeAggregator:
